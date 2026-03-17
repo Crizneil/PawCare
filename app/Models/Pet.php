@@ -56,23 +56,34 @@ class Pet extends Model
     }
     public function getCalculatedStatusAttribute()
     {
+        $vaxCount = $this->vaccinations()->count();
         $latest = $this->latestVaccination;
 
-        if (!$latest)
+        // 2. Check if never vaccinated
+        if ($vaxCount === 0) {
             return 'unvaccinated';
-
-        // If the record has a 'next_due_date', calculate based on today's date
-        if ($latest->next_due_date) {
-            $dueDate = Carbon::parse($latest->next_due_date);
-            $now = Carbon::now();
-
-            if ($now->gt($dueDate))
-                return 'overdue';
-            if ($now->diffInDays($dueDate) <= 14)
-                return 'due_soon';
         }
 
-        return $latest->status ?? 'fully_vaccinated';
+        // 3. Overdue Check (If next due date has passed)
+        if ($latest && $latest->next_due_date) {
+            $dueDate = \Carbon\Carbon::parse($latest->next_due_date);
+
+            if ($dueDate->isPast()) {
+                return 'overdue';
+            }
+
+            // 4. Due Soon (Within 14 days - keeping your original 14-day window)
+            if (\Carbon\Carbon::now()->diffInDays($dueDate, false) <= 14) {
+                return 'due_soon';
+            }
+        }
+
+        /** * 5. Logic for Partially vs Fully */
+        if ($vaxCount < 2) {
+            return 'partially_vaccinated';
+        }
+
+        return 'fully_vaccinated';
     }
     public function getVaxStatusAttribute()
     {

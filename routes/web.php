@@ -98,6 +98,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/pets/{id}/vaccinate', [VaccineController::class, 'store'])->name('pets.vaccinate');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile/update', [AdminController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/owner-profile/{id}', [AdminController::class, 'showOwner'])->name('owner.profile');
 
     // Archive & Restore Routes
     Route::get('/archive', [AdminController::class, 'archive'])->name('archive');
@@ -130,6 +131,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::post('/appointments/store', [StaffController::class, 'storeAppointment'])->name('appointments.store');
     Route::post('/appointments/{id}/reschedule', [StaffController::class, 'reschedule'])->name('appointments.reschedule');
     Route::get('/appointments/booked-slots', [StaffController::class, 'getBookedSlots'])->name('appointments.slots');
+    Route::get('/generate-report', [StaffController::class, 'generateReport'])->name('generate-report');
 
     // Pet Records & Vaccination
     Route::get('/pet-records', [StaffController::class, 'petRecords'])->name('pet-records');

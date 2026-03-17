@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
+use Carbon\Carbon;
 use App\Models\Pet;
 use App\Models\Vaccination;
 use App\Models\Appointment;
 use App\Models\VaccineInventory;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class VaccineController extends Controller
 {
@@ -194,5 +197,6 @@ class VaccineController extends Controller
 
         return back()->with('error', 'Only pending appointments can be cancelled.');
     }
+
 }
 

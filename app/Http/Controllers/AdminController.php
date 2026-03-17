@@ -101,36 +101,42 @@ class AdminController extends Controller
      */
     public function getAppointmentsApi(Request $request)
     {
-        // IMPORTANT: Cancelled appointments should not appear on any calendar view
-        // (keep them available in the table/list views via other endpoints).
+        // Filter out cancelled appointments for the calendar view
         $appointments = Appointment::with(['user', 'pet'])
             ->whereNotIn('status', ['cancelled', 'Cancelled'])
             ->get();
 
         $events = $appointments->map(function ($appt) {
-            // Colors based on status
+            $owner = $appt->user;
+
+            // 1. Combine the granular address fields from the User model
+            // Note: Using 'house_no' as per your recent database update
+            $fullAddress = $owner
+                ? "{$owner->house_no} {$owner->street}, Brgy. {$owner->barangay}, {$owner->city}"
+                : 'Not Provided';
+
+            // 2. Colors based on status
             $colors = [
-                'pending' => '#fd7e14', // Orange
-                'approved' => '#0d6efd', // Blue
+                'pending'   => '#fd7e14', // Orange
+                'approved'  => '#0d6efd', // Blue
                 'completed' => '#198754', // Green
-                'Done' => '#198754',
-                'cancelled' => '#dc3545', // Red
-                'rejected' => '#6c757d', // Gray
+                'Done'      => '#198754',
+                'rejected'  => '#6c757d', // Gray
             ];
 
             return [
-                'id' => $appt->id,
-                'title' => $appt->pet_name . ' (' . ucfirst($appt->service_type) . ')',
-                'start' => $appt->appointment_date . 'T' . $appt->appointment_time,
+                'id'              => $appt->id,
+                'title'           => ($appt->pet->name ?? $appt->pet_name) . ' (' . ucfirst($appt->service_type) . ')',
+                'start'           => $appt->appointment_date . 'T' . $appt->appointment_time,
                 'backgroundColor' => $colors[$appt->status] ?? '#6c757d',
-                'borderColor' => $colors[$appt->status] ?? '#6c757d',
-                'textColor' => '#ffffff',
-                'extendedProps' => [
-                    'owner_name' => $appt->user->name ?? 'Unknown',
-                    'owner_phone' => $appt->user->phone ?? 'Unknown',
-                    'owner_address' => $appt->address ?? 'Not Provided',
-                    'species' => ucfirst($appt->species),
-                    'status' => ucfirst($appt->status)
+                'borderColor'     => $colors[$appt->status] ?? '#6c757d',
+                'textColor'       => '#ffffff',
+                'extendedProps'   => [
+                    'owner_name'    => $owner ? $owner->name : 'Walk-in',
+                    'owner_phone'   => $owner ? $owner->phone : 'N/A',
+                    'owner_address' => $fullAddress, // <--- This sends the address to the calendar
+                    'species'       => ucfirst($appt->species),
+                    'status'        => ucfirst($appt->status)
                 ]
             ];
         });
@@ -310,7 +316,7 @@ class AdminController extends Controller
             'role' => 'owner',
 
             // Granular Address Fields
-            'house_number' => $request->house_no,
+            'house_no' => $request->house_no,
             'street' => $request->street,
             'barangay' => $request->barangay,
             'city' => $request->city,
@@ -387,7 +393,7 @@ class AdminController extends Controller
             'phone' => 'nullable|string|max:11',
             'gender' => 'nullable|string',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'house_number' => 'nullable|string|max:255',
+            'house_no' => 'nullable|string|max:255',
             'street' => 'nullable|string|max:255',
             'barangay' => 'required|string|max:255',
             'city' => 'required|string|max:255',
@@ -434,18 +440,25 @@ class AdminController extends Controller
         $view = $request->input('view', 'active'); // 'active' or 'archived'
         $query = Pet::with('user');
 
-        // Combined ID and text search for better robustness
         $petId = $request->input('pet_id');
         $search = $request->input('general_search');
 
+        // 1. URL Extraction Logic (for QR scans)
+        if ($search && filter_var($search, FILTER_VALIDATE_URL)) {
+            $search = collect(explode('/', $search))->last();
+        }
+
+        // 2. Search Logic
         if ($petId) {
             $query->withTrashed()->where(function ($q) use ($petId) {
                 $q->where('id', $petId)
                     ->orWhere('pet_id', $petId);
             });
         } elseif ($search) {
-            // If it looks like a Pet ID, try matching that first
-            if (str_starts_with(strtoupper($search), 'PC-') || str_starts_with(strtoupper($search), 'WALK-')) {
+            // Added 'ADMIN-' to the check to match your manual appointments
+            if (str_starts_with(strtoupper($search), 'PC-') ||
+                str_starts_with(strtoupper($search), 'WALK-') ||
+                str_starts_with(strtoupper($search), 'ADMIN-')) {
                 $query->withTrashed()->where('pet_id', 'like', "%{$search}%");
             } else {
                 $query->where(function ($q) use ($search) {
@@ -456,21 +469,22 @@ class AdminController extends Controller
             }
         }
 
+        // 3. Status Filtering (Crucial: Keep this part!)
         if (!$petId && !$search) {
             if ($view === 'archived') {
                 $query->withTrashed()->where(function ($q) {
                     $q->whereIn('status', ['DECEASED', 'INACTIVE'])
-                        ->orWhereNotNull('deleted_at');
+                    ->orWhereNotNull('deleted_at');
                 });
             } else {
                 $query->notDeceased();
             }
-
-
         }
 
+        // 4. Results and View
         $pets = $query->latest()->paginate(10)->appends($request->all());
-        $owners = User::where('role', 'owner')->get(); // Fetch owners for Add Pet Modal
+        $owners = User::where('role', 'owner')->get();
+
         return view('admin.pet-records', compact('pets', 'owners', 'view'));
     }
 
@@ -502,6 +516,7 @@ class AdminController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'name' => 'required|string|max:255',
+            'gender' => 'required',
             'species' => 'required|string|in:Dog,Cat',
             'breed' => 'nullable|string|max:255',
             'birthdate' => 'required|date|before_or_equal:today',
@@ -518,7 +533,7 @@ class AdminController extends Controller
             'species' => $request->species,
             'breed' => $request->breed ?? 'Unknown',
             'birthday' => $request->birthdate,
-            'gender' => 'Unknown', // Need to pass default gender to satisfy schema
+            'gender' => $request->gender, // Need to pass default gender to satisfy schema
             'owner' => User::find($request->user_id)->name ?? 'Unknown',
             'status' => 'Verified', // Pets added by Admin are automatically verified
         ]);
@@ -774,6 +789,7 @@ class AdminController extends Controller
                     'pet_id' => $pet->id,
                     'pet_name' => $pet->name,
                     'species' => $pet->species,
+                    'gender' => $request->gender,
                     'appointment_date' => $request->appointment_date,
                     'appointment_time' => $formattedTime,
                     'service_type' => $request->service_type,
@@ -972,5 +988,28 @@ class AdminController extends Controller
         Mail::to($appointment->user->email)->send(new AppointmentReminder($details));
 
         return back()->with('success', 'Email reminder sent!');
+    }
+    public function showOwner(Request $request, $id)
+    {
+        // Check if we are viewing a Walk-in (based on the 'type' parameter from your link)
+        if ($request->query('type') === 'walkin') {
+            // For walk-ins, the $id is actually the PET ID.
+            // We find the pet and treat its columns as the 'owner' data.
+            $owner = Pet::findOrFail($id);
+
+            // We wrap it in an object so the Blade view doesn't break
+            return view('admin.owner-profile', [
+                'owner' => $owner,
+                'is_walkin' => true
+            ]);
+        }
+
+        // Standard case: View a registered Owner account
+        $owner = User::with('pets')->where('role', 'owner')->findOrFail($id);
+
+        return view('admin.owner-profile', [
+            'owner' => $owner,
+            'is_walkin' => false
+        ]);
     }
 }

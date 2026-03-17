@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeEmail;
-
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class StaffController extends Controller
 {
@@ -22,7 +22,7 @@ class StaffController extends Controller
     {
         return view('staff.dashboard', [
             'appointmentsToday' => Appointment::whereDate('appointment_date', today())
-                ->where('status', 'approved')
+                ->whereIn('status', ['approved', 'checked-in'])
                 ->get(),
             'dueForVaccination' => Pet::notDeceased()->where('status', 'needs_booster')->limit(5)->get(),
             'lowStock' => VaccineInventory::whereColumn('stock', '<=', 'low_stock_threshold')->get(),
@@ -78,10 +78,12 @@ class StaffController extends Controller
 
     public function updateAppointmentStatus(Request $request, $id,)
     {
+        $request->validate([
+            'status' => 'required|string'
+        ]);
+
         $newStatus = $request->status;
         $appointment = Appointment::findOrFail($id);
-
-        // Normalize to lowercase for the check
         $checkStatus = strtolower($newStatus);
 
         if (in_array($checkStatus, ['done', 'completed'])) {
@@ -128,6 +130,10 @@ class StaffController extends Controller
                 if ($inventory && $inventory->stock > 0) {
                     $inventory->decrement('stock', 1);
                 }
+                $appointment->batch_no = $batchNo;
+                $appointment->vaccine_name = $finalName;
+                $appointment->next_due_date = now()->addYear();
+                $appointment->administered_by = auth()->user()->name;
             }
 
             $appointment->save();
@@ -136,13 +142,17 @@ class StaffController extends Controller
         } else {
             // Handle simple status updates like 'checked-in', 'late', etc.
             $appointment->status = $newStatus;
+            if (!$appointment->status) {
+                return back()->with('error', 'Invalid status provided.');
+            }
+
             $appointment->save();
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
         }
     }
     public function storeAppointment(Request $request)
     {
-        // 1. Updated Validation Logic
+        // 1. Validation Logic
         $rules = [
             'owner_status' => 'required|in:existing,new',
             'pet_name' => 'required|string|max:255',
@@ -159,7 +169,6 @@ class StaffController extends Controller
             $rules['last_name'] = 'required|string|max:255';
             $rules['phone'] = 'required|string';
             $rules['email'] = 'nullable|email|unique:users,email';
-            $rules['owner_gender'] = 'nullable|string';
         } else {
             $rules['user_id'] = 'required|exists:users,id';
         }
@@ -169,13 +178,13 @@ class StaffController extends Controller
         // --- STEP 2: Handle Owner Logic ---
         $userId = null;
         $ownerName = 'Guest';
-        $phone = $request->phone; // Capture this here to ensure it's available
+        $phone = $request->phone;
 
         if ($request->owner_status === 'existing') {
             $user = User::findOrFail($request->user_id);
             $userId = $user->id;
             $ownerName = $user->name;
-            $phone = $user->phone; // Use the existing user's phone
+            $phone = $user->phone;
         } else {
             $fullName = trim("{$request->first_name} " . ($request->middle_initial ? "{$request->middle_initial}. " : "") . $request->last_name);
 
@@ -196,8 +205,12 @@ class StaffController extends Controller
                 ]);
                 $userId = $user->id;
                 $ownerName = $user->name;
+
+                // --- ADDED THIS: Trigger the Welcome Email ---
+                // Use the WelcomeEmail class you imported at the top of the file
+                Mail::to($user->email)->send(new WelcomeEmail($user, $plainPassword));
+
             } else {
-                // This is a PURE walk-in (No User record)
                 $userId = null;
                 $ownerName = $fullName;
             }
@@ -218,30 +231,29 @@ class StaffController extends Controller
             'breed' => $finalBreed,
             'owner' => $ownerName,
             'owner_phone' => $phone,
-            'owner_gender' => $request->owner_gender, // Owner Gender
+            'owner_gender' => $request->owner_gender,
             'status' => 'ACTIVE',
-            // Ensure these are saved to the Pet table for walk-ins!
             'house_no' => $request->house_no,
             'street' => $request->street,
             'barangay' => $request->barangay,
             'city' => $request->city ?? 'Meycauayan City',
             'province' => $request->province ?? 'Bulacan',
-            'status' => 'ACTIVE',
         ]);
 
-        // 5. Create the Appointment using the form's time
+        // 5. Create the Appointment
         Appointment::create([
             'user_id' => $userId,
             'pet_id' => $pet->id,
             'pet_name' => $pet->name,
+            'gender' => $request->gender,
             'species' => $pet->species,
             'appointment_date' => $request->schedule_date ?? now()->toDateString(),
-            'appointment_time' => $request->schedule_time, // Use the input from modal
+            'appointment_time' => $request->schedule_time,
             'service_type' => $request->service_type,
             'status' => 'approved',
         ]);
 
-        return back()->with('success', 'Walk-in appointment created for ' . $ownerName);
+        return back()->with('success', 'Walk-in appointment created and welcome email sent to ' . $ownerName);
     }
     public function petRecords(Request $request)
     {
@@ -257,12 +269,16 @@ class StaffController extends Controller
 
         // Check if $search is exactly a pet ID or internal ID
         // (Assuming if it matches 'PC-' or is numeric, it's likely a direct ID search)
-        $isSpecificId = $search && (str_starts_with(strtoupper($search), 'PC-') || is_numeric($search));
+        $isSpecificId = $search && (
+            str_starts_with(strtoupper($search), 'PC-') ||
+            str_starts_with(strtoupper($search), 'WALK-') ||
+            is_numeric($search)
+        );
 
         if ($isSpecificId) {
             $query->withTrashed()->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                    ->orWhere('pet_id', 'like', "%{$search}%");
+                    ->orWhere('pet_id', $search);
             });
         } else {
             if ($view === 'archived') {
@@ -325,32 +341,33 @@ class StaffController extends Controller
             $q->notDeceased();
         })->with(['pet', 'staff']);
 
-        // --- NEW: Filter by specific Pet ID ---
-        if ($request->has('pet_id')) {
-            $query->where('pet_id', $request->pet_id);
+        // --- Date Range Filter ---
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('date_administered', [$request->start_date, $request->end_date]);
         }
 
-        // Existing Filters
+        // --- Existing Quick Filters ---
         if ($request->filter == 'today') {
             $query->whereDate('date_administered', today());
-        }
-
-        if ($request->filter == 'week') {
+        } elseif ($request->filter == 'week') {
             $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
         }
 
-        if ($request->staff_id) {
+        // --- Dropdown Filters ---
+        if ($request->filled('pet_id')) {
+            $query->where('pet_id', $request->pet_id);
+        }
+
+        if ($request->filled('staff_id')) {
             $query->where('staff_id', $request->staff_id);
         }
 
-        if ($request->vaccine_name) {
+        if ($request->filled('vaccine_name')) {
             $query->where('vaccine_name', $request->vaccine_name);
         }
 
-        // Get results
         $history = $query->latest('date_administered')->paginate(15)->appends($request->all());
 
-        // Get lists for the dropdown filters
         $staffList = User::where('role', 'staff')->get();
         $vaccineList = VaccineInventory::select('name')->distinct()->get();
 
@@ -620,5 +637,97 @@ class StaffController extends Controller
 
         // Return unique slots so JavaScript can disable them in the dropdown
         return response()->json(array_values(array_unique($bookedSlots)));
+    }
+    public function generateReport(Request $request)
+    {
+        // 1. Capture parameters from the request
+        // 'type' is usually the category (vaccination_history vs appointments)
+        // 'filter' is the specific subset (today, completed, missed)
+        $reportCategory = $request->get('type');
+        $filter = $request->get('filter', 'today');
+        $type = ($reportCategory === 'vaccination_history') ? 'vaccination' : $filter;
+        $summaryData = [];
+
+        // --- CASE A: VACCINATION HISTORY REPORT ---
+        if ($reportCategory === 'vaccination_history') {
+            $query = Vaccination::with(['pet', 'staff']);
+            $reportTitle = "VACCINATION HISTORY REPORT";
+            $viewPath = 'staff.reports.vaccination_history_report';
+
+            // Quick Period Filters
+            if ($request->filled('period')) {
+                $period = $request->get('period');
+                if ($period == 'today') {
+                    $query->whereDate('date_administered', today());
+                } elseif ($period == 'weekly') {
+                    $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
+                } elseif ($period == 'monthly') {
+                    $query->whereMonth('date_administered', now()->month)
+                        ->whereYear('date_administered', now()->year);
+                }
+            }
+
+            // Manual Date Range
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $query->whereBetween('date_administered', [$request->start_date, $request->end_date]);
+            }
+
+            // Dropdown Specific Filters
+            if ($request->filled('vaccine_name')) {
+                $query->where('vaccine_name', $request->vaccine_name);
+            }
+            if ($request->filled('staff_id')) {
+                $query->where('staff_id', $request->staff_id);
+            }
+
+            $data = $query->latest('date_administered')->get();
+
+        } else {
+        // --- CASE B: APPOINTMENT REPORTS ---
+        $query = Appointment::with(['pet', 'user']);
+        $viewPath = 'staff.reports.staff_appointment';
+        $today = today();
+
+        // Calculate the 4 specific counts for the Summary Table
+        $summaryData = [
+            'date'      => $today->format('M d, Y'),
+            'completed' => Appointment::whereDate('appointment_date', $today)->whereIn('status', ['done', 'completed'])->count(),
+            'missed'    => Appointment::whereDate('appointment_date', $today)->where('status', 'missed')->count(),
+            'cancelled' => Appointment::whereDate('appointment_date', $today)->where('status', 'cancelled')->count(),
+            'total'     => Appointment::whereDate('appointment_date', $today)->count(),
+        ];
+
+        switch ($filter) {
+            case 'completed':
+                $query->whereIn('status', ['done', 'completed']);
+                $reportTitle = "COMPLETED APPOINTMENTS REPORT";
+                break;
+            case 'missed':
+                $query->where('status', 'missed');
+                $reportTitle = "MISSED APPOINTMENTS REPORT";
+                break;
+            case 'today':
+                // Specifically for the "Today" list view
+                $query->whereDate('appointment_date', $today);
+                $reportTitle = "TODAY'S APPOINTMENTS REPORT";
+                break;
+            case 'summary':
+            default:
+                // Specifically for the Executive Summary with the stats table
+                $query->whereDate('appointment_date', $today);
+                $reportTitle = "DAILY APPOINTMENT SUMMARY";
+                break;
+        }
+        $data = $query->orderBy('appointment_time', 'asc')->get();
+    }
+
+    // Pass $summaryData to both PDF and View
+    if ($request->has('pdf')) {
+        $pdf = Pdf::loadView($viewPath, compact('data', 'reportTitle', 'type', 'summaryData', 'filter'))
+                    ->setPaper('a4', 'portrait');
+        return $pdf->download("PawCare_Daily_Summary.pdf");
+    }
+
+    return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
     }
 }

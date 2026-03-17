@@ -103,46 +103,7 @@
             </div>
         </div>
 
-        {{-- Filter Section --}}
-        <div class="card shadow-sm border-0 mb-4 p-3">
-            <form method="GET" action="{{ route('admin.appointments') }}">
-                <div class="row g-2 align-items-end">
-                    <div class="col-6 col-md-2">
-                        <label class="small text-muted mb-1">Status</label>
-                        <select name="status" class="form-select rounded-pill">
-                            <option value="">All</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed
-                            </option>
-                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="small text-muted mb-1">From</label>
-                        <input type="date" name="from" value="{{ request('from') }}" class="form-control rounded-pill">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="small text-muted mb-1">To</label>
-                        <input type="date" name="to" value="{{ request('to') }}" class="form-control rounded-pill">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="small text-muted mb-1">Owner</label>
-                        <input type="text" name="owner" value="{{ request('owner') }}" class="form-control rounded-pill"
-                            placeholder="Name">
-                    </div>
-                    <div class="col-8 col-md-2">
-                        <label class="small text-muted mb-1">Pet</label>
-                        <input type="text" name="pet" value="{{ request('pet') }}" class="form-control rounded-pill"
-                            placeholder="Pet Name">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <button class="btn btn-orange w-100 rounded-pill mt-md-0 mt-2">Filter</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+
 
         {{-- Master Appointment Calendar --}}
         <div class="card shadow-sm border-0 mb-2 p-3 rounded-4">
@@ -371,64 +332,82 @@
 
                 // Handle Event Click Detail View
                 eventClick: function (info) {
-                    info.jsEvent.preventDefault();
-                    let props = info.event.extendedProps;
-                    let statusStr = props.status.toLowerCase();
+                info.jsEvent.preventDefault();
+                let props = info.event.extendedProps;
+                let statusStr = props.status.toLowerCase();
 
-                    eventPetName.innerText = info.event.title.split(' (')[0];
-                    eventSpecies.innerText = props.species;
-                    eventOwnerName.innerText = props.owner_name;
-                    eventOwnerPhone.innerText = props.owner_phone;
-                    document.getElementById('eventOwnerAddress').innerText = props.owner_address || 'Not Provided';
+                // 1. Set Pet Info
+                eventPetName.innerText = info.event.title.split(' (')[0];
+                eventSpecies.innerText = props.species;
 
-                    // Format nice date/time for modal
-                    eventDate.innerText = info.event.start.toLocaleDateString('default', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
-                    eventTime.innerText = info.event.start.toLocaleTimeString('default', { hour: 'numeric', minute: '2-digit' });
+                // 2. Handle Owner Information
+                let displayName = "Guest/Walk-in";
+                let displayPhone = "N/A";
+                let displayAddress = "Not Provided";
 
-                    eventStatusBadge.innerText = props.status;
-                    eventStatusBadge.className = "badge rounded-pill px-3 py-2 fs-6 text-white";
-                    eventStatusBadge.style.backgroundColor = info.event.backgroundColor;
-
-                    // Build dynamic action buttons depending on status
-                    let actionsHtml = '';
-
-                    if (statusStr === 'pending') {
-                        actionsHtml += `
-                                            <form action="/admin/appointments/${info.event.id}/approve" method="POST" class="d-grid mb-2">
-                                                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
-                                                    <i class="bi bi-check2-circle me-1"></i> Approve Appointment
-                                                </button>
-                                            </form>
-                                            <button type="button"
-                                                class="btn btn-outline-danger rounded-pill fw-bold text-uppercase py-3 shadow-sm"
-                                                onclick="openRejectModalWithConfirm(${info.event.id})">
-                                                <i class="bi bi-x-circle me-1"></i> Reject Appointment
-                                            </button>
-                                        `;
-                    } else if (statusStr === 'approved' || statusStr === 'rescheduled') {
-                        actionsHtml += `
-                                            <form action="/admin/appointments/${info.event.id}/done"
-                                                method="POST"
-                                                class="d-grid"
-                                                onsubmit="return confirm('Mark this appointment as Done?');">
-                                                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
-                                                    <i class="bi bi-check2-square me-1"></i> Mark as Done
-                                                </button>
-                                            </form>
-                                        `;
-                    } else {
-                        actionsHtml += `
-                                            <div class="alert alert-secondary text-center small border-0 w-100 rounded-4 mb-0">
-                                                This appointment is closed and no further actions can be taken.
-                                            </div>
-                                        `;
-                    }
-
-                    eventActionsContainer.innerHTML = actionsHtml;
-                    eventModal.show();
+                // Check for Registered Owner first
+                if (props.owner_name && props.owner_name !== 'Guest/Walk-in') {
+                    displayName = props.owner_name;
+                    displayPhone = props.owner_phone || 'N/A';
+                    displayAddress = props.owner_address || 'Not Provided';
                 }
+                // Fallback to Guest Info if it's a walk-in
+                else if (props.guest_name) {
+                    displayName = props.guest_name + " (Guest)";
+                    displayPhone = props.guest_phone || 'N/A';
+                    displayAddress = props.guest_address || 'Not Provided';
+                }
+
+                eventOwnerName.innerText = displayName;
+                eventOwnerPhone.innerText = displayPhone;
+                document.getElementById('eventOwnerAddress').innerText = displayAddress;
+
+                // 3. Format Date and ACTUAL Time
+                eventDate.innerText = info.event.start.toLocaleDateString('default', {
+                    weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+                });
+                eventTime.innerText = info.event.start.toLocaleTimeString('en-US', {
+                    hour: 'numeric', minute: '2-digit', hour12: true
+                });
+
+                // 4. Status Badge
+                eventStatusBadge.innerText = props.status;
+                eventStatusBadge.className = "badge rounded-pill px-3 py-2 fs-6 text-white";
+                eventStatusBadge.style.backgroundColor = info.event.backgroundColor;
+
+                // 5. Build dynamic action buttons (Keeping your existing logic)
+                let actionsHtml = '';
+                if (statusStr === 'pending') {
+                    actionsHtml += `
+                        <form action="/admin/appointments/${info.event.id}/approve" method="POST" class="d-grid mb-2">
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
+                                <i class="bi bi-check2-circle me-1"></i> Approve Appointment
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-outline-danger rounded-pill fw-bold text-uppercase py-3 shadow-sm"
+                            onclick="openRejectModalWithConfirm(${info.event.id})">
+                            <i class="bi bi-x-circle me-1"></i> Reject Appointment
+                        </button>`;
+                } else if (statusStr === 'approved' || statusStr === 'rescheduled') {
+                    actionsHtml += `
+                        <form action="/admin/appointments/${info.event.id}/done" method="POST" class="d-grid"
+                            onsubmit="return confirm('Mark this appointment as Done?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
+                                <i class="bi bi-check2-square me-1"></i> Mark as Done
+                            </button>
+                        </form>`;
+                } else {
+                    actionsHtml += `
+                        <div class="alert alert-secondary text-center small border-0 w-100 rounded-4 mb-0">
+                            This appointment is closed and no further actions can be taken.
+                        </div>`;
+                }
+
+                eventActionsContainer.innerHTML = actionsHtml;
+                eventModal.show();
+            }
             });
 
             calendar.render();

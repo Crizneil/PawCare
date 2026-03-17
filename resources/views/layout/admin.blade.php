@@ -38,11 +38,15 @@
         /* Sidebar Scroll Styling */
         .sidebar-nav-scroll {
             overflow-y: auto;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE and Edge */
         }
+
         .sidebar-nav-scroll::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
+            display: none;
+            /* Chrome, Safari, Opera */
         }
 
         .swal2-container {
@@ -55,6 +59,7 @@
     /** @var \App\Models\User $user */
     $user = Auth::user();
 @endphp
+
 <body>
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     <div class="d-flex">
@@ -77,6 +82,10 @@
                             class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                             <i data-lucide="layout-grid"></i> Overview
                         </a>
+                        <a href="{{ route('admin.appointments') }}"
+                            class="nav-link {{ request()->is('admin/appointments*') ? 'active' : '' }}">
+                            <i data-lucide="calendar"></i> Appointments
+                        </a>
                         <a href="{{ route('admin.pet-records') }}"
                             class="nav-link {{ request()->routeIs('admin.pet-records') ? 'active' : '' }}">
                             <i data-lucide="dog"></i> Pet Database
@@ -86,7 +95,7 @@
                             <i data-lucide="users"></i> Staff
                         </a>
                         <a href="{{ route('admin.appointments') }}"
-                            class="nav-link {{ request()->routeIs('admin.appointments') ? 'active' : '' }}">
+                            class="nav-link {{ request()->is('admin/appointments*') ? 'active' : '' }}">
                             <i data-lucide="calendar"></i> Appointments
                         </a>
                         <a href="{{ route('admin.logs') }}"
@@ -248,7 +257,7 @@
 
                 // Identify action types
                 const isDeleteAction = $form.find('input[name="_method"][value="DELETE"]').length > 0 ||
-                                       $submitBtn.text().trim().toLowerCase().includes('delete');
+                    $submitBtn.text().trim().toLowerCase().includes('delete');
                 const isDeceasedStatus = $statusSelect.length && $statusSelect.val() === 'DECEASED';
 
                 // Bypass custom logic for specific delete modals
@@ -259,7 +268,7 @@
                 // Intercept DECEASED status modifications
                 if (isDeceasedStatus) {
                     e.preventDefault();
-                    
+
                     Swal.fire({
                         title: 'Confirm Deceased Status',
                         text: "Marking this pet as DECEASED will archive the record. This is a solemn action.",
@@ -268,10 +277,10 @@
                         confirmButtonColor: '#2c3e50',
                         confirmButtonText: 'Yes, confirm DECEASED',
                         cancelButtonText: 'Cancel',
-                        customClass: { 
-                            popup: 'rounded-4 border-0 shadow-lg', 
-                            confirmButton: 'rounded-pill px-4', 
-                            cancelButton: 'rounded-pill px-4' 
+                        customClass: {
+                            popup: 'rounded-4 border-0 shadow-lg',
+                            confirmButton: 'rounded-pill px-4',
+                            cancelButton: 'rounded-pill px-4'
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -279,7 +288,7 @@
                             $form[0].submit();
                         }
                     });
-                    
+
                     return;
                 }
 

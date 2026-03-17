@@ -2,15 +2,46 @@
 
 @section('content')
     <div class="container-fluid p-4 fade-in">
-        {{-- Header - Added flex-wrap for mobile --}}
+        {{-- Header - Updated with Report Dropdown --}}
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
             <div>
                 <h2 class="fw-bold mb-0">Appointments</h2>
                 <p class="text-muted mb-0 small">Manage walk-ins and scheduled vaccinations.</p>
             </div>
-            <button class="btn btn-orange rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#walkInModal">
-                <i data-lucide="plus" class="me-2" style="width: 18px;"></i> New Walk-in
-            </button>
+            <div class="d-flex gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-outline-dark rounded-pill px-4 py-2 shadow-sm fw-bold dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate Report
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        {{-- Updated to use the new master route: staff.generate-report --}}
+                        <li>
+                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'today']) }}" target="_blank">
+                                Today's Appointments
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'completed']) }}" target="_blank">
+                                Completed Appointments
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'missed']) }}" target="_blank">
+                                Missed Appointments
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item fw-bold" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'summary']) }}" target="_blank">
+                                Daily Summary
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-orange rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#walkInModal">
+                    <i data-lucide="plus" class="me-2" style="width: 18px;"></i> New Walk-in
+                </button>
+            </div>
         </div>
 
         {{-- Sub-menu Navigation - Modern Segmented Control --}}
@@ -105,7 +136,7 @@
                                             'pending' => 'bg-warning-subtle text-warning border-warning',
                                             'approved' => 'bg-info-subtle text-info border-info',
                                             'rescheduled' => 'bg-info-subtle text-info border-info',
-                                            'checked-in' => 'bg-primary-subtle text-primary border-primary',
+                                            'checked-in' => 'bg-success-subtle text-success border-success',
                                             'late' => 'bg-secondary-subtle text-secondary border-secondary',
                                             'missed' => 'bg-danger-subtle text-danger border-danger',
                                             'completed' => 'bg-success-subtle text-success border-success',

@@ -4,7 +4,30 @@
 
 @section('content')
 <div class="container-fluid p-4 fade-in">
-    <h2 class="fw-bold mb-4 text-dark">Vaccination History</h2>
+    {{-- UPDATED HEADER WITH REPORT BUTTON --}}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <h2 class="fw-bold text-dark mb-0">Vaccination History</h2>
+
+        <div class="dropdown">
+            <button class="btn btn-outline-dark rounded-pill px-4 py-2 shadow-sm fw-bold dropdown-toggle" type="button" id="reportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Generate Report
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                <li>
+                    {{-- Print / Preview --}}
+                    <a class="dropdown-item" href="{{ route('staff.generate-report', array_merge(request()->all(), ['type' => 'vaccination_history'])) }}" target="_blank">
+                        <i data-lucide="printer" class="me-2" style="width: 14px;"></i> Print / Preview
+                    </a>
+                </li>
+                <li>
+                    {{-- Download PDF --}}
+                    <a class="dropdown-item" href="{{ route('staff.generate-report', array_merge(request()->all(), ['type' => 'vaccination_history', 'pdf' => 1])) }}">
+                        <i data-lucide="download" class="me-2" style="width: 14px;"></i> Download PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
 
     {{-- 1. FILTER NOTICE --}}
     @if(request('pet_id'))
@@ -24,54 +47,68 @@
         </div>
     @endif
 
+    {{-- 1.5 QUICK SHORTCUTS --}}
+    <div class="d-flex justify-content-center mb-4">
+        <div class="bg-light rounded-pill p-1 shadow-sm d-inline-flex border">
+            @php $currentPeriod = request('period'); @endphp
+            <a class="btn rounded-pill px-4 fw-bold {{ $currentPeriod == 'today' ? 'btn-primary text-white shadow-sm' : 'btn-light text-muted border-0' }}"
+                href="{{ route('staff.vaccination-history', ['period' => 'today']) }}">Today</a>
+
+            <a class="btn rounded-pill px-4 fw-bold {{ $currentPeriod == 'weekly' ? 'btn-primary text-white shadow-sm' : 'btn-light text-muted border-0' }}"
+                href="{{ route('staff.vaccination-history', ['period' => 'weekly']) }}">Weekly</a>
+
+            <a class="btn rounded-pill px-4 fw-bold {{ $currentPeriod == 'monthly' ? 'btn-primary text-white shadow-sm' : 'btn-light text-muted border-0' }}"
+                href="{{ route('staff.vaccination-history', ['period' => 'monthly']) }}">Monthly</a>
+
+            <a class="btn rounded-pill px-4 fw-bold {{ !$currentPeriod ? 'btn-primary text-white shadow-sm' : 'btn-light text-muted border-0' }}"
+                href="{{ route('staff.vaccination-history') }}">All Time</a>
+        </div>
+    </div>
+
     {{-- 2. ADVANCED FILTER BAR --}}
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-3">
             <form action="{{ route('staff.vaccination-history') }}" method="GET" class="row g-3 align-items-center">
-                @if(request('pet_id'))
-                    <input type="hidden" name="pet_id" value="{{ request('pet_id') }}">
+                {{-- Keep the period state if filtering by staff/vaccine --}}
+                @if(request('period'))
+                    <input type="hidden" name="period" value="{{ request('period') }}">
                 @endif
 
-                {{-- Quick Date Filters --}}
-                <div class="col-12 col-xl-auto">
-                    <div class="btn-group rounded-pill overflow-hidden border shadow-sm w-100" role="group">
-                        <a href="{{ route('staff.vaccination-history', ['filter' => 'today']) }}"
-                           class="btn btn-sm {{ request('filter') == 'today' ? 'btn-primary' : 'btn-white' }}">Today</a>
-                        <a href="{{ route('staff.vaccination-history', ['filter' => 'week']) }}"
-                           class="btn btn-sm {{ request('filter') == 'week' ? 'btn-primary' : 'btn-white' }}">This Week</a>
-                        <a href="{{ route('staff.vaccination-history') }}"
-                           class="btn btn-sm {{ !request('filter') ? 'btn-primary' : 'btn-white' }}">All Time</a>
+                {{-- Custom Date Range (The "Two Dates") --}}
+                <div class="col-12 col-md-4 col-xl-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-0 rounded-start-pill text-muted small">Range:</span>
+                        <input type="date" name="start_date" class="form-control border-0 bg-light py-2" value="{{ request('start_date') }}">
+                        <input type="date" name="end_date" class="form-control border-0 bg-light py-2 rounded-end-pill" value="{{ request('end_date') }}">
                     </div>
                 </div>
 
-                {{-- By Staff --}}
-                <div class="col-6 col-md-3 col-xl-2">
+                {{-- Staff Filter --}}
+                <div class="col-6 col-md-2 col-xl-2">
                     <select name="staff_id" class="form-select form-select-sm border-0 bg-light rounded-pill shadow-sm px-3 py-2" onchange="this.form.submit()">
                         <option value="">All Staff</option>
                         @foreach($staffList as $staff)
-                            <option value="{{ $staff->id }}" {{ request('staff_id') == $staff->id ? 'selected' : '' }}>
-                                {{ $staff->name }}
-                            </option>
+                            <option value="{{ $staff->id }}" {{ request('staff_id') == $staff->id ? 'selected' : '' }}>{{ $staff->name }}</option>
                         @endforeach
                     </select>
                 </div>
 
-                {{-- By Vaccine --}}
-                <div class="col-6 col-md-3 col-xl-2">
+                {{-- Vaccine Filter --}}
+                <div class="col-6 col-md-2 col-xl-2">
                     <select name="vaccine_name" class="form-select form-select-sm border-0 bg-light rounded-pill shadow-sm px-3 py-2" onchange="this.form.submit()">
                         <option value="">All Vaccines</option>
                         @foreach($vaccineList as $vax)
-                            <option value="{{ $vax->name }}" {{ request('vaccine_name') == $vax->name ? 'selected' : '' }}>
-                                {{ $vax->name }}
-                            </option>
+                            <option value="{{ $vax->name }}" {{ request('vaccine_name') == $vax->name ? 'selected' : '' }}>{{ $vax->name }}</option>
                         @endforeach
                     </select>
                 </div>
 
-                {{-- Reset Button --}}
-                <div class="col-12 col-md-auto ms-md-auto">
-                    <a href="{{ route('staff.vaccination-history') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-4 w-100 shadow-sm">
-                        <i data-lucide="refresh-cw" class="me-1" style="width:14px;"></i> Reset Filters
+                <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm">
+                        <i data-lucide="search" class="me-1" style="width:14px;"></i> Apply Filters
+                    </button>
+                    <a href="{{ route('staff.vaccination-history') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-4 shadow-sm">
+                        <i data-lucide="refresh-cw" class="me-1" style="width:14px;"></i> Reset
                     </a>
                 </div>
             </form>

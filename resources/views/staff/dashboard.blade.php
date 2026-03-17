@@ -79,16 +79,30 @@
             {{-- Scanner Section --}}
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-dark text-white p-3 d-flex justify-content-between align-items-center border-0">
-                    <h5 class="mb-0 small fw-bold text-white"><i data-lucide="scan" class="me-2"></i> Quick Scan Pet QR</h5>
-                    <span class="badge bg-success">READY</span>
+                    <h5 class="mb-0 small fw-bold text-white"><i data-lucide="scan" class="me-2"></i> Quick Patient Scan</h5>
+                    <span class="badge bg-warning text-dark">HARDWARE COMPATIBLE</span>
                 </div>
                 <div class="card-body p-4 text-center">
+
+                    {{-- HARDWARE SCANNER INPUT (Hidden until focused or always active) --}}
+                    <form action="{{ route('staff.pet-records') }}" method="GET" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" name="search" id="hardwareScanInput"
+                                class="form-control border-0 bg-light"
+                                placeholder="Scan QR with Hardware or Enter ID..."
+                                autofocus autocomplete="off">
+                            <button class="btn btn-warning px-3 fw-bold" type="submit">SEARCH</button>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Scanner hardware will automatically redirect upon scan.</small>
+                    </form>
+
+                    <div class="hr-text text-muted mb-3">OR USE CAMERA</div>
+
+                    {{-- CAMERA SCANNER SECTION --}}
                     <div id="reader" style="width: 100%; display:none; margin-bottom: 20px; border-radius: 15px; overflow:hidden;"></div>
-                    <div id="scan-placeholder" class="py-4">
-                        <i data-lucide="qr-code" style="width: 48px; height: 48px;" class="text-muted mb-3"></i>
-                        <h6 class="fw-bold text-dark">Scan Digital Card</h6>
-                        <button id="startScanBtn" class="btn btn-warning rounded-pill fw-bold px-4 shadow-sm mt-2">
-                            <i data-lucide="camera" class="me-2"></i> START CAMERA
+                    <div id="scan-placeholder" class="py-2">
+                        <button id="startScanBtn" class="btn btn-outline-dark rounded-pill fw-bold px-4 btn-sm">
+                            <i data-lucide="camera" class="me-2"></i> START CAMERA SCANNER
                         </button>
                     </div>
                     <button id="stopScanBtn" class="btn btn-secondary rounded-pill fw-bold px-4 shadow-sm" style="display:none;">STOP CAMERA</button>
@@ -138,9 +152,13 @@
                                     <td><span class="badge bg-blue-light text-primary">{{ $apt->service_type }}</span></td>
                                     <td>{{ date('h:i A', strtotime($apt->appointment_time)) }}</td>
                                     <td class="text-end">
-                                        <form action="{{ route('staff.appointments.update', [$apt->id, 'Done']) }}" method="POST">
+                                        <form action="{{ route('staff.appointments.update', $apt->id) }}" method="POST">
                                             @csrf
-                                            <button class="btn btn-sm btn-success rounded-pill px-3">Check-in</button>
+                                            {{-- This ensures $request->status is 'completed' --}}
+                                            <input type="hidden" name="status" value="checked-in">
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
+                                                Check-in
+                                            </button>
                                         </form>
                                     </td>
                                 </tr>
@@ -204,28 +222,60 @@
         });
     }
 
-    function onScanSuccess(decodedText) {
-    // Stop the scanner once a code is found to prevent multiple redirects
+   function onScanSuccess(decodedText) {
     html5QrCode.stop().then(() => {
-        // Show a quick loading state (optional)
-        console.log("Scanned URL: " + decodedText);
+        console.log("Scanned Content: " + decodedText);
 
-        // Logic to extract the ID from the URL: .../verify-pet/PAW-12345
         let petId = '';
 
+        // Improved logic to handle URLs, walk-in paths, or raw IDs
         if (decodedText.includes('/verify-pet/')) {
             petId = decodedText.split('/verify-pet/').pop();
+        } else if (decodedText.includes('WALK-')) {
+            // Specifically catches walk-in IDs if they are raw or in a different URL
+            petId = decodedText.substring(decodedText.indexOf('WALK-'));
         } else {
-            // Fallback if the QR just contains the raw ID
+            // Fallback for raw PC- IDs or numeric IDs
             petId = decodedText;
         }
 
-        // Redirect to Staff Pet Records with the search parameter
-        // Your controller's petRecords method should handle the 'search' query
-        window.location.href = "{{ route('staff.pet-records') }}?search=" + petId;
+        // Clean up any remaining URL parameters if they exist
+        petId = petId.split('?')[0];
+
+        // Redirect to Pet Records
+        window.location.href = "{{ route('staff.pet-records') }}?search=" + encodeURIComponent(petId);
     }).catch((err) => {
         console.error("Failed to stop scanner", err);
     });
 }
+const hardwareInput = document.getElementById('hardwareScanInput');
+
+    // 1. Keep focus on the input so the hardware scanner always has a target
+    document.addEventListener('click', () => {
+        // Delay slightly so it doesn't interrupt specific clicks on other inputs
+        setTimeout(() => {
+            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                hardwareInput.focus();
+            }
+        }, 1000);
+    });
+
+    // 2. Auto-submit logic for the hardware scanner
+    hardwareInput.addEventListener('input', function () {
+        const val = this.value.trim();
+
+        // Detect if it's a URL or a specific ID format
+        const isUrl = val.includes('http');
+        const isWalkIn = val.startsWith('WALK-');
+        const isRegistered = val.startsWith('PC-');
+
+        if (isUrl || isWalkIn || isRegistered) {
+            this.classList.add('is-valid');
+            // Small delay to ensure the scanner finished typing the full string
+            setTimeout(() => {
+                this.form.submit();
+            }, 300);
+        }
+    });
 </script>
 @endsection

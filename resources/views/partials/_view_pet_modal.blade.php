@@ -94,11 +94,22 @@
                                     </span>
                                 </div>
                                 <div class="col-4 text-end">
-                                    {{-- Unified View Profile Button --}}
-                                    <a href="{{ $pet->user_id
-                                        ? route('staff.pet-owners', $pet->user_id)
-                                        : route('staff.owner.profile', ['id' => $pet->id, 'type' => 'walkin']) }}"
-                                        class="btn btn-sm btn-orange rounded-pill px-3 shadow-sm">
+                                    {{-- Role-aware View Profile Button --}}
+                                    @php
+                                        $isUser = $pet->user_id;
+                                        $rolePrefix = auth()->user()->role === 'admin' ? 'admin' : 'staff';
+
+                                        // Determine the correct route name
+                                        $routeName = $isUser ? $rolePrefix . '.owner.profile' : $rolePrefix . '.owner.profile';
+
+                                        // Note: Check your route names in web.php.
+                                        // If your staff route is 'staff.pet-owners', use this logic:
+                                        $finalRoute = $isUser
+                                            ? route($rolePrefix . (auth()->user()->role === 'staff' ? '.pet-owners' : '.owner.profile'), $pet->user_id)
+                                            : route($rolePrefix . '.owner.profile', ['id' => $pet->id, 'type' => 'walkin']);
+                                    @endphp
+
+                                    <a href="{{ $finalRoute }}" class="btn btn-sm btn-orange rounded-pill px-3 shadow-sm">
                                         <i data-lucide="user" class="me-1" style="width:14px;"></i>
                                         View Owner Profile
                                     </a>

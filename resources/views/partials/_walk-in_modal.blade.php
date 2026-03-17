@@ -297,8 +297,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const walkinBreed = document.getElementById('walkinBreedSelect');
     const walkinOtherContainer = document.getElementById('walkinOtherBreedContainer');
     const breeds = {
-        'Dog': ['Aspin', 'Shih Tzu', 'Pomeranian', 'Pug', 'Chihuahua', 'Golden Retriever', 'Other'],
-        'Cat': ['Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Other']
+        'Dog': ['Aspin', 'Shih Tzu', 'Pomeranian', 'Pug', 'Chihuahua',
+            'Golden Retriever', 'Labrador Retriever', 'Siberian Husky',
+            'German Shepherd', 'Poodle', 'Beagle', 'Bulldog', 'Rottweiler',
+            'Dachshund', 'Yorkshire Terrier', 'Boxer', 'Doberman Pinscher',
+            'Corgi', 'Maltese', 'Bichon Frise', 'Chow Chow', 'Dalmatian', 'Other'],
+
+        'Cat': ['Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Ragdoll',
+            'British Shorthair', 'Sphynx', 'Abyssinian', 'Scottish Fold',
+            'Russian Blue', 'Bengal', 'American Shorthair', 'Himalayan',
+            'Norwegian Forest Cat', 'Oriental Shorthair', 'Other']
     };
 
     if (walkinSpecies) {
