@@ -136,7 +136,7 @@
                                             'pending' => 'bg-warning-subtle text-warning border-warning',
                                             'approved' => 'bg-info-subtle text-info border-info',
                                             'rescheduled' => 'bg-info-subtle text-info border-info',
-                                            'checked-in' => 'bg-primary-subtle text-primary border-primary',
+                                            'checked-in' => 'bg-success-subtle text-success border-success',
                                             'late' => 'bg-secondary-subtle text-secondary border-secondary',
                                             'missed' => 'bg-danger-subtle text-danger border-danger',
                                             'completed' => 'bg-success-subtle text-success border-success',

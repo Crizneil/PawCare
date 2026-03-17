@@ -21,10 +21,6 @@
                     placeholder="Search by Pet ID or Name...">
                 <button class="btn btn-orange rounded-pill px-4">Search</button>
             </form>
-
-            <button class="btn btn-outline-secondary rounded-pill px-4">
-                Export
-            </button>
         </div>
     </div>
 
@@ -76,6 +72,7 @@
                                     $status = $pet->calculated_status;
                                     $badgeClass = match($status) {
                                         'fully_vaccinated'     => 'bg-success',
+                                        'partially_vaccinated' => 'bg-info text-primary',
                                         'due_soon'             => 'bg-warning text-dark',
                                         'overdue'              => 'bg-dark',
                                         'unvaccinated'         => 'bg-danger',

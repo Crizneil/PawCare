@@ -98,6 +98,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/pets/{id}/vaccinate', [VaccineController::class, 'store'])->name('pets.vaccinate');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile/update', [AdminController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/owner-profile/{id}', [AdminController::class, 'showOwner'])->name('owner.profile');
 
     // Archive & Restore Routes
     Route::get('/archive', [AdminController::class, 'archive'])->name('archive');

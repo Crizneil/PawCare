@@ -250,48 +250,53 @@ class PetController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validation
+        // 1. Validation - Notice 'birthdate' vs 'birthday'
         $request->validate([
             'name' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // 2MB Max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'species' => 'required',
-            'gender' => 'required',
+            'gender' => 'required|in:Male,Female',
             'breed' => 'required',
-            'other_species' => 'required_if:breed,Other',
-            'birthday' => 'required|date',
+            'other_breed' => 'required_if:breed,Other', // Matches your modal input name
+            'birthdate' => 'required|date',
+            'user_id' => 'required|exists:users,id', // Changed from birthday to match modal
         ]);
 
         // 2. Handle the "Other" Breed logic
         $finalBreed = ($request->breed === 'Other')
-            ? $request->other_species
+            ? $request->other_breed
             : $request->breed;
 
-        // 3. Handle File Upload
+        // 3. Handle File Upload (Existing logic is fine)
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imageName = time() . '_' . uniqid() . '.' . $request->image->extension();
-            // Move file to public/uploads/pets
             $path = $request->file('image')->store('profiles', 'public');
             $imagePath = '/storage/' . $path;
         }
 
-        // 4. Create the pet record
+        // 4. Determine the Owner
+        // If the admin is adding it, use the selected user_id.
+        // If the owner is adding it, use Auth::id().
+        $ownerId = $request->user_id ?? Auth::id();
+        $ownerRecord = \App\Models\User::find($ownerId);
+
+        // 5. Create the pet record
         Pet::create([
             'pet_id' => 'PC-2026-' . rand(1000, 9999),
-            'user_id' => Auth::id(),
+            'user_id' => $ownerId,
             'name' => $request->name,
-            'gender' => $request->gender,
+            'gender' => $request->gender, // This will now work correctly
             'species' => $request->species,
-            'birthday' => $request->birthday,
+            'birthday' => $request->birthdate, // Map birthdate from form to birthday in DB
             'breed' => $finalBreed,
-            'owner' => Auth::user()->name,
-            'image_url' => $imagePath, // Save the path here
+            'owner' => $ownerRecord->name ?? 'Unknown Owner',
+            'image_url' => $imagePath,
             'status' => 'ACTIVE',
             'last_date' => now(),
             'vaccine_type' => 'None',
         ]);
 
-        return redirect()->route('pet-owner.pet-records')->with('success', 'Pet registered successfully!');
+        return redirect()->back()->with('success', 'Pet registered successfully!');
     }
 
     public function destroy($id)

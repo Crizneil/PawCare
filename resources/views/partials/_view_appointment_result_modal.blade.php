@@ -34,12 +34,12 @@
                         @if(in_array(strtolower($appointment->service_type), ['vaccination', 'deworming']))
                             <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Vaccine/Treatment</label>
                             <span class="fw-bold text-dark mb-0" style="color: #fd7e14;">
-                                {{ $appointment->vaccine_name ?? 'Not Specified' }}
+                                {{ $appointment->vaccine_name ?? ($appointment->pet->latestVaccination->vaccine_name ?? 'Not Specified') }}
                             </span>
                         @else
                             {{-- Replaced Status with Administered By for Checkups --}}
                             <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Administered By</label>
-                            <p class="fw-medium mb-0 text-dark">{{ $appointment->administered_by ?? 'Clinic Staff' }}</p>
+                            <p class="fw-bold mb-0 text-dark">{{ $appointment->administered_by ?? 'Clinic Staff' }}</p>
                         @endif
                     </div>
 
@@ -48,7 +48,7 @@
                     <div class="col-6">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Batch Number</label>
                         <p class="fw-medium mb-0 text-dark">
-                            {{ $appointment->batch_no ?? '---' }}
+                            {{ $appointment->batch_no ?? ($appointment->pet->latestVaccination->batch_no ?? '---') }}
                         </p>
                         <small class="text-muted" style="font-size: 0.65rem;">Inventory Record</small>
                     </div>
@@ -56,7 +56,7 @@
 
                     <div class="{{ in_array(strtolower($appointment->service_type), ['vaccination', 'deworming']) ? 'col-6 text-end' : 'col-12 text-center' }}">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Date Administered</label>
-                        <p class="fw-medium mb-0 text-dark">
+                        <p class="fw-bold mb-0 text-dark">
                             {{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}
                         </p>
                     </div>
@@ -65,7 +65,7 @@
                     @if(in_array(strtolower($appointment->service_type), ['vaccination', 'deworming']))
                     <div class="col-12 text-center mt-2">
                         <label class="text-muted small fw-bold text-uppercase mb-1 d-block">Administered By</label>
-                        <p class="fw-medium mb-0 text-dark"><i data-lucide="user" class="me-1" style="width: 14px;"></i> {{ $appointment->administered_by ?? 'Clinic Staff' }}</p>
+                        <p class="fw-bold mb-0 text-dark"><i data-lucide="user" class="me-1" style="width: 14px;"></i> {{ $appointment->administered_by ?? 'Clinic Staff' }}</p>
                     </div>
                     @endif
 
@@ -75,7 +75,10 @@
                             <div>
                                 <label class="text-muted small fw-bold text-uppercase d-block" style="font-size: 0.65rem;">Follow-Up Date</label>
                                 <h5 class="fw-bold mb-0 text-dark" style="color: #fd7e14;">
-                                    {{ $appointment->next_due_date ? \Carbon\Carbon::parse($appointment->next_due_date)->format('F d, Y') : 'No Follow-up Set' }}
+                                    @php
+                                        $nextDate = $appointment->next_due_date ?? ($appointment->pet->latestVaccination->next_due_date ?? null);
+                                    @endphp
+                                    {{ $nextDate ? \Carbon\Carbon::parse($nextDate)->format('F d, Y') : 'No Follow-up Set' }}
                                 </h5>
                             </div>
                             <div class="text-end">

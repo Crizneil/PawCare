@@ -40,15 +40,31 @@
                                 </td>
                                 <td>
                                     @php
-                                        $statusClass = match($vax->status) {
-                                            'vaccinated' => 'bg-success-subtle text-success border-success',
-                                            'needs_booster' => 'bg-warning-subtle text-warning border-warning',
-                                            'overdue' => 'bg-danger-subtle text-danger border-danger',
-                                            default => 'bg-secondary-subtle text-secondary'
-                                        };
+                                        $statusClass = 'bg-secondary-subtle text-secondary';
+                                        $statusLabel = 'No Date';
+
+                                        if ($vax->next_due_date) {
+                                            $dueDate = \Carbon\Carbon::parse($vax->next_due_date);
+                                            $now = \Carbon\Carbon::now();
+                                            $daysRemaining = $now->diffInDays($dueDate, false); // false allows negative numbers for overdue
+
+                                            if ($daysRemaining < 0) {
+                                                // Past the due date
+                                                $statusClass = 'bg-danger-subtle text-danger border-danger';
+                                                $statusLabel = 'Overdue';
+                                            } elseif ($daysRemaining <= 30) {
+                                                // Within 30 days of due date
+                                                $statusClass = 'bg-warning-subtle text-warning border-warning';
+                                                $statusLabel = 'Due Soon';
+                                            } else {
+                                                // More than 30 days remaining
+                                                $statusClass = 'bg-success-subtle text-success border-success';
+                                                $statusLabel = 'Up to Date';
+                                            }
+                                        }
                                     @endphp
                                     <span class="badge border px-2 {{ $statusClass }}">
-                                        {{ ucfirst($vax->status) }}
+                                        {{ $statusLabel }}
                                     </span>
                                 </td>
                             </tr>

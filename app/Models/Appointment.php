@@ -18,6 +18,7 @@ class Appointment extends Model
         'pet_id',
         'pet_name',
         'species',
+        'gender',
         'appointment_date',
         'appointment_time',
         'service_type',

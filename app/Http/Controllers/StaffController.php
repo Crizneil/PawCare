@@ -22,7 +22,7 @@ class StaffController extends Controller
     {
         return view('staff.dashboard', [
             'appointmentsToday' => Appointment::whereDate('appointment_date', today())
-                ->where('status', 'approved')
+                ->whereIn('status', ['approved', 'checked-in'])
                 ->get(),
             'dueForVaccination' => Pet::notDeceased()->where('status', 'needs_booster')->limit(5)->get(),
             'lowStock' => VaccineInventory::whereColumn('stock', '<=', 'low_stock_threshold')->get(),
@@ -78,10 +78,12 @@ class StaffController extends Controller
 
     public function updateAppointmentStatus(Request $request, $id,)
     {
+        $request->validate([
+            'status' => 'required|string'
+        ]);
+
         $newStatus = $request->status;
         $appointment = Appointment::findOrFail($id);
-
-        // Normalize to lowercase for the check
         $checkStatus = strtolower($newStatus);
 
         if (in_array($checkStatus, ['done', 'completed'])) {
@@ -128,6 +130,10 @@ class StaffController extends Controller
                 if ($inventory && $inventory->stock > 0) {
                     $inventory->decrement('stock', 1);
                 }
+                $appointment->batch_no = $batchNo;
+                $appointment->vaccine_name = $finalName;
+                $appointment->next_due_date = now()->addYear();
+                $appointment->administered_by = auth()->user()->name;
             }
 
             $appointment->save();
@@ -136,6 +142,10 @@ class StaffController extends Controller
         } else {
             // Handle simple status updates like 'checked-in', 'late', etc.
             $appointment->status = $newStatus;
+            if (!$appointment->status) {
+                return back()->with('error', 'Invalid status provided.');
+            }
+
             $appointment->save();
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
         }
@@ -235,6 +245,7 @@ class StaffController extends Controller
             'user_id' => $userId,
             'pet_id' => $pet->id,
             'pet_name' => $pet->name,
+            'gender' => $request->gender,
             'species' => $pet->species,
             'appointment_date' => $request->schedule_date ?? now()->toDateString(),
             'appointment_time' => $request->schedule_time,
@@ -258,12 +269,16 @@ class StaffController extends Controller
 
         // Check if $search is exactly a pet ID or internal ID
         // (Assuming if it matches 'PC-' or is numeric, it's likely a direct ID search)
-        $isSpecificId = $search && (str_starts_with(strtoupper($search), 'PC-') || is_numeric($search));
+        $isSpecificId = $search && (
+            str_starts_with(strtoupper($search), 'PC-') ||
+            str_starts_with(strtoupper($search), 'WALK-') ||
+            is_numeric($search)
+        );
 
         if ($isSpecificId) {
             $query->withTrashed()->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                    ->orWhere('pet_id', 'like', "%{$search}%");
+                    ->orWhere('pet_id', $search);
             });
         } else {
             if ($view === 'archived') {
@@ -708,7 +723,7 @@ class StaffController extends Controller
 
     // Pass $summaryData to both PDF and View
     if ($request->has('pdf')) {
-        $pdf = Pdf::loadView($viewPath, compact('data', 'reportTitle', 'type', 'summaryData'))
+        $pdf = Pdf::loadView($viewPath, compact('data', 'reportTitle', 'type', 'summaryData', 'filter'))
                     ->setPaper('a4', 'portrait');
         return $pdf->download("PawCare_Daily_Summary.pdf");
     }

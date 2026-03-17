@@ -64,6 +64,10 @@
                             class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                             <i data-lucide="layout-grid"></i> Overview
                         </a>
+                        <a href="{{ route('admin.appointments') }}"
+                            class="nav-link {{ request()->is('admin/appointments*') ? 'active' : '' }}">
+                            <i data-lucide="calendar"></i> Appointments
+                        </a>
                         <a href="{{ route('admin.pet-records') }}"
                             class="nav-link {{ request()->routeIs('admin.pet-records') ? 'active' : '' }}">
                             <i data-lucide="shield-check"></i> Pet Database
@@ -71,10 +75,6 @@
                         <a href="{{ route('admin.employees') }}"
                             class="nav-link {{ request()->is('admin/employees*') ? 'active' : '' }}">
                             <i data-lucide="users"></i> Staff
-                        </a>
-                        <a href="{{ route('admin.appointments') }}"
-                            class="nav-link {{ request()->is('admin/appointments*') ? 'active' : '' }}">
-                            <i data-lucide="calendar"></i> Appointments
                         </a>
                         <a href="{{ route('admin.logs') }}"
                             class="nav-link {{ request()->is('admin/logs*') ? 'active' : '' }}">
@@ -247,7 +247,7 @@
                 // Intercept DECEASED status modifications
                 if (isDeceasedStatus) {
                     e.preventDefault();
-                    
+
                     Swal.fire({
                         title: 'Confirm Deceased Status',
                         text: "Marking this pet as DECEASED will archive the record. This is a solemn action.",
@@ -256,10 +256,10 @@
                         confirmButtonColor: '#2c3e50',
                         confirmButtonText: 'Yes, confirm DECEASED',
                         cancelButtonText: 'Cancel',
-                        customClass: { 
-                            popup: 'rounded-4 border-0 shadow-lg', 
-                            confirmButton: 'rounded-pill px-4', 
-                            cancelButton: 'rounded-pill px-4' 
+                        customClass: {
+                            popup: 'rounded-4 border-0 shadow-lg',
+                            confirmButton: 'rounded-pill px-4',
+                            cancelButton: 'rounded-pill px-4'
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -267,7 +267,7 @@
                             $form[0].submit();
                         }
                     });
-                    
+
                     return;
                 }
 

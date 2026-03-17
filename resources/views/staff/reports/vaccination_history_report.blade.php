@@ -112,7 +112,7 @@
                 <td class="sig-box">
                     <p style="margin:0; font-size: 11px;">Noted By:</p>
                     <div class="sig-line"></div>
-                    <p class="sig-name">DR. [NAME], DVM</p>
+                    <p class="sig-name">DR. IMELDA E. ARGUELLES</p>
                     <p style="margin:0; font-size: 10px;">City Veterinarian</p>
                 </td>
             </tr>
