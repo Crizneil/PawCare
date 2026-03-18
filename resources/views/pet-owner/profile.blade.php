@@ -35,9 +35,9 @@
                                     <div class="bg-light rounded-circle p-2 me-3">
                                         <i data-lucide="mail" class="text-muted" style="width: 18px;"></i>
                                     </div>
-                                    <div>
+                                    <div class="overflow-hidden"> {{-- Added wrapper to contain the break --}}
                                         <label class="small text-muted d-block">Email Address</label>
-                                        <span class="fw-bold text-dark">{{ auth()->user()->email }}</span>
+                                        <span class="fw-bold text-dark text-break">{{ auth()->user()->email }}</span>
                                     </div>
                                 </div>
                             </div>

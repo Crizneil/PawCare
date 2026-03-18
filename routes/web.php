@@ -143,6 +143,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::get('/owner/{id}', [StaffController::class, 'ownerProfile'])->name('owner.profile');
     Route::get('/owner-profile/{id}', [StaffController::class, 'ownerProfile'])->name('pet-owners');
     Route::post('/owner/{id}/create-account', [StaffController::class, 'createAccount'])->name('owner.createAccount');
+    Route::get('/owner/{id}/pets', [StaffController::class, 'getPetsByOwner'])->name('owner.pets');
 
     // Inventory
     Route::get('/vaccine-inventory', [StaffController::class, 'vaccineInventory'])->name('vaccine-inventory');
@@ -156,6 +157,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::post('/pets/{id}/restore-deceased', [AdminController::class, 'restoreDeceasedPet'])->name('pets.restore-deceased');
     Route::post('/pets/{id}/restore', [AdminController::class, 'restorePet'])->name('pets.restore');
     Route::delete('/pets/{id}/force-delete', [AdminController::class, 'forceDeletePet'])->name('pets.force-delete');
+
 });
 
 // Pet Owner Routes

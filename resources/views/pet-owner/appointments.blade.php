@@ -8,6 +8,32 @@
             <div>
                 <h2 class="fw-bold mb-0">Appointment Availability</h2>
                 <p class="text-muted small">Select an available date on the calendar below to set an appointment.</p>
+                
+                {{-- Today's Quick Status Badge --}}
+                @php
+                    $statusText = 'Available Slot';
+                    $statusColor = 'success';
+                    $isDisabled = false;
+
+                    if ($totalBookedToday >= $totalSlots) {
+                        $statusText = 'Fully Booked';
+                        $statusColor = 'danger';
+                        $isDisabled = true;
+                    } elseif ($userBookedToday >= 2) {
+                        $statusText = 'Limit Reached';
+                        $statusColor = 'danger';
+                        $isDisabled = true;
+                    } elseif ($userBookedToday == 1) {
+                        $statusText = 'Limited Slot';
+                        $statusColor = 'warning';
+                    }
+                @endphp
+
+                <div class="mt-2">
+                    <span class="badge bg-{{ $statusColor }} px-3 py-2 rounded-pill shadow-sm">
+                        <i class="bi bi-info-circle me-1"></i> Today's Clinic: <strong>{{ $statusText }}</strong>
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -18,20 +44,20 @@
         {{-- Calendar Legend --}}
         <div class="d-flex flex-wrap align-items-center gap-3 mb-4 small text-muted">
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #e3f7e7;"></span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #16f543;"></span>
                 <span>All Slots Free (No Bookings)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fff7cc;"></span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #f4df68;"></span>
                 <span>Limited Slots (Some Times Taken)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fde8e7;"></span>
-                <span>Fully Booked / You Already Booked</span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fa4e45;"></span>
+                <span>Fully Booked / Limit Reached</span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #ececec;"></span>
-                <span>Closed (Saturday / Sunday)</span>
+                <span>Closed (Friday - Sunday)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #f8f9fa;"></span>
@@ -154,9 +180,10 @@
                     <input type="hidden" name="appointment_date" id="appointment_date_input">
                     <div class="modal-body p-4 text-start">
 
-                        <div class="mb-4">
+                        <div class="mb-4 text-center">
                             <label class="small fw-bold text-muted mb-1">Appointment Schedule</label>
                             <h5 class="fw-bold text-primary mb-0" id="appointmentScheduleDisplay">Select a Date</h5>
+                            <div id="modalStatusBadge" class="mt-2 text-center"></div>
                         </div>
 
                         <div class="row g-4">
@@ -207,7 +234,10 @@
                         </div>
                     </div>
                     <div class="modal-footer border-top p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="saveAppointmentBtn">Save Appointment</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="saveAppointmentBtn" 
+                            {{ ($totalBookedToday >= $totalSlots || $userBookedToday >= 2) ? 'disabled' : '' }}>
+                            Save Appointment
+                        </button>
                         <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
                     </div>
                 </form>
@@ -352,8 +382,19 @@
         }
 
         .availability-full {
-            background-color: #ef4444; /* red-500 */
+            background-color: #ef4444 !important; /* red-500 */
             box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+
+        .availability-limited {
+            background-color: #facc15 !important; /* yellow-400 */
+            color: #854d0e !important; /* dark yellow text */
+            box-shadow: 0 2px 4px rgba(250, 204, 21, 0.2);
+        }
+
+        .availability-free {
+            background-color: #10b981 !important; /* emerald-500 */
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
         }
 
         /* Modal Enhancements */
@@ -380,35 +421,32 @@
     </style>
 
 <script>
-   document.addEventListener('DOMContentLoaded', async function () {
-    var calendarEl = document.getElementById('userCalendar');
-    var appointmentModal = new bootstrap.Modal(document.getElementById('setAppointmentModal'));
-    var scheduleDisplay = document.getElementById('appointmentScheduleDisplay');
-    var dateInput = document.getElementById('appointment_date_input');
-    var timeSelect = document.getElementById('appointment_time_select');
-    var serviceSelect = document.getElementById('service_type_select');
-
-    const PREDEFINED_TIMES = [
-        { label: "8:00 AM - 8:30 AM", value: "08:00" },
-        { label: "8:30 AM - 9:00 AM", value: "08:30" },
-        { label: "9:00 AM - 9:30 AM", value: "09:00" },
-        { label: "9:30 AM - 10:00 AM", value: "09:30" },
-        { label: "10:00 AM - 10:30 AM", value: "10:00" },
-        { label: "10:30 AM - 11:00 AM", value: "10:30" },
-        { label: "11:00 AM - 11:30 AM", value: "11:00" },
-        { label: "11:30 AM - 12:00 PM (Morning Cut-off)", value: "11:30" },
-        { label: "1:00 PM - 1:30 PM", value: "13:00" },
-        { label: "1:30 PM - 2:00 PM", value: "13:30" },
-        { label: "2:00 PM - 2:30 PM", value: "14:00" },
-        { label: "2:30 PM - 3:00 PM", value: "14:30" },
-        { label: "3:00 PM - 3:30 PM", value: "15:00" },
-        { label: "3:30 PM - 4:00 PM", value: "15:30" },
-        { label: "4:00 PM - 4:30 PM", value: "16:00" },
-        { label: "4:30 PM - 5:00 PM", value: "16:30" }
-    ];
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('userCalendar');
+    const appointmentModal = new bootstrap.Modal(document.getElementById('setAppointmentModal'));
+    const scheduleDisplay = document.getElementById('appointmentScheduleDisplay');
+    const dateInput = document.getElementById('appointment_date_input');
+    const timeSelect = document.getElementById('appointment_time_select');
+    const serviceSelect = document.getElementById('service_type_select');
+    const petSelect = document.querySelector('select[name="pet_id"]');
 
     let availabilityData = {};
-    let ownerBookedDates = []; // Now expected to be an array of objects per date
+    let ownerBookedDates = {};
+    let isFetching = false;
+    
+    // SERVER-SIDE USER ID LOG
+    console.log("[JS DEBUG] Logic is checking for User ID:", {{ auth()->id() ?? 'null' }});
+
+    const PREDEFINED_TIMES = [
+        { label: "8:00 AM - 8:30 AM", value: "08:00" }, { label: "8:30 AM - 9:00 AM", value: "08:30" },
+        { label: "9:00 AM - 9:30 AM", value: "09:00" }, { label: "9:30 AM - 10:00 AM", value: "09:30" },
+        { label: "10:00 AM - 10:30 AM", value: "10:00" }, { label: "10:30 AM - 11:00 AM", value: "10:30" },
+        { label: "11:00 AM - 11:30 AM", value: "11:00" }, { label: "11:30 AM - 12:00 PM (Cut-off)", value: "11:30" },
+        { label: "1:00 PM - 1:30 PM", value: "13:00" }, { label: "1:30 PM - 2:00 PM", value: "13:30" },
+        { label: "2:00 PM - 2:30 PM", value: "14:00" }, { label: "2:30 PM - 3:00 PM", value: "14:30" },
+        { label: "3:00 PM - 3:30 PM", value: "15:00" }, { label: "3:30 PM - 4:00 PM", value: "15:30" },
+        { label: "4:00 PM - 4:30 PM", value: "16:00" }, { label: "4:30 PM - 5:00 PM", value: "16:30" }
+    ];
 
     const formatLocalToISODate = (dateObj) => {
         const year = dateObj.getFullYear();
@@ -418,14 +456,107 @@
     };
 
     async function fetchAvailability(startStr, endStr) {
+        if (isFetching) return;
+        isFetching = true;
         try {
             const res = await fetch(`{{ route('pet-owner.api.available-slots') }}?start=${startStr}&end=${endStr}`);
             const data = await res.json();
+            console.log("[API DEBUG] Raw response:", data);
             availabilityData = data.booked_slots || {};
             ownerBookedDates = data.owner_booked_dates || {};
+            
+            // Dynamically update the DOM since FullCalendar's dayCellDidMount ran before the API returned
+            updateAllCalendarCells();
         } catch (err) {
             console.error("Failed to fetch slots", err);
+        } finally {
+            isFetching = false;
         }
+    }
+
+    function updatePetOptions(selectedDate) {
+        let bookedForThisDate = ownerBookedDates[selectedDate] || [];
+        if (typeof bookedForThisDate === 'object' && !Array.isArray(bookedForThisDate)) {
+            bookedForThisDate = Object.values(bookedForThisDate);
+        }
+        const busyPetIds = bookedForThisDate.map(appt => String(appt.pet_id));
+
+        Array.from(petSelect.options).forEach(option => {
+            if (option.value === "") return;
+            const originalText = option.getAttribute('data-original-text') || option.text;
+            if (!option.hasAttribute('data-original-text')) option.setAttribute('data-original-text', originalText);
+            
+            if (busyPetIds.includes(option.value)) {
+                option.disabled = true;
+                option.text = originalText + " (Already Scheduled)";
+            } else {
+                option.disabled = false;
+                option.text = originalText;
+            }
+        });
+    }
+
+    function updateAllCalendarCells() {
+        const dayCells = document.querySelectorAll('.fc-daygrid-day');
+        dayCells.forEach(cell => {
+            const dateStr = cell.getAttribute('data-date');
+            if (!dateStr) return;
+
+            const valParts = dateStr.split('-');
+            const cellDate = new Date(valParts[0], valParts[1] - 1, valParts[2]);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+
+            // 1. Clear existing states
+            cell.classList.remove('fc-day-available', 'fc-day-limited', 'fc-day-full', 'fc-day-closed', 'fc-day-passed');
+            const frame = cell.querySelector('.fc-daygrid-day-frame');
+            if (!frame) return;
+
+            const oldIndicator = frame.querySelector('.availability-indicator');
+            if (oldIndicator) oldIndicator.remove();
+
+            if (cellDate < todayDate) {
+                cell.classList.add('fc-day-passed');
+                return;
+            }
+
+            // 2. Normalize Data
+            const bookedTimes = availabilityData[dateStr] || [];
+            const totalBookedCount = Array.isArray(bookedTimes) ? bookedTimes.length : Object.keys(bookedTimes).length;
+            const ownerAppointments = ownerBookedDates[dateStr] || [];
+            const ownerCount = Array.isArray(ownerAppointments) ? ownerAppointments.length : Object.keys(ownerAppointments).length;
+
+            const dayOfWeek = cellDate.getDay();
+            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+            
+            // 3. Create & Apply new indicator matching backend truth
+            const indicator = document.createElement('div');
+            indicator.className = 'availability-indicator';
+
+            if (isClosedDay) {
+                cell.classList.add('fc-day-closed');
+                indicator.classList.add('availability-full');
+                indicator.innerText = "Closed";
+            } else if (ownerCount >= 2) {
+                cell.classList.add('fc-day-full');
+                indicator.classList.add('availability-full');
+                indicator.innerText = "Limit Reached";
+            } else if (totalBookedCount >= 20) {
+                cell.classList.add('fc-day-full');
+                indicator.classList.add('availability-full');
+                indicator.innerText = "Fully Booked";
+            } else if (ownerCount === 1) {
+                cell.classList.add('fc-day-limited');
+                indicator.classList.add('availability-limited');
+                indicator.innerText = "Limited Slot";
+            } else {
+                cell.classList.add('fc-day-available');
+                indicator.classList.add('availability-free');
+                indicator.innerText = "Available Slot";
+            }
+
+            frame.appendChild(indicator);
+        });
     }
 
     function updateAvailableTimes() {
@@ -434,19 +565,13 @@
         const bookedTimes = availabilityData[selectedDate] || [];
 
         timeSelect.innerHTML = '<option value="">Select Time</option>';
-
         PREDEFINED_TIMES.forEach((timeObj, index) => {
             let opt = document.createElement('option');
             let isUnavailable = bookedTimes.includes(timeObj.value);
 
-            // Logic for Kapon (Needs current slot AND the next slot free)
             if (selectedService === 'kapon') {
                 const nextTimeObj = PREDEFINED_TIMES[index + 1];
-
-                // Cannot book Kapon if it's the last slot of the morning/afternoon session
-                const isEndOfSession = (timeObj.value === "11:30" || timeObj.value === "16:30");
-
-                if (isEndOfSession || !nextTimeObj || bookedTimes.includes(nextTimeObj.value)) {
+                if (timeObj.value === "11:30" || timeObj.value === "16:30" || !nextTimeObj || bookedTimes.includes(nextTimeObj.value)) {
                     isUnavailable = true;
                 }
             }
@@ -456,40 +581,50 @@
                 opt.innerText = `${timeObj.label} (Unavailable)`;
             } else {
                 opt.value = timeObj.value;
-                opt.innerText = (selectedService === 'kapon') ? `${timeObj.label}` : timeObj.label;
+                opt.innerText = timeObj.label;
             }
             timeSelect.appendChild(opt);
         });
     }
 
-    // Refresh times when service type changes
     serviceSelect.addEventListener('change', updateAvailableTimes);
 
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: { left: 'today prev,next', center: 'title', right: '' },
         height: 'auto',
-        datesSet: async function (info) {
-            await fetchAvailability(info.startStr.split('T')[0], info.endStr.split('T')[0]);
-            calendar.render();
+        datesSet: function (info) {
+            fetchAvailability(info.startStr.split('T')[0], info.endStr.split('T')[0]);
         },
         dayCellDidMount: function (info) {
             const dateStr = formatLocalToISODate(info.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
 
-            const dayOfWeek = info.date.getDay();
-            // CLOSED: Friday (5), Saturday (6), Sunday (0)
-            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+            info.el.classList.remove('fc-day-available', 'fc-day-limited', 'fc-day-full', 'fc-day-closed', 'fc-day-passed');
+            const frame = info.el.querySelector('.fc-daygrid-day-frame');
+            if (frame) {
+                const oldIndicator = frame.querySelector('.availability-indicator');
+                if (oldIndicator) oldIndicator.remove();
+            }
 
-            const ownerAppointments = ownerBookedDates[dateStr] || [];
-            const isLimitReached = ownerAppointments.length >= 2;
-
-            if (info.date < today) {
+            if (info.date < todayDate) {
                 info.el.classList.add('fc-day-passed');
                 return;
             }
 
+            const bookedTimes = availabilityData[dateStr] || [];
+            const totalBookedCount = Array.isArray(bookedTimes) ? bookedTimes.length : Object.keys(bookedTimes).length;
+            const ownerAppointments = ownerBookedDates[dateStr] || [];
+            const ownerCount = Array.isArray(ownerAppointments) ? ownerAppointments.length : Object.keys(ownerAppointments).length;
+            
+            // LOG RAW DATA FOR EVERY DATE WITH BOOKINGS
+            if (ownerCount > 0 || totalBookedCount > 0) {
+                console.log(`[Calendar Debug] Date: ${dateStr}, My Count: ${ownerCount}, Total Count: ${totalBookedCount}, Raw My Data:`, ownerAppointments);
+            }
+
+            const dayOfWeek = info.date.getDay();
+            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
             const indicator = document.createElement('div');
             indicator.className = 'availability-indicator';
 
@@ -497,40 +632,77 @@
                 info.el.classList.add('fc-day-closed');
                 indicator.classList.add('availability-full');
                 indicator.innerText = "Closed";
-            } else if (isLimitReached) {
+            } else if (ownerCount >= 2) {
                 info.el.classList.add('fc-day-full');
                 indicator.classList.add('availability-full');
-                indicator.innerText = "Daily Limit Met";
+                indicator.innerText = "Limit Reached";
+                console.log(`[Limit Reached] Date: ${dateStr}, My Bookings: ${ownerCount}`);
+            } else if (totalBookedCount >= 20) {
+                info.el.classList.add('fc-day-full');
+                indicator.classList.add('availability-full');
+                indicator.innerText = "Fully Booked";
+            } else if (ownerCount === 1) {
+                info.el.classList.add('fc-day-limited');
+                indicator.classList.add('availability-limited');
+                indicator.innerText = "Limited Slot";
+                console.log(`[Limited Slot] Date: ${dateStr}, My Bookings: ${ownerCount}`);
             } else {
-                const count = (availabilityData[dateStr] || []).length;
-                if (count >= 16) {
-                    info.el.classList.add('fc-day-full');
-                    indicator.classList.add('availability-full');
-                    indicator.innerText = "Fully Booked";
-                } else {
-                    info.el.classList.add('fc-day-available');
-                    indicator.innerText = count === 0 ? "All Slots Free" : "Slots Available";
-                }
+                info.el.classList.add('fc-day-available');
+                indicator.classList.add('availability-free');
+                indicator.innerText = "Available Slot";
             }
-            info.el.querySelector('.fc-daygrid-day-frame').appendChild(indicator);
+
+            if (frame) frame.appendChild(indicator);
         },
         dateClick: function (info) {
             const dateStr = info.dateStr;
             const dayOfWeek = info.date.getDay();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const todayCheck = new Date();
+            todayCheck.setHours(0, 0, 0, 0);
 
-            // Block Closed Days (Fri-Sun) and Limit of 2
-            if (info.date < today || [0, 5, 6].includes(dayOfWeek)) return;
-            if ((ownerBookedDates[dateStr] || []).length >= 2) {
-                alert("You have reached the maximum of 2 appointments for this day.");
+            if (info.date < todayCheck || [0, 5, 6].includes(dayOfWeek)) return;
+
+            let userBookingsToday = ownerBookedDates[dateStr] || [];
+            if (typeof userBookingsToday === 'object' && !Array.isArray(userBookingsToday)) userBookingsToday = Object.values(userBookingsToday);
+            const ownerCount = userBookingsToday.length;
+            const dayBookings = availabilityData[dateStr] || [];
+
+            if (ownerCount >= 2) {
+                alert("Maximum limit reached for this day (" + ownerCount + "/2).");
+                return;
+            }
+            if (dayBookings.length >= 20) {
+                alert("Clinic is fully booked for this date.");
                 return;
             }
 
             dateInput.value = dateStr;
             scheduleDisplay.innerText = info.date.toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
-            serviceSelect.value = ""; // Reset service to force user selection
+            updatePetOptions(dateStr);
+            serviceSelect.value = "";
             timeSelect.innerHTML = '<option value="">Please select a service first</option>';
+            
+            // Modal Status Badge Logic
+            const statusBadge = document.getElementById('modalStatusBadge');
+            let badgeHtml = '';
+            let isDateFull = false;
+            
+            if (ownerCount >= 2) {
+                badgeHtml = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Limit Reached (2/2)</span>';
+                isDateFull = true;
+            } else if (dayBookings.length >= 20) {
+                badgeHtml = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Clinic Fully Booked</span>';
+                isDateFull = true;
+            } else if (ownerCount === 1) {
+                badgeHtml = '<span class="badge bg-warning px-3 py-2 rounded-pill shadow-sm text-dark">Limited Slot (1 Left)</span>';
+            } else {
+                badgeHtml = '<span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">Available Slot</span>';
+            }
+            if (statusBadge) statusBadge.innerHTML = badgeHtml;
+            
+            const saveBtn = document.getElementById('saveAppointmentBtn');
+            if (saveBtn) saveBtn.disabled = isDateFull;
+
             appointmentModal.show();
         }
     });

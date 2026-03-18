@@ -14,25 +14,15 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 flex-grow-1 flex-md-grow-0">
-                @if($view === 'archived')
-                    <a href="{{ route('staff.pet-records') }}" class="btn btn-light rounded-pill px-4 shadow-sm border">
-                        <i data-lucide="arrow-left" class="me-2" style="width: 18px;"></i> Back to Active
-                    </a>
-                @else
-                    <a href="{{ route('staff.pet-records', ['view' => 'archived']) }}"
-                        class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
-                        <i data-lucide="archive" class="me-2" style="width: 18px;"></i> View Archived
-                    </a>
-                    <form action="{{ route('staff.pet-records') }}" method="GET" class="d-inline">
-                        <div class="input-group">
-                            <input type="text" name="search" class="form-control border-0 shadow-sm rounded-pill px-3"
-                                placeholder="Search Pet..." value="{{ request('search') }}" style="min-width: 200px;">
-                            <button class="btn btn-orange rounded-pill ms-2 px-4 shadow-sm" type="submit">
-                                <i data-lucide="search" style="width: 18px;"></i>
-                            </button>
-                        </div>
-                    </form>
-                @endif
+                <form action="{{ route('staff.pet-records') }}" method="GET" class="d-inline">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control border-0 shadow-sm rounded-pill px-3"
+                            placeholder="Search Pet..." value="{{ request('search') }}" style="min-width: 200px;">
+                        <button class="btn btn-orange rounded-pill ms-2 px-4 shadow-sm" type="submit">
+                            <i data-lucide="search" style="width: 18px;"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

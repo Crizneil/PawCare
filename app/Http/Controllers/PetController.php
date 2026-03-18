@@ -53,20 +53,35 @@ class PetController extends Controller
         // Pet Count
         $petCount = $pets->count();
 
-        // Upcoming Appointment (sample for now)
-        $nextAppointment = 'Feb 25, 2026';
-        $appointmentStatus = 'Confirmed';
+        // Fetch real upcoming appointment
+        $latestAppointment = Appointment::where('user_id', Auth::id())
+            ->whereDate('appointment_date', '>=', now()->toDateString())
+            ->whereIn('status', ['pending', 'approved', 'rescheduled'])
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->first();
+
+        $nextAppointment = $latestAppointment
+            ? Carbon::parse($latestAppointment->appointment_date)->format('M d, Y')
+            : 'No Appointment';
+        $appointmentStatus = $latestAppointment
+            ? ucfirst($latestAppointment->status)
+            : '';
 
         // Upcoming Vaccine Due
-        $nextVaccine = optional(
-            $pets->sortBy('next_date')->first()
+        $nextVaccineDate = optional(
+            $pets->whereNotNull('next_date')->sortBy('next_date')->first()
         )->next_date;
+
+        $nextVaccine = $nextVaccineDate
+            ? Carbon::parse($nextVaccineDate)->format('M d, Y')
+            : 'No Due Vaccine';
 
         // Reminder Alert Logic
         $vaccineReminder = null;
 
-        if ($nextVaccine) {
-            $daysRemaining = now()->diffInDays($nextVaccine, false);
+        if ($nextVaccineDate) {
+            $daysRemaining = now()->startOfDay()->diffInDays(Carbon::parse($nextVaccineDate)->startOfDay(), false);
 
             if ($daysRemaining <= 7 && $daysRemaining >= 0) {
                 $vaccineReminder = 'Rabies Vaccine due in ' . $daysRemaining . ' day(s)';
@@ -89,13 +104,31 @@ class PetController extends Controller
 
     public function appointments()
     {
-        // Fetch the owner's appointments
+        $today = now()->toDateString();
+        $totalSlots = 20; // Clinic capacity (e.g., 20)
+
+        // 1. Calculate stats for the Status Badge (Today)
+        $totalBookedToday = Appointment::where('appointment_date', $today)
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->count();
+
+        $userBookedToday = Appointment::where('appointment_date', $today)
+            ->where('user_id', auth()->id())
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->count();
+
+        // 2. Fetch the owner's appointment history
         $appointments = Appointment::where('user_id', auth()->id())
             ->where('status', '!=', 'cancelled')
             ->latest()
             ->paginate(10);
 
-        return view('pet-owner.appointments', compact('appointments'));
+        return view('pet-owner.appointments', compact(
+            'appointments',
+            'totalBookedToday',
+            'userBookedToday',
+            'totalSlots'
+        ));
     }
     public function cancelAppointment($id)
     {
@@ -119,50 +152,58 @@ class PetController extends Controller
      */
     public function getAvailableSlots(Request $request)
     {
-        $start = Carbon::parse($request->start)->startOfDay();
-        $end = Carbon::parse($request->end)->endOfDay();
-
+        $start = Carbon::parse($request->start)->format('Y-m-d');
+        $end = Carbon::parse($request->end)->format('Y-m-d');
         $ownerId = auth()->id();
 
-        // Get all booked appointments (that are not cancelled/rejected/done/completed)
-        // Passed/Done appointments shouldn't consume future visual clinic capacity unless they block a specific slot
-        $appointments = Appointment::whereBetween('appointment_date', [$start->format('Y-m-d'), $end->format('Y-m-d')])
-            ->whereNotIn('status', ['cancelled', 'rejected', 'done', 'completed'])
+        // 1. Fetch ALL appointments for the range (including completed ones)
+        // We only exclude truly 'dead' appointments like cancelled/rejected
+        $appointments = Appointment::whereBetween('appointment_date', [$start, $end])
+            ->whereNotIn('status', ['cancelled', 'rejected'])
             ->get();
 
         $bookedSlots = [];
         $ownerBookedDates = [];
 
         foreach ($appointments as $appt) {
-        $date = $appt->appointment_date;
-        $time = date('H:i', strtotime($appt->appointment_time));
+            $date = date('Y-m-d', strtotime($appt->appointment_date));
+            $time = date('H:i', strtotime($appt->appointment_time));
+            $status = strtolower($appt->status);
 
-        if (!isset($bookedSlots[$date])) {
-            $bookedSlots[$date] = [];
-        }
-
-        $bookedSlots[$date][] = $time;
-
-        // If service is kapon, mark the NEXT slot as booked too
-        if (strtolower($appt->service_type) === 'kapon') {
-            $nextSlot = date('H:i', strtotime($appt->appointment_time . ' +30 minutes'));
-            $bookedSlots[$date][] = $nextSlot;
-        }
-
-            // If the logged-in owner already has any appointment on this day,
-            // we capture the specific status and ID to tell the frontend whether to show "Visit Done" or "You Already Booked".
-            if ($appt->user_id === $ownerId) {
-                $ownerBookedDates[$date] = [
+            // 2. OWNER LIMIT LOGIC:
+            // We count ALL appointments (even 'done') toward their daily limit of 2
+            if ($appt->user_id == $ownerId) {
+                if (!isset($ownerBookedDates[$date])) {
+                    $ownerBookedDates[$date] = [];
+                }
+                $ownerBookedDates[$date][] = [
                     'id' => $appt->id,
-                    'status' => strtolower($appt->status)
+                    'pet_id' => $appt->pet_id,
+                    'status' => $status
                 ];
+            }
+
+            // 3. CLINIC CAPACITY LOGIC:
+            // Only count 'active' appointments toward the 16-slot clinic limit.
+            // Completed/Done appointments no longer "block" a time slot for others.
+            if (!in_array($status, ['done', 'completed'])) {
+                $bookedSlots[$date][] = $time;
+
+                if (strtolower($appt->service_type) === 'kapon') {
+                    $nextSlot = date('H:i', strtotime($appt->appointment_time . ' +30 minutes'));
+                    $bookedSlots[$date][] = $nextSlot;
+                }
             }
         }
 
         return response()->json([
             'booked_slots' => $bookedSlots,
-            'max_capacity_per_day' => 10, // Max appointments per day (global capacity)
-            'owner_booked_dates' => $ownerBookedDates,
+            'owner_booked_dates' => (object)$ownerBookedDates,
+            'debug' => [
+                'user_id' => auth()->id(),
+                'owner_count' => count($ownerBookedDates),
+                'range' => [$start, $end]
+            ]
         ]);
     }
 
@@ -199,6 +240,14 @@ class PetController extends Controller
         return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $pet) {
             // Convert time format for database strictly before checking (e.g., "08:00" to "08:00:00")
             $formattedTime = date('H:i:s', strtotime($request->appointment_time));
+            // Check if the user already has a pending appointment for this pet to avoid spam
+            $duplicate = Appointment::where('pet_id', $pet->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($duplicate) {
+                return back()->withErrors(['pet_id' => 'This pet already has a pending appointment.']);
+            }
 
             $existing = Appointment::where('appointment_date', $request->appointment_date)
                 ->where('appointment_time', $formattedTime)

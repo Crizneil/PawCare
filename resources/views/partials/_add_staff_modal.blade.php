@@ -6,7 +6,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <form action="{{ route('admin.staff.store') }}" method="POST">
+                <form action="{{ route('admin.staff.store') }}" method="POST" id="staffRegistrationForm">
                     @csrf
                     <div class="mb-3">
                         <label class="small fw-bold text-muted">Full Name</label>
@@ -16,13 +16,32 @@
                         <label class="small fw-bold text-muted">Email Address</label>
                         <input type="email" name="email" class="form-control rounded-pill bg-light border-0 px-3" placeholder="staff@pawcare.com" required>
                     </div>
+
                     <div class="mb-3">
                         <label class="small fw-bold text-muted">Password</label>
-                        <input type="password" name="password" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Min 8 characters" required>
+                        <div class="position-relative">
+                            <input type="password" name="password" id="password"
+                                   class="form-control rounded-pill bg-light border-0 ps-3 pe-5"
+                                   placeholder="Min 8 characters" minlength="8" required>
+                            <button type="button" class="btn position-absolute top-50 end-0 translate-middle-y border-0 bg-transparent pe-3 text-muted"
+                                    style="z-index: 10;" onclick="togglePassword('password', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div id="pw-error" class="text-danger small ms-3 mt-1" style="display:none;">Password must be at least 8 characters.</div>
                     </div>
+
                     <div class="mb-4">
                         <label class="small fw-bold text-muted">Confirm Password</label>
-                        <input type="password" name="password_confirmation" class="form-control rounded-pill bg-light border-0 px-3" required placeholder="Confirm password" required>
+                        <div class="position-relative">
+                            <input type="password" name="password_confirmation" id="password_confirmation"
+                                   class="form-control rounded-pill bg-light border-0 ps-3 pe-5"
+                                   placeholder="Confirm password" minlength="8" required>
+                            <button type="button" class="btn position-absolute top-50 end-0 translate-middle-y border-0 bg-transparent pe-3 text-muted"
+                                    style="z-index: 10;" onclick="togglePassword('password_confirmation', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-2">
@@ -34,3 +53,45 @@
         </div>
     </div>
 </div>
+
+<script>
+// Toggle Password Visibility
+function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        input.type = "password";
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+
+// Form Submission Validation
+document.getElementById('staffRegistrationForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('password');
+    const confirm = document.getElementById('password_confirmation');
+    const errorDiv = document.getElementById('pw-error');
+
+    // Reset error state
+    errorDiv.style.display = 'none';
+
+    // Check 1: Length check
+    if (password.value.length < 8) {
+        e.preventDefault(); // Stop form submission
+        errorDiv.style.display = 'block';
+        password.focus();
+        return;
+    }
+
+    // Check 2: Match check
+    if (password.value !== confirm.value) {
+        e.preventDefault();
+        alert("Passwords do not match!");
+        confirm.focus();
+        return;
+    }
+});
+</script>

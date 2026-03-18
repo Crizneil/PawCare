@@ -94,10 +94,6 @@
                             class="nav-link {{ request()->routeIs('admin.employees') ? 'active' : '' }}">
                             <i data-lucide="users"></i> Staff
                         </a>
-                        <a href="{{ route('admin.appointments') }}"
-                            class="nav-link {{ request()->is('admin/appointments*') ? 'active' : '' }}">
-                            <i data-lucide="calendar"></i> Appointments
-                        </a>
                         <a href="{{ route('admin.logs') }}"
                             class="nav-link {{ request()->routeIs('admin.logs') ? 'active' : '' }}">
                             <i data-lucide="history"></i> Logs
