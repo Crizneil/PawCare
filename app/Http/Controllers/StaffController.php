@@ -730,4 +730,9 @@ class StaffController extends Controller
 
     return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
     }
+    public function getPetsByOwner($userId)
+{
+    $pets = Pet::where('user_id', $userId)->get();
+    return response()->json($pets);
+}
 }

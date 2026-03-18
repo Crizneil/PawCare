@@ -1,60 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>OFFICIAL INVENTORY CONTROL REPORT - {{ now()->format('M d, Y') }}</title>
-    <style>
-        /* Basic Page Setup */
-        @page { margin: 15mm; }
+<style>
+    @page { margin: 15mm; }
 
-        /* The padding-bottom here ensures the table never overlaps the fixed footer */
-        body {
-            font-family: 'Helvetica', sans-serif;
-            color: #000;
-            margin: 0;
-            padding-bottom: 220px;
-            line-height: 1.4;
+    body {
+        font-family: 'Helvetica', sans-serif;
+        color: #000;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    /* 1. HIDE BUTTONS & FORCE FOOTER TO BOTTOM ON PRINT */
+    @media print {
+        .no-print { display: none !important; }
+
+        /* Force the footer to stay at the bottom of the printed page */
+        .page-footer-container {
+            position: fixed;
+            bottom: -10mm;
+            left: 0;
+            right: 0;
+            height: 180px;
+            background-color: white;
         }
+    }
 
-        /* Header Spacing */
-        .official-header { text-align: center; margin-bottom: 20px; }
-        .official-header p { margin: 0; line-height: 1.1; font-size: 13px; }
-        .official-header .republic { text-transform: uppercase; font-weight: bold; font-size: 15px; }
-        .official-header .location { text-transform: uppercase; font-weight: bold; font-size: 13px; }
-        .official-header .office { font-weight: bold; font-size: 17px; margin-top: 8px; display: block; }
+    /* 2. PDF ENGINE SPECIFIC POSITIONING */
+    .pdf-fixed-footer {
+        position: fixed;
+        bottom: -10mm;
+        left: 0;
+        right: 0;
+        height: 180px;
+        background-color: white;
+    }
 
-        .report-title { text-align: center; font-weight: bold; font-size: 18px; text-transform: uppercase; text-decoration: underline; margin: 15px 0 5px 0; }
-        .generation-meta { text-align: center; font-size: 11px; margin-bottom: 20px; }
+    /* 3. NORMAL BROWSER PREVIEW (What you see on screen) */
+    .preview-footer {
+        width: 100%;
+        margin-top: 50px;
+    }
 
-        /* Table Styling */
-        table.inventory-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .inventory-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 8px; font-size: 11px; text-align: left; text-transform: uppercase; }
-        .inventory-table td { border: 1px solid #000; padding: 8px; font-size: 11px; }
+    .table-footer-space {
+        height: 180px;
+        border: none !important;
+    }
 
-        /* HIDDEN ELEMENTS FOR PDF & PRINT */
-        .no-print { display: block; }
+    /* Official Header & Table Styles */
+    .official-header { text-align: center; margin-bottom: 20px; }
+    .official-header p { margin: 0; line-height: 1.1; font-size: 13px; }
+    .official-header .republic { text-transform: uppercase; font-weight: bold; font-size: 15px; }
+    .official-header .location { text-transform: uppercase; font-weight: bold; font-size: 13px; }
+    .official-header .office { font-weight: bold; font-size: 17px; margin-top: 8px; display: block; }
+    .report-title { text-align: center; font-weight: bold; font-size: 18px; text-transform: uppercase; text-decoration: underline; margin: 15px 0 5px 0; }
+    .generation-meta { text-align: center; font-size: 11px; margin-bottom: 20px; }
 
-        @media print, .pdf-mode {
-            .no-print { display: none !important; }
+    table.inventory-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .inventory-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 8px; font-size: 11px; text-align: left; text-transform: uppercase; }
+    .inventory-table td { border: 1px solid #000; padding: 8px; font-size: 11px; }
 
-            /* Fixed footer positioning for DomPDF and Print */
-            .page-footer-container {
-                position: fixed;
-                bottom: -10mm; /* Adjusted to utilize the bottom margin space */
-                left: 0;
-                right: 0;
-                width: 100%;
-                height: 180px;
-            }
-        }
-
-        /* Signature Table Styling */
-        .sig-table { width: 100%; border: none; }
-        .sig-box { width: 45%; text-align: center; border: none !important; padding: 0; }
-        .sig-line { border-bottom: 1px solid #000; margin-top: 35px; margin-bottom: 5px; }
-        .sig-name { font-weight: bold; text-transform: uppercase; font-size: 13px; margin: 0; }
-        .footer-note { text-align: center; font-size: 9px; color: #555; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 15px; }
-    </style>
+    .sig-table { width: 100%; border: none; }
+    .sig-box { width: 45%; text-align: center; border: none !important; padding: 0; vertical-align: bottom; }
+    .sig-line { border-bottom: 1px solid #000; margin-top: 35px; margin-bottom: 5px; width: 80%; margin-left: auto; margin-right: auto; }
+    .sig-name { font-weight: bold; text-transform: uppercase; font-size: 13px; margin: 0; }
+    .footer-note { text-align: center; font-size: 9px; color: #555; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 15px; }
+</style>
 </head>
 <body>
     @if(!$isPdf)
@@ -100,30 +111,33 @@
             </tr>
             @endforeach
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" class="table-footer-space" style="border: none;"></td>
+            </tr>
+        </tfoot>
     </table>
 
-    <div class="page-footer-container">
+    <div class="page-footer-container {{ $isPdf ? 'pdf-fixed-footer' : 'preview-footer' }}">
         <table class="sig-table">
             <tr>
                 <td class="sig-box">
-                    <p style="margin:0; font-size: 11px;">Certified Correct By:</p>
+                    <p style="margin:0; font-size: 11px;">Prepared By:</p>
                     <div class="sig-line"></div>
                     <p class="sig-name">{{ auth()->user()->name ?? 'Main Admin' }}</p>
                     <p style="margin:0; font-size: 10px;">Clinic Staff / Data Officer</p>
                 </td>
                 <td style="width: 10%; border: none;"></td>
                 <td class="sig-box">
-                    <p style="margin:0; font-size: 11px;">Attested and Approved By:</p>
+                    <p style="margin:0; font-size: 11px;">Noted By:</p>
                     <div class="sig-line"></div>
                     <p class="sig-name">DR. IMELDA E. ARGUELLES</p>
-                    <p style="margin:0; font-size: 10px;">City Veterinarian / License No.</p>
+                    <p style="margin:0; font-size: 10px;">City Veterinarian</p>
                 </td>
             </tr>
         </table>
-
         <div class="footer-note">
-            This is an official document generated by the PawCare Vaccine Inventory. The data presented reflects the system's records as of the generation timestamp. Discrepancies should be reported immediately to the City Veterinarian's Office.
+            This is an official document generated by the PawCare System for the City of Meycauayan.
         </div>
     </div>
 </body>
-</html>

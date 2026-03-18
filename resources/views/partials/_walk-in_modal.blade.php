@@ -29,7 +29,7 @@
                     {{-- 2. IF EXISTING: Search Owner --}}
                     <div id="existingOwnerSection" class="mb-4">
                         <label class="small fw-bold text-muted mb-1">Search Owner</label>
-                        <div class="input-group">
+                        <div class="input-group mb-3">
                             <span class="input-group-text bg-light border-0"><i data-lucide="search" size="18"></i></span>
                             <select name="user_id" id="ownerSearchSelect" class="form-select bg-light border-0 px-3">
                                 <option value="" disabled selected>Type name or email to search...</option>
@@ -38,6 +38,13 @@
                                         {{ $owner->name }}
                                     </option>
                                 @endforeach
+                            </select>
+                        </div>
+
+                        <div id="petSearchSection" style="display: none;">
+                            <label class="small fw-bold text-muted mb-1">Select Registered Pet</label>
+                            <select id="petSelect" class="form-select rounded-pill bg-light border-0 px-3">
+                                <option value="">-- Choose Pet --</option>
                             </select>
                         </div>
                     </div>
@@ -403,4 +410,76 @@ function formatTimeDisplay(time) {
 // Trigger update when date or service changes
 walkinDate.addEventListener('change', updateAvailableSlots);
 walkinService.addEventListener('change', updateAvailableSlots);
+
+// --- Existing Owner Pet Fetching & Auto-fill ---
+const petSearchSection = document.getElementById('petSearchSection');
+const petSelect = document.getElementById('petSelect');
+
+// Inputs to be auto-filled
+const petNameInput = document.querySelector('input[name="pet_name"]');
+const speciesSelect = document.getElementById('walkinSpeciesSelect');
+const breedSelect = document.getElementById('walkinBreedSelect');
+const genderSelect = document.querySelector('select[name="gender"]');
+const birthdayInput = document.querySelector('input[name="birthday"]');
+
+// 1. When Owner is selected via TomSelect
+if (ownerSearchSelect && tsControl) {
+    tsControl.on('change', async function(userId) {
+        if (!userId) {
+            petSearchSection.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/staff/get-owner-pets/${userId}`);
+            const pets = await response.json();
+
+            petSelect.innerHTML = '<option value="">-- Choose Pet --</option>';
+
+            if (pets.length > 0) {
+                pets.forEach(pet => {
+                    const opt = document.createElement('option');
+                    opt.value = pet.id;
+                    opt.textContent = pet.name;
+                    // Store pet data in data attributes for easy access
+                    opt.dataset.info = JSON.stringify(pet);
+                    petSelect.appendChild(opt);
+                });
+                petSearchSection.style.display = 'block';
+            } else {
+                petSearchSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Error fetching pets:", error);
+        }
+    });
+}
+
+// 2. When Pet is selected, auto-fill the fields
+petSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (!selectedOption.value) return;
+
+    const pet = JSON.parse(selectedOption.dataset.info);
+
+    // Auto-fill fields
+    petNameInput.value = pet.name;
+    speciesSelect.value = pet.species;
+
+    // Trigger species change manually to populate breed list
+    speciesSelect.dispatchEvent(new Event('change'));
+
+    // Set breed (delay slightly to ensure breed list is populated by your existing script)
+    setTimeout(() => {
+        breedSelect.value = pet.breed;
+        // Handle "Other" breed if necessary
+        if (pet.breed === 'Other') {
+            document.getElementById('walkinOtherBreedContainer').classList.remove('d-none');
+            document.getElementById('walkinOtherBreedInput').value = pet.other_breed || '';
+        }
+    }, 50);
+
+    genderSelect.value = pet.gender;
+    birthdayInput.value = pet.birthday;
+});
 </script>

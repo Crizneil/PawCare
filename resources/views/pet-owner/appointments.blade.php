@@ -18,20 +18,20 @@
         {{-- Calendar Legend --}}
         <div class="d-flex flex-wrap align-items-center gap-3 mb-4 small text-muted">
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #e3f7e7;"></span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #16f543;"></span>
                 <span>All Slots Free (No Bookings)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fff7cc;"></span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #f4df68;"></span>
                 <span>Limited Slots (Some Times Taken)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fde8e7;"></span>
-                <span>Fully Booked / You Already Booked</span>
+                <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #fa4e45;"></span>
+                <span>Fully Booked / Limit Reached</span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #ececec;"></span>
-                <span>Closed (Saturday / Sunday)</span>
+                <span>Closed (Friday - Sunday)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #f8f9fa;"></span>
@@ -380,13 +380,18 @@
     </style>
 
 <script>
-   document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', async function () {
     var calendarEl = document.getElementById('userCalendar');
     var appointmentModal = new bootstrap.Modal(document.getElementById('setAppointmentModal'));
     var scheduleDisplay = document.getElementById('appointmentScheduleDisplay');
     var dateInput = document.getElementById('appointment_date_input');
     var timeSelect = document.getElementById('appointment_time_select');
     var serviceSelect = document.getElementById('service_type_select');
+    var petSelect = document.querySelector('select[name="pet_id"]'); // Added Pet Select reference
+
+    let availabilityData = {};
+    let ownerBookedDates = {};
+    let isFetching = false;
 
     const PREDEFINED_TIMES = [
         { label: "8:00 AM - 8:30 AM", value: "08:00" },
@@ -407,9 +412,6 @@
         { label: "4:30 PM - 5:00 PM", value: "16:30" }
     ];
 
-    let availabilityData = {};
-    let ownerBookedDates = []; // Now expected to be an array of objects per date
-
     const formatLocalToISODate = (dateObj) => {
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -418,14 +420,45 @@
     };
 
     async function fetchAvailability(startStr, endStr) {
+        if (isFetching) return;
+        isFetching = true;
         try {
             const res = await fetch(`{{ route('pet-owner.api.available-slots') }}?start=${startStr}&end=${endStr}`);
             const data = await res.json();
+
+            // Ensure we handle the object correctly
             availabilityData = data.booked_slots || {};
             ownerBookedDates = data.owner_booked_dates || {};
+
+            // CRITICAL: This triggers dayCellDidMount to run again with the fresh data
+            calendar.render();
         } catch (err) {
             console.error("Failed to fetch slots", err);
+        } finally {
+            isFetching = false;
         }
+    }
+
+    function updatePetOptions(selectedDate) {
+        let bookedForThisDate = ownerBookedDates[selectedDate] || [];
+        if (typeof bookedForThisDate === 'object' && !Array.isArray(bookedForThisDate)) {
+            bookedForThisDate = Object.values(bookedForThisDate);
+        }
+        const busyPetIds = bookedForThisDate.map(appt => String(appt.pet_id));
+
+        Array.from(petSelect.options).forEach(option => {
+            if (option.value === "") return;
+            const originalText = option.getAttribute('data-original-text') || option.text;
+            if (!option.hasAttribute('data-original-text')) option.setAttribute('data-original-text', originalText);
+
+            if (busyPetIds.includes(option.value)) {
+                option.disabled = true;
+                option.text = originalText + " (Already Scheduled)";
+            } else {
+                option.disabled = false;
+                option.text = originalText;
+            }
+        });
     }
 
     function updateAvailableTimes() {
@@ -434,19 +467,13 @@
         const bookedTimes = availabilityData[selectedDate] || [];
 
         timeSelect.innerHTML = '<option value="">Select Time</option>';
-
         PREDEFINED_TIMES.forEach((timeObj, index) => {
             let opt = document.createElement('option');
             let isUnavailable = bookedTimes.includes(timeObj.value);
 
-            // Logic for Kapon (Needs current slot AND the next slot free)
             if (selectedService === 'kapon') {
                 const nextTimeObj = PREDEFINED_TIMES[index + 1];
-
-                // Cannot book Kapon if it's the last slot of the morning/afternoon session
-                const isEndOfSession = (timeObj.value === "11:30" || timeObj.value === "16:30");
-
-                if (isEndOfSession || !nextTimeObj || bookedTimes.includes(nextTimeObj.value)) {
+                if (timeObj.value === "11:30" || timeObj.value === "16:30" || !nextTimeObj || bookedTimes.includes(nextTimeObj.value)) {
                     isUnavailable = true;
                 }
             }
@@ -456,40 +483,54 @@
                 opt.innerText = `${timeObj.label} (Unavailable)`;
             } else {
                 opt.value = timeObj.value;
-                opt.innerText = (selectedService === 'kapon') ? `${timeObj.label}` : timeObj.label;
+                opt.innerText = timeObj.label;
             }
             timeSelect.appendChild(opt);
         });
     }
 
-    // Refresh times when service type changes
     serviceSelect.addEventListener('change', updateAvailableTimes);
 
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: { left: 'today prev,next', center: 'title', right: '' },
         height: 'auto',
-        datesSet: async function (info) {
-            await fetchAvailability(info.startStr.split('T')[0], info.endStr.split('T')[0]);
-            calendar.render();
+        datesSet: function (info) {
+            fetchAvailability(info.startStr.split('T')[0], info.endStr.split('T')[0]);
         },
         dayCellDidMount: function (info) {
             const dateStr = formatLocalToISODate(info.date);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            const dayOfWeek = info.date.getDay();
-            // CLOSED: Friday (5), Saturday (6), Sunday (0)
-            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
-
-            const ownerAppointments = ownerBookedDates[dateStr] || [];
-            const isLimitReached = ownerAppointments.length >= 2;
+            // 1. CLEAR existing states to prevent "ghost" indicators
+            info.el.classList.remove('fc-day-available', 'fc-day-limited', 'fc-day-full', 'fc-day-closed', 'fc-day-passed');
+            const frame = info.el.querySelector('.fc-daygrid-day-frame');
+            if (frame) {
+                const oldIndicator = frame.querySelector('.availability-indicator');
+                if (oldIndicator) oldIndicator.remove();
+            }
 
             if (info.date < today) {
                 info.el.classList.add('fc-day-passed');
                 return;
             }
 
+            // 2. NORMALIZE the data (Handle Laravel's object vs array)
+            const bookedTimes = availabilityData[dateStr] || [];
+            const totalBookedCount = Array.isArray(bookedTimes) ? bookedTimes.length : Object.keys(bookedTimes).length;
+
+            let ownerAppointments = ownerBookedDates[dateStr] || [];
+            // Convert {} to [] if Laravel sent an object
+            if (ownerAppointments && typeof ownerAppointments === 'object' && !Array.isArray(ownerAppointments)) {
+                ownerAppointments = Object.values(ownerAppointments);
+            }
+            const ownerCount = ownerAppointments.length;
+
+            const dayOfWeek = info.date.getDay();
+            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+
+            // 3. CREATE indicator
             const indicator = document.createElement('div');
             indicator.className = 'availability-indicator';
 
@@ -497,22 +538,30 @@
                 info.el.classList.add('fc-day-closed');
                 indicator.classList.add('availability-full');
                 indicator.innerText = "Closed";
-            } else if (isLimitReached) {
+            }
+            // This is the specific logic you updated in PHP
+            else if (ownerCount >= 2) {
                 info.el.classList.add('fc-day-full');
                 indicator.classList.add('availability-full');
-                indicator.innerText = "Daily Limit Met";
-            } else {
-                const count = (availabilityData[dateStr] || []).length;
-                if (count >= 16) {
-                    info.el.classList.add('fc-day-full');
-                    indicator.classList.add('availability-full');
-                    indicator.innerText = "Fully Booked";
-                } else {
-                    info.el.classList.add('fc-day-available');
-                    indicator.innerText = count === 0 ? "All Slots Free" : "Slots Available";
-                }
+                indicator.innerText = "Limit Reached";
             }
-            info.el.querySelector('.fc-daygrid-day-frame').appendChild(indicator);
+            else if (totalBookedCount >= 16) {
+                info.el.classList.add('fc-day-full');
+                indicator.classList.add('availability-full');
+                indicator.innerText = "Fully Booked";
+            }
+            else if (ownerCount > 0 || totalBookedCount > 0) {
+                info.el.classList.add('fc-day-limited');
+                indicator.innerText = "Limited Slots";
+            }
+            else {
+                info.el.classList.add('fc-day-available');
+                indicator.innerText = "All Slots Free";
+            }
+
+            if (frame) {
+                frame.appendChild(indicator);
+            }
         },
         dateClick: function (info) {
             const dateStr = info.dateStr;
@@ -520,16 +569,20 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Block Closed Days (Fri-Sun) and Limit of 2
             if (info.date < today || [0, 5, 6].includes(dayOfWeek)) return;
-            if ((ownerBookedDates[dateStr] || []).length >= 2) {
-                alert("You have reached the maximum of 2 appointments for this day.");
+
+            let userBookingsToday = ownerBookedDates[dateStr] || [];
+            if (typeof userBookingsToday === 'object' && !Array.isArray(userBookingsToday)) userBookingsToday = Object.values(userBookingsToday);
+
+            if (userBookingsToday.length >= 2) {
+                alert("Maximum limit reached for this day.");
                 return;
             }
 
             dateInput.value = dateStr;
             scheduleDisplay.innerText = info.date.toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
-            serviceSelect.value = ""; // Reset service to force user selection
+            updatePetOptions(dateStr);
+            serviceSelect.value = "";
             timeSelect.innerHTML = '<option value="">Please select a service first</option>';
             appointmentModal.show();
         }

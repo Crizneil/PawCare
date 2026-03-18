@@ -3,7 +3,12 @@
 @section('content')
 
 <div class="container py-4">
-    <h3 class="fw-bold mb-4">Owner Profile</h3>
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ route('staff.pet-records') }}" class="btn btn-light rounded-circle me-3">
+            <i data-lucide="arrow-left"></i>
+        </a>
+        <h3 class="fw-bold mb-0">Owner Profile</h3>
+    </div>
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body">
             <h5 class="fw-bold mb-3">Owner Information</h5>
@@ -87,20 +92,37 @@
         </div>
     </div>
 
-    {{-- PET LIST --}}
+    {{-- REGISTERED PETS WITH STATUS BADGES --}}
     <div class="card border-0 shadow-sm rounded-4 mt-4">
         <div class="card-body">
             <h5 class="fw-bold mb-3">Registered Pets</h5>
-            <ul class="list-group">
-                @foreach($owner->pets as $pet)
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ $pet->name }} ({{ $pet->species }})
-                    <span class="badge bg-light text-dark border">
-                        #{{ $pet->id }}
-                    </span>
-                </li>
-                @endforeach
-            </ul>
+            @if($owner->pets->count() > 0)
+                <div class="list-group list-group-flush">
+                    @foreach($owner->pets as $pet)
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <span class="fw-bold d-block">{{ $pet->name }}</span>
+                                    <span class="text-muted small">({{ $pet->species }})</span>
+                                </div>
+
+                                {{-- VACCINATION STATUS BADGE --}}
+                                @if(isset($pet->vax_status))
+                                    <span class="badge rounded-pill {{ $pet->vax_status->class }} py-2 px-3 ms-2" style="font-size:0.75rem;">
+                                        {!! $pet->vax_status->icon !!}
+                                        <span class="ms-1">{{ $pet->vax_status->label }}</span>
+                                    </span>
+                                @endif
+                            </div>
+                            <span class="badge bg-light text-dark border rounded-pill">
+                                {{ $pet->pet_id }}
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-muted">No pets registered to this owner.</p>
+            @endif
         </div>
     </div>
 </div>
