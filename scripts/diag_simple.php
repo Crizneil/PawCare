@@ -1,20 +1,23 @@
 <?php
-include 'vendor/autoload.php';
-$app = require_once 'bootstrap/app.php';
+include __DIR__ . '/../vendor/autoload.php';
+$app = require_once __DIR__ . '/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\Appointment;
 use App\Models\User;
 
-$appts = Appointment::all();
+$user = User::where('role', 'owner')->first();
+$ownerId = $user ? $user->id : 0;
+
+$appts = Appointment::where('user_id', $ownerId)->get();
 $data = [
-    'total_appointments_in_db' => $appts->count(),
+    'owner_id' => $ownerId,
+    'owner_email' => $user ? $user->email : 'none',
+    'total_appointments' => $appts->count(),
     'appointments' => $appts->map(function($a) {
         return [
             'id' => $a->id,
-            'user_id' => $a->user_id,
-            'user_email' => $a->user ? $a->user->email : 'N/A',
             'date' => $a->appointment_date,
             'status' => $a->status
         ];

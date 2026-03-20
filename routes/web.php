@@ -9,7 +9,6 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\VaccineController;
 use App\Http\Controllers\AdminReportController;
-use App\Http\Controllers\ChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,7 +18,6 @@ use App\Http\Controllers\ChatController;
 
 // Public routes (views)
 Route::view('/', 'index')->name('home');
-Route::post('/chat', [ChatController::class, 'chat'])->name('chat.post');
 Route::view('/about', 'about')->name('about');
 Route::view('/blog', 'blog')->name('blog');
 Route::view('/contact', 'contact')->name('contact');
@@ -90,11 +88,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/logs/{id}/restore', [AdminController::class, 'restoreLog'])->name('logs.restore');
     Route::post('/logs/restore-all', [AdminController::class, 'restoreAllLogs'])->name('logs.restore-all');
     Route::get('/vaccination-status', [VaccineController::class, 'status'])->name('vaccination-status');
-    Route::get('/vaccinations', [VaccineController::class, 'index'])->name('vaccinations');
     Route::put('/vaccination/update/{id}', [VaccineController::class, 'updateStatus'])->name('vaccinations.update');
-    Route::patch('/vaccine/{id}/update', [AdminController::class, 'updateVaccine'])->name('vaccine.update');
-    Route::delete('/vaccine/{id}/delete', [AdminController::class, 'destroyVaccine'])->name('vaccine.destroy');
-    Route::post('/vaccine/store', [AdminController::class, 'storeVaccine'])->name('vaccine.store');
     Route::post('/pets/{id}/vaccinate', [VaccineController::class, 'store'])->name('pets.vaccinate');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile/update', [AdminController::class, 'updateProfile'])->name('profile.update');
@@ -104,16 +98,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/archive', [AdminController::class, 'archive'])->name('archive');
     Route::post('/pets/{id}/restore-deceased', [AdminController::class, 'restoreDeceasedPet'])->name('pets.restore-deceased');
     Route::post('/pets/{id}/restore', [AdminController::class, 'restorePet'])->name('pets.restore');
-    Route::delete('/pets/{id}/force-delete', [AdminController::class, 'forceDeletePet'])->name('pets.force-delete');
     Route::post('/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('staff.restore');
-    Route::delete('/staff/{id}/force-delete', [AdminController::class, 'forceDeleteStaff'])->name('staff.force-delete');
-    Route::post('/vaccine/{id}/restore', [AdminController::class, 'restoreVaccine'])->name('vaccines.restore');
-    Route::delete('/vaccine/{id}/force-delete', [AdminController::class, 'forceDeleteVaccine'])->name('vaccines.force-delete');
 
     // Reports & Analytics Routes
     Route::get('/reports/appointments', [AdminReportController::class, 'appointmentReport'])->name('reports.appointments');
-    Route::get('/reports/inventory', [AdminReportController::class, 'inventoryReport'])->name('reports.inventory');
-    Route::get('/reports/vaccine-generate', [AdminReportController::class, 'generateVaccineReport'])->name('reports.vaccine');
+    Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
 
     // Calendar API Endpoints
     Route::get('/api/appointments', [AdminController::class, 'getAppointmentsApi'])->name('api.appointments');
@@ -146,9 +135,6 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::get('/owner/{id}/pets', [StaffController::class, 'getPetsByOwner'])->name('owner.pets');
 
     // Inventory
-    Route::get('/vaccine-inventory', [StaffController::class, 'vaccineInventory'])->name('vaccine-inventory');
-    Route::post('/vaccine-inventory/{id}/use', [StaffController::class, 'useVaccineInventory'])->name('vaccine-use');
-    Route::patch('/vaccine-inventory/{id}/update', [StaffController::class, 'updateVaccine'])->name('vaccine.update');
 
     // Digital Card Requests
     Route::post('/request-card/{pet_id}', [StaffController::class, 'requestDigitalCard'])->name('request-card');
@@ -157,6 +143,9 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::post('/pets/{id}/restore-deceased', [AdminController::class, 'restoreDeceasedPet'])->name('pets.restore-deceased');
     Route::post('/pets/{id}/restore', [AdminController::class, 'restorePet'])->name('pets.restore');
     Route::delete('/pets/{id}/force-delete', [AdminController::class, 'forceDeletePet'])->name('pets.force-delete');
+
+    // Reports
+    Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
 
 });
 
@@ -181,6 +170,9 @@ Route::prefix('owner')->name('pet-owner.')->middleware(['auth'])->group(function
     Route::put('/pet-records/{id}/update', [PetController::class, 'update'])->name('update-pet');
     Route::get('/pet-records/{id}/digital-id', [PetController::class, 'showDigitalId'])->name('digital-id');
     Route::post('/pet-records/store', [PetController::class, 'store'])->name('pets.store');
+
+    // Reports
+    Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
 
     // Calendar API Endpoints
     Route::get('/api/appointments/available-slots', [PetController::class, 'getAvailableSlots'])->name('api.available-slots');

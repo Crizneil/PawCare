@@ -15,6 +15,8 @@ use App\Mail\AppointmentConfirmedEmail;
 
 class PetController extends Controller
 {
+    use \App\Traits\AppointmentValidation;
+
     public function index(Request $request)
     {
         $query = Pet::with('user');
@@ -234,6 +236,14 @@ class PetController extends Controller
             return back()
                 ->withErrors(['pet_id' => 'Only verified pets with active status can be booked for appointments.'])
                 ->withInput();
+        }
+
+        // --- NEW: Anti-Rabies Validation ---
+        if ($request->service_type === 'Anti-Rabies') {
+            $error = $this->checkAntiRabiesEligibility($pet->id, $request->appointment_date);
+            if ($error) {
+                return back()->withErrors(['service_type' => $error])->withInput();
+            }
         }
 
         // Double Booking Prevention

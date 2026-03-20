@@ -106,19 +106,19 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Vaccine Type</label>
-                        <input type="text" name="vaccine_name" class="form-control rounded-pill bg-light border-0"
-                               value="{{ $pet->latestVaccination->vaccine_name ?? '' }}" placeholder="e.g. 5-in-1, Rabies">
+                        <input type="text" name="vaccine_name" list="vaccineOptions" class="form-control rounded-pill bg-light border-0 vax-name-input"
+                               value="{{ $pet->latestVaccination->vaccine_name ?? '' }}" placeholder="Choose or type vaccine name...">
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Last Vaccination</label>
-                            <input type="date" name="date_administered" class="form-control rounded-pill bg-light border-0"
+                            <input type="date" name="date_administered" class="form-control rounded-pill bg-light border-0 vax-date-input"
                                    value="{{ $pet->latestVaccination->date_administered ?? '' }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Next Due Date</label>
-                            <input type="date" name="next_due_date" class="form-control rounded-pill bg-light border-0"
+                            <input type="date" name="next_due_date" class="form-control rounded-pill bg-light border-0 vax-due-input"
                                    value="{{ $pet->latestVaccination->next_due_date ?? '' }}">
                         </div>
                     </div>

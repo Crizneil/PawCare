@@ -218,7 +218,8 @@
                                     {{-- Updated Service List --}}
                                     <select id="service_type_select" name="service_type" class="form-select bg-light" required>
                                         <option value="">Please Select Service(s) Here.</option>
-                                        <option value="vaccination">Vaccination</option>
+                                        <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
+                                        <option value="vaccination">General Vaccination</option>
                                         <option value="deworming">Deworming</option>
                                         <option value="check-up">Check-up</option>
                                         <option value="kapon">Kapon</option>

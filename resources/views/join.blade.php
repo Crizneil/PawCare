@@ -63,7 +63,8 @@
                                 <i class="fi flaticon-calendar-1 fs-4 me-3 mt-1" style="color: #ff6b6b;"></i>
                                 <div>
                                     <h5 class="fw-bold mb-1">Office Hours</h5>
-                                    <p class="mb-0 text-muted">Monday - Thursday: 8:00 AM - 5:00 PM<br>Friday, Saturday & Sunday:
+                                    <p class="mb-0 text-muted">Monday - Thursday: 8:00 AM - 5:00 PM<br>Friday, Saturday
+                                        & Sunday:
                                         Closed</p>
                                 </div>
                             </div>
@@ -119,7 +120,7 @@
                                     <span style="font-size: 24px; line-height: 1;">🏥</span>
                                 </div>
                                 <div>
-                                    <h5 class="fw-bold mb-1">4. Previous Records (Optional)</h5>
+                                    <h5 class="fw-bold mb-1">4. Previous Records</h5>
                                     <p class="mb-0 text-muted fs-6">A screenshot or copy of previous E-Health Cards for
                                         medical migration.</p>
                                 </div>

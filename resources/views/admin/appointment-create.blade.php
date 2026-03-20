@@ -36,10 +36,12 @@
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-semibold">Service Type</label>
-                        <select name="reason" class="form-select rounded-pill">
+                        <select name="service_type" class="form-select rounded-pill">
                             <option value="Check-up">Check-up</option>
-                            <option value="Vaccination">Vaccination</option>
+                            <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
+                            <option value="Vaccination">General Vaccination</option>
                             <option value="Deworming">Deworming</option>
+                            <option value="Kapon">Kapon</option>
                         </select>
                     </div>
 

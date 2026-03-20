@@ -238,6 +238,8 @@
             $('.preloader').delay(100).fadeOut(500, function () {
                 //active wow
                 wow.init();
+                // Start Hero Animation
+                $('.hero-section').addClass('start-animation');
             });
         }
     }
@@ -763,6 +765,7 @@
     // Call this inside the jQuery block
     $(document).ready(function() {
         handleDashboardSidebar();
+        handleThemeToggle();
     });
     $(document).ready(function() {
     // Ensure that when a modal is opened, the sidebar overlay is hidden

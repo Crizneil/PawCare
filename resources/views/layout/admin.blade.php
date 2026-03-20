@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Dashboard | PawCare</title>
 
     <link href="{{ asset('assets/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -12,13 +13,33 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/newicon.png') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* Skeleton Loading Animation */
+        @keyframes pulse {
+            0% { background-color: rgba(165, 165, 165, 0.1); }
+            50% { background-color: rgba(165, 165, 165, 0.3); }
+            100% { background-color: rgba(165, 165, 165, 0.1); }
+        }
+
+        .skeleton {
+            animation: pulse 1.5s ease-in-out infinite;
+            border-radius: 4px;
+            display: inline-block;
+            min-height: 1em;
+            width: 100%;
+        }
+
+        .skeleton-text { height: 0.8em; margin-bottom: 0.5em; }
+        .skeleton-title { height: 1.25em; margin-bottom: 0.75em; width: 60%; }
+
         .grayscale {
             filter: grayscale(100%);
             transition: filter 0.3s ease;
@@ -51,6 +72,38 @@
 
         .swal2-container {
             z-index: 999999 !important;
+        }
+
+        /* Hideable Sidebar Styles */
+        #sidebar {
+            width: 280px;
+            min-width: 280px;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        #sidebar.collapsed {
+            margin-left: -280px !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            overflow: hidden !important;
+            border-right: none !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #sidebar.collapsed + .content-area {
+            margin-left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
+        }
+
+        .content-area {
+            transition: all 0.3s ease;
+            min-width: 0; /* Ensures content shrinks properly */
         }
     </style>
 </head>
@@ -106,10 +159,6 @@
                             class="nav-link {{ request()->routeIs('admin.vaccination-status') ? 'active' : '' }}">
                             <i data-lucide="syringe"></i> Vaccination Status
                         </a>
-                        <a href="{{ route('admin.vaccinations') }}"
-                            class="nav-link {{ request()->routeIs('admin.vaccinations') ? 'active' : '' }}">
-                            <i data-lucide="package"></i> Vaccine Inventory
-                        </a>
                         <a href="{{ route('admin.profile') }}"
                             class="nav-link {{ request()->routeIs('admin.profile') ? 'active' : '' }}">
                             <i data-lucide="user-cog"></i> Profile
@@ -136,10 +185,6 @@
                         <a href="{{ route('staff.vaccination-history') }}"
                             class="nav-link {{ request()->routeIs('staff.vaccination-history') ? 'active' : '' }}">
                             <i data-lucide="history"></i> Vaccination History
-                        </a>
-                        <a href="{{ route('staff.vaccine-inventory') }}"
-                            class="nav-link {{ request()->routeIs('staff.vaccine-inventory') ? 'active' : '' }}">
-                            <i data-lucide="package"></i> Vaccine Inventory
                         </a>
                         <a href="{{ route('staff.profile') }}"
                             class="nav-link {{ request()->routeIs('staff.profile') ? 'active' : '' }}">
@@ -193,6 +238,7 @@
     </div>
 
     <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/admin.js') }}"></script>
     @stack('scripts')
@@ -298,8 +344,45 @@
                 }
             });
         });
+
+        // --- Vaccination Auto Due Date Logic ---
+        $(document).on('input change', '.vax-name-input, .vax-date-input', function() {
+            const $container = $(this).closest('form');
+            const vaxName = $container.find('.vax-name-input').val().toLowerCase();
+            const dateAdministered = $container.find('.vax-date-input').val();
+            const $dueInput = $container.find('.vax-due-input');
+
+            if (!dateAdministered) return;
+
+            let date = new Date(dateAdministered);
+            let updated = false;
+
+            if (vaxName.includes('rabies') || vaxName.includes('rabisin') || 
+                vaxName.includes('5-in-1') || vaxName.includes('dhpp') || 
+                vaxName.includes('feline 4-way') || vaxName.includes('bordetella')) {
+                date.setFullYear(date.getFullYear() + 1);
+                updated = true;
+            } else if (vaxName.includes('deworming')) {
+                date.setMonth(date.getMonth() + 3);
+                updated = true;
+            }
+
+            if (updated) {
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                $dueInput.val(`${yyyy}-${mm}-${dd}`);
+            }
+        });
     </script>
-    @include('partials._chat_widget')
+    {{-- Global Vaccine Options Datalist (Refined) --}}
+    <datalist id="vaccineOptions">
+        <option value="Anti-Rabies (Rabisin)">
+        <option value="5-in-1 Vaccine (DHPP)">
+        <option value="Feline 4-Way Vaccine">
+        <option value="Bordetella (Kennel Cough)">
+        <option value="Deworming">
+    </datalist>
 </body>
 
 </html>

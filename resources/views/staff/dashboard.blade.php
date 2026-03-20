@@ -17,61 +17,105 @@
         </div>
     </div>
 
-    {{-- 1. Top Row Summary Cards --}}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary-light p-3 rounded-3 text-primary me-3">
-                        <i data-lucide="calendar-check"></i>
+    {{-- Skeleton Loader (Visible initially) --}}
+    <div id="skeleton-loader">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="skeleton-circle me-3"></div>
+                        <div class="flex-grow-1">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
                     </div>
-                    <div>
-                        <h4 class="fw-bold mb-0">{{ $appointmentsToday->count() }}</h4>
-                        <small class="text-muted">Today's Appointments</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="skeleton-circle me-3"></div>
+                        <div class="flex-grow-1">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="skeleton-circle me-3"></div>
+                        <div class="flex-grow-1">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-                <div class="d-flex align-items-center">
-                    <div class="bg-warning-light p-3 rounded-3 text-warning me-3">
-                        <i data-lucide="alert-triangle"></i>
-                    </div>
-                    <div>
-                        <h4 class="fw-bold mb-0">{{ $dueForVaccination->count() }}</h4>
-                        <small class="text-muted">Pets Due for Vax</small>
-                    </div>
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="skeleton skeleton-title mb-4"></div>
+                    <div class="skeleton" style="height: 200px;"></div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-                <div class="d-flex align-items-center">
-                    <div class="bg-danger-light p-3 rounded-3 text-danger me-3">
-                        <i data-lucide="package"></i>
-                    </div>
-                    <div>
-                        <h4 class="fw-bold mb-0 text-danger">{{ $lowStock->count() }}</h4>
-                        <small class="text-muted">Low Stock Alerts</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
-                <div class="d-flex align-items-center">
-                    <div class="bg-success-light p-3 rounded-3 text-success me-3">
-                        <i data-lucide="check-circle"></i>
-                    </div>
-                    <div>
-                        <h4 class="fw-bold mb-0">{{ $recentVaccinations->count() }}</h4>
-                        <small class="text-muted">Recently Vaccinated</small>
-                    </div>
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <div class="skeleton skeleton-title mb-4"></div>
+                    <div class="skeleton skeleton-text mb-2"></div>
+                    <div class="skeleton skeleton-text mb-2"></div>
+                    <div class="skeleton skeleton-text"></div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Actual Content (Hidden initially) --}}
+    <div id="actual-content" style="display: none;">
+        {{-- 1. Top Row Summary Cards --}}
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary-light p-3 rounded-3 text-primary me-3">
+                            <i data-lucide="calendar-check"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-0">{{ $appointmentsToday->count() }}</h4>
+                            <small class="text-muted">Today's Appointments</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning-light p-3 rounded-3 text-warning me-3">
+                            <i data-lucide="alert-triangle"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-0">{{ $dueForVaccination->count() }}</h4>
+                            <small class="text-muted">Pets Due for Vax</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success-light p-3 rounded-3 text-success me-3">
+                            <i data-lucide="check-circle"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-0">{{ $recentVaccinations->count() }}</h4>
+                            <small class="text-muted">Recently Vaccinated</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <div class="row">
         {{-- Left Column: Scanner & Inventory --}}
@@ -109,18 +153,6 @@
                 </div>
             </div>
 
-            {{-- Low Stock Alert List --}}
-            <div class="card border-0 shadow-sm rounded-4 p-4">
-                <h6 class="fw-bold mb-3"><i data-lucide="alert-circle" class="me-2 text-danger"></i>Inventory Alerts</h6>
-                @forelse($lowStock as $item)
-                    <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded-3">
-                        <span class="small fw-semibold">{{ $item->name }}</span>
-                        <span class="badge bg-danger rounded-pill">{{ $item->stock }} left</span>
-                    </div>
-                @empty
-                    <p class="text-muted small">All stock levels are healthy.</p>
-                @endforelse
-            </div>
         </div>
 
         {{-- Right Column: Appointments & Recent Activity --}}
@@ -191,7 +223,9 @@
         </div>
     </div>
 </div>
+@endsection
 
+@push('scripts')
 {{-- QR Scanner Script --}}
 <script>
     const html5QrCode = new Html5Qrcode("reader");
@@ -277,5 +311,14 @@ const hardwareInput = document.getElementById('hardwareScanInput');
             }, 300);
         }
     });
+
+    // Handle Skeleton Loader Toggle
+    $(document).ready(function() {
+        setTimeout(function() {
+            $('#skeleton-loader').fadeOut(300, function() {
+                $('#actual-content').fadeIn(400);
+            });
+        }, 1200);
+    });
 </script>
-@endsection
+@endpush

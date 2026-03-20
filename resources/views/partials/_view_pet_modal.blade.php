@@ -92,6 +92,17 @@
                                     <span class="fw-bold">
                                         {{ $pet->user->phone ?? ($pet->owner_phone ?? ($pet->phone ?? 'N/A')) }}
                                     </span>
+
+                                    <small class="text-muted d-block mt-2">Address</small>
+                                    <span class="fw-bold" style="font-size: 0.85rem;">
+                                        @if($pet->house_no || $pet->street || $pet->barangay)
+                                            {{ $pet->house_no }} {{ $pet->street }}, {{ $pet->barangay }}, {{ $pet->city }}, {{ $pet->province }}
+                                        @elseif($pet->user && $pet->user->full_address)
+                                            {{ $pet->user->full_address }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </span>
                                 </div>
                                 <div class="col-4 text-end">
                                     {{-- Role-aware View Profile Button --}}

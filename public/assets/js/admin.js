@@ -12,9 +12,23 @@ $(document).ready(function () {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            $sidebar.toggleClass('active');
-            $overlay.toggleClass('active');
-            $('body').toggleClass('overflow-hidden');
+
+            if ($(window).width() <= 768) {
+                $sidebar.toggleClass('active');
+                $overlay.toggleClass('active');
+                $('body').toggleClass('overflow-hidden');
+            } else {
+                $sidebar.toggleClass('collapsed');
+                // Save state to localStorage
+                localStorage.setItem('sidebarCollapsed', $sidebar.hasClass('collapsed'));
+            }
+        }
+
+        // Apply saved state on load for desktop
+        if ($(window).width() > 768) {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                $sidebar.addClass('collapsed');
+            }
         }
 
         // Open/Toggle

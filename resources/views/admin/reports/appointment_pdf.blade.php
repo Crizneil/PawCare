@@ -90,7 +90,8 @@
     <table class="appointment-table">
         <thead>
             <tr>
-                <th>Date/Time</th>
+                <th>Date</th>
+                <th>Time</th>
                 <th>Pet Owner</th>
                 <th>Pet Name</th>
                 <th>Service Type</th>
@@ -100,7 +101,8 @@
         <tbody>
             @forelse($data as $appointment)
             <tr>
-                <td>{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y h:i A') }}</td>
+                <td>{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
+                <td>{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') }}</td>
                 <td>
                     @if($appointment->user)
                         {{ $appointment->user->name }}
@@ -116,14 +118,14 @@
             </tr>
             @empty
             <tr>
-                <td colspan="5" style="text-align: center;">No appointments found for this period.</td>
+                <td colspan="6" style="text-align: center;">No appointments found for this period.</td>
             </tr>
             @endforelse
         </tbody>
 
         <tfoot>
             <tr>
-                <td colspan="5" class="table-footer-space" style="border: none;"></td>
+                <td colspan="6" class="table-footer-space" style="border: none;"></td>
             </tr>
         </tfoot>
     </table>

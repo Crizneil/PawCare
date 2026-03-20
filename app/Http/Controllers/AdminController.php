@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Models\Pet;
 use App\Models\Appointment;
 use App\Models\ActivityLog;
-use App\Models\VaccineInventory;
 use App\Mail\AppointmentReminder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -21,13 +20,44 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminController extends Controller
 {
+    use \App\Traits\AppointmentValidation;
+
     public function dashboard()
     {
         $totalPets = Pet::notDeceased()->count();
         $totalOwners = User::where('role', 'owner')->count();
         $totalStaff = User::where('role', 'staff')->count();
 
-        // UPDATED: Only count today's appointments if they are APPROVED
+        // Vaccination Status Data for Chart
+        $pets = Pet::notDeceased()->with('vaccinations')->get();
+        
+        $vaccinationStats = [
+            'fully_vaccinated' => 0,
+            'partially_vaccinated' => 0,
+            'overdue' => 0,
+            'due_soon' => 0,
+            'unvaccinated' => 0
+        ];
+
+        foreach ($pets as $pet) {
+            $status = $pet->calculated_status;
+            if (isset($vaccinationStats[$status])) {
+                $vaccinationStats[$status]++;
+            }
+        }
+
+        // Species Data for Chart
+        $speciesStats = [
+            'dogs' => Pet::notDeceased()->where('species', 'Dog')->count(),
+            'cats' => Pet::notDeceased()->where('species', 'Cat')->count(),
+        ];
+
+        // Upcoming Vaccinations (Next 14 days)
+        $upcomingVaccinations = \App\Models\Vaccination::whereBetween('next_due_date', [now(), now()->addDays(14)])
+            ->with(['pet', 'pet.user'])
+            ->latest()
+            ->get();
+
         $appointmentsToday = Appointment::whereDate('appointment_date', today())
             ->where('status', 'approved')
             ->count();
@@ -36,16 +66,16 @@ class AdminController extends Controller
             ->with(['pet', 'requester'])
             ->get();
 
-        // Fetch low stock vaccines to display an alert
-        $lowStockVaccines = VaccineInventory::whereColumn('stock', '<=', 'low_stock_threshold')->get();
 
         return view('admin.dashboard', compact(
             'totalPets',
             'totalOwners',
             'totalStaff',
+            'vaccinationStats',
+            'speciesStats',
+            'upcomingVaccinations',
             'appointmentsToday',
-            'requests',
-            'lowStockVaccines'
+            'requests'
         ));
     }
 
@@ -769,6 +799,14 @@ class AdminController extends Controller
                 ]);
             }
 
+            // --- NEW: Anti-Rabies Validation ---
+            if ($request->service_type === 'Anti-Rabies') {
+                $error = $this->checkAntiRabiesEligibility($pet->id, $request->appointment_date);
+                if ($error) {
+                    return back()->withErrors(['service_type' => $error])->withInput();
+                }
+            }
+
             // Standardize time format for database
             $formattedTime = date('H:i:s', strtotime($request->appointment_time));
 
@@ -805,57 +843,6 @@ class AdminController extends Controller
         }
     }
 
-    public function updateVaccine(Request $request, $id)
-    {
-        $vaccine = VaccineInventory::findOrFail($id);
-
-        // Only update the fields provided in the request
-        $vaccine->update($request->only([
-            'stock',
-            'batch_no',
-            'received_date', // Allow updating the arrival date
-            'expiry_date',
-            'low_stock_threshold'
-        ]));
-
-        ActivityLog::record(
-            'UPDATE_VACCINE',
-            "Updated inventory details for {$vaccine->name} (Batch: {$vaccine->batch_no})."
-        );
-
-        return back()->with('success', "{$vaccine->name} inventory updated.");
-    }
-
-    public function destroyVaccine($id)
-    {
-        $vaccine = VaccineInventory::findOrFail($id);
-        $vaccine->delete();
-
-        return back()->with('success', "Vaccine record deleted.");
-    }
-    public function storeVaccine(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'batch_no' => 'required|string|unique:vaccine_inventories,batch_no',
-            'stock' => 'required|integer|min:0',
-            'low_stock_threshold' => 'required|integer',
-            'received_date' => 'required|date', // Added validation for arrival date
-            'expiry_date' => 'required|date|after:received_date', // Ensures vaccine isn't expired on arrival
-        ]);
-
-        // Set a default description based on the name if the user didn't provide one
-        $validated['description'] = $request->description ?? ($request->name . " inventory batch.");
-
-        VaccineInventory::create($validated);
-
-        ActivityLog::record(
-            'CREATE_VACCINE',
-            "Admin added a new batch of {$request->name} (Batch: {$request->batch_no}) received on {$request->received_date}."
-        );
-
-        return back()->with('success', 'New vaccine batch added to inventory!');
-    }
     public function archive(Request $request)
     {
         $tab = $request->input('tab', 'pets');
@@ -874,11 +861,6 @@ class AdminController extends Controller
             $data = $query->latest()->paginate(10);
         } elseif ($tab === 'staff') {
             $query = User::onlyTrashed()->where('role', 'staff');
-            if ($search)
-                $query->where('name', 'like', "%{$search}%");
-            $data = $query->latest()->paginate(10);
-        } elseif ($tab === 'vaccines') {
-            $query = VaccineInventory::onlyTrashed();
             if ($search)
                 $query->where('name', 'like', "%{$search}%");
             $data = $query->latest()->paginate(10);
@@ -908,20 +890,6 @@ class AdminController extends Controller
         return back()->with('success', "Pet record for {$pet->name} has been restored successfully.");
     }
 
-    public function forceDeletePet($id)
-    {
-        $pet = Pet::withTrashed()->findOrFail($id);
-        $name = $pet->name;
-        $pet->forceDelete();
-
-        ActivityLog::record(
-            'PERMANENT_DELETE',
-            "Permanently deleted pet record for: " . $name
-        );
-
-        return back()->with('success', "Pet record for {$name} deleted permanently.");
-    }
-
     public function restoreStaff($id)
     {
         $staff = User::onlyTrashed()->findOrFail($id);
@@ -933,48 +901,6 @@ class AdminController extends Controller
         );
 
         return back()->with('success', "Staff account for {$staff->name} restored.");
-    }
-
-    public function forceDeleteStaff($id)
-    {
-        $staff = User::onlyTrashed()->findOrFail($id);
-        $name = $staff->name;
-        $staff->forceDelete();
-
-        ActivityLog::record(
-            'PERMANENT_DELETE',
-            "Permanently deleted staff account: " . $name
-        );
-
-        return back()->with('success', "Staff account for {$name} deleted permanently.");
-    }
-
-   public function restoreVaccine($id)
-    {
-        // Find the soft-deleted vaccine
-        $vaccine = VaccineInventory::onlyTrashed()->findOrFail($id);
-        $vaccine->restore();
-
-        ActivityLog::record(
-            'RESTORE',
-            "Restored vaccine record: " . $vaccine->name
-        );
-
-        return back()->with('success', "Vaccine {$vaccine->name} has been restored to inventory.");
-    }
-
-    public function forceDeleteVaccine($id)
-    {
-        $vaccine = VaccineInventory::withTrashed()->findOrFail($id);
-        $name = $vaccine->name;
-        $vaccine->forceDelete();
-
-        ActivityLog::record(
-            'PERMANENT_DELETE',
-            "Permanently deleted vaccine record for: " . $name
-        );
-
-        return back()->with('success', "Vaccine {$name} deleted permanently.");
     }
 
     public function sendEmailReminder($appointment)

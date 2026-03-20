@@ -98,7 +98,8 @@
                     </tr>
                 @else
                     <tr>
-                        <th>Date/Time</th>
+                        <th>Date</th>
+                        <th>Time</th>
                         <th>Pet Owner</th>
                         <th>Pet Name</th>
                         <th>Service Type</th>
@@ -118,10 +119,8 @@
                 @else
                     @forelse($data as $apt)
                         <tr>
-                            <td>
-                                {{ \Carbon\Carbon::parse($apt->appointment_date)->format('M d, Y') }}
-                                ({{ \Carbon\Carbon::parse($apt->appointment_time)->format('h:i A') }})
-                            </td>
+                            <td>{{ \Carbon\Carbon::parse($apt->appointment_date)->format('M d, Y') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($apt->appointment_time)->format('h:i A') }}</td>
                             <td>{{ $apt->pet->owner ?? ($apt->user->name ?? 'Guest') }}</td>
                             <td>{{ $apt->pet_name }}</td>
                             <td>{{ ucfirst($apt->service_type) }}</td>
@@ -129,7 +128,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" style="text-align: center;">No appointments found for this period.</td>
+                            <td colspan="6" style="text-align: center;">No appointments found for this period.</td>
                         </tr>
                     @endforelse
                 @endif

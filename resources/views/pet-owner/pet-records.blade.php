@@ -3,7 +3,11 @@
 @section('page_title', 'My Pets')
 
 @section('content')
-<div class="container-fluid p-4">
+    @php
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+    @endphp
+    <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-0">My Pets</h2>
@@ -99,6 +103,10 @@
                     <a href="{{ route('pet-owner.digital-id', $pet->id) }}"
                         class="btn btn-outline-dark rounded-pill shadow-sm">
                         <i data-lucide="qr-code" class="me-2" style="width: 16px;"></i> View Digital ID
+                    </a>
+                    <a href="{{ route('pet-owner.reports.pet-medical-history', $pet->id) }}"
+                        class="btn btn-outline-danger rounded-pill shadow-sm" target="_blank">
+                        <i data-lucide="file-text" class="me-2" style="width: 16px;"></i> Download Medical History
                     </a>
                 </div>
             </div>

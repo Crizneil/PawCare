@@ -8,30 +8,9 @@ use Carbon\Carbon;
 use App\Models\Pet;
 use App\Models\Vaccination;
 use App\Models\Appointment;
-use App\Models\VaccineInventory;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class VaccineController extends Controller
 {
-    public function index(Request $request)
-    {
-        $query = VaccineInventory::query();
-
-        if ($request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%')
-                ->orWhere('batch_no', 'like', '%' . $request->search . '%');
-        }
-
-        $vaccines = $query->latest()->paginate(10)->appends(['search' => $request->search]);
-
-        //  Detect if we are on the staff page or admin page
-        if ($request->is('staff/*')) {
-            return view('staff.vaccine-inventory', compact('vaccines'));
-        }
-
-        return view('admin.vaccinations', compact('vaccines'));
-    }
-
     public function status(Request $request)
     {
         $query = Pet::notDeceased()->with(['user', 'latestVaccination']);
@@ -65,34 +44,10 @@ class VaccineController extends Controller
             'staff_id' => auth()->id(), // Track who did it
         ]);
 
-        // AUTOMATIC INVENTORY SYNC (Atomic Transaction)
-        // Find the matching vaccine inventory and decrement it
-        $inventory = VaccineInventory::where('name', $request->vaccine_name)->first();
-        if ($inventory && $inventory->stock > 0) {
-            $inventory->decrement('stock');
-        }
 
         return back()->with('success', 'Vaccination record added successfully!');
     }
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'stock' => 'required|integer|min:0',
-            'expiry_date' => 'required|date',
-        ]);
-
-        $vaccine = VaccineInventory::findOrFail($id);
-
-        // Only update stock and expiry for staff level
-        $vaccine->update([
-            'stock' => $request->stock,
-            'expiry_date' => $request->expiry_date,
-        ]);
-
-        return redirect()->route('staff.vaccine-inventory')
-            ->with('success', 'Vaccine stock updated successfully.');
-    }
 
     public function updateStatus(Request $request, $id)
     {
@@ -131,17 +86,7 @@ class VaccineController extends Controller
             }
         }
 
-        // --- INVENTORY REDUCTION LOGIC ---
-        $inventory = VaccineInventory::where('name', $request->vaccine_name)->first();
-        $finalBatchNo = $request->batch_no ?? ($inventory ? $inventory->batch_no : 'N/A');
-
-        if ($inventory) {
-            if ($inventory->stock > 0) {
-                $inventory->decrement('stock', 1);
-            } else {
-                return back()->with('error', "Insufficient stock for {$request->vaccine_name}!");
-            }
-        }
+        $finalBatchNo = $request->batch_no ?? 'N/A';
 
         // Create History Record
         $pet->vaccinations()->create([

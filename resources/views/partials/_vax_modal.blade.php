@@ -13,22 +13,17 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Vaccine Type</label>
-                        <select name="vaccine_name" class="form-select rounded-3" required>
-                            <option value="" selected disabled>Select from Inventory</option>
-                            @foreach(\App\Models\VaccineInventory::where('stock', '>', 0)->get() as $item)
-                                <option value="{{ $item->name }}">{{ $item->name }} ({{ $item->stock }} left)</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <label class="form-label small fw-bold">Vaccine Brand/Name</label>
+                        <input type="text" name="vaccine_name" list="vaccineOptions" class="form-control rounded-3 vax-name-input" placeholder="Choose or type vaccine name..." required>
+                   </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold">Date Administered</label>
-                            <input type="date" name="date_administered" class="form-control rounded-3" value="{{ date('Y-m-d') }}" required>
+                            <input type="date" name="date_administered" class="form-control rounded-3 vax-date-input" value="{{ date('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold">Next Due Date</label>
-                            <input type="date" name="next_due_date" class="form-control rounded-3" required>
+                            <input type="date" name="next_due_date" class="form-control rounded-3 vax-due-input" required>
                         </div>
                     </div>
                 </div>

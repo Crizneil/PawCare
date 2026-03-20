@@ -36,16 +36,24 @@
                         <div class="row">
                             <div class="col-6 mb-3">
                                 <label class="small fw-bold text-muted text-uppercase">Species</label>
-                                <select name="species" class="form-select rounded-pill bg-light border-0 px-3">
-                                    <option value="dog" {{ $pet->species == 'dog' ? 'selected' : '' }}>Dog</option>
-                                    <option value="cat" {{ $pet->species == 'cat' ? 'selected' : '' }}>Cat</option>
+                                <select name="species" id="speciesSelect{{ $pet->id }}" class="form-select rounded-pill bg-light border-0 px-3">
+                                    <option value="Dog" {{ strtolower($pet->species) == 'dog' ? 'selected' : '' }}>Dog</option>
+                                    <option value="Cat" {{ strtolower($pet->species) == 'cat' ? 'selected' : '' }}>Cat</option>
                                 </select>
                             </div>
                             <div class="col-6 mb-3">
                                 <label class="small fw-bold text-muted text-uppercase">Breed</label>
-                                <input type="text" name="breed" class="form-control rounded-pill bg-light border-0 px-3"
-                                    value="{{ $pet->breed }}">
+                                <select name="breed" id="breedSelect{{ $pet->id }}" class="form-select rounded-pill bg-light border-0 px-3">
+                                    <option value="" selected disabled>Select Breed</option>
+                                </select>
                             </div>
+                            
+                            {{-- Container for "Other" breed if needed --}}
+                            <div class="col-12 mb-3 d-none" id="otherBreedContainer{{ $pet->id }}">
+                                <label class="small fw-bold text-muted text-uppercase">Specify Breed</label>
+                                <input type="text" name="other_breed" id="otherBreedInput{{ $pet->id }}" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Enter breed name">
+                            </div>
+
                             <div class="col-12 mb-3">
                                 <label class="small fw-bold text-muted text-uppercase">Health Status</label>
                                 <select name="status" class="form-select rounded-pill bg-light border-0 px-3">
@@ -58,6 +66,23 @@
                                 </select>
                             </div>
                         </div>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                if (typeof initializePetBreedLogic === 'function') {
+                                    initializePetBreedLogic({
+                                        speciesId: 'speciesSelect{{ $pet->id }}',
+                                        breedId: 'breedSelect{{ $pet->id }}',
+                                        breedContainerId: null,
+                                        otherContainerId: 'otherBreedContainer{{ $pet->id }}',
+                                        otherInputId: 'otherBreedInput{{ $pet->id }}',
+                                        initialSpecies: '{{ $pet->species }}',
+                                        initialBreed: '{{ $pet->breed }}',
+                                        otherBreedValue: '{{ $pet->other_breed ?? '' }}'
+                                    });
+                                }
+                            });
+                        </script>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">

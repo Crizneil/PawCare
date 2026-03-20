@@ -164,6 +164,12 @@
                                                             History
                                                         </a>
                                                     </li>
+                                                    <li>
+                                                        <a class="dropdown-item py-2 text-danger"
+                                                            href="{{ route('staff.reports.pet-medical-history', $pet->id) }}" target="_blank">
+                                                            <i data-lucide="file-text" class="me-2" style="width: 16px;"></i> Medical History (PDF)
+                                                        </a>
+                                                    </li>
                                                 </ul>
                                             </div>
                                         @endif

@@ -8,39 +8,96 @@ function initializePetBreedLogic(config) {
     if (!speciesSelect || !breedSelect) return;
 
     const breeds = {
-        'Dog': ['Golden Retriever', 'German Shepherd', 'Poodle', 'Bulldog', 'Pomeranian', 'Shih Tzu', 'Aspin', 'Chihuahua', 'Other'],
-        'Cat': ['Persian', 'Siamese', 'Maine Coon', 'Bengal', 'Puspin', 'Other'],
+        'Dog': [
+            'Aspin', 'Beagle', 'Bulldog (English)', 'Bulldog (French)', 'Bulldog (American)', 
+            'Chihuahua', 'Chow Chow', 'Cocker Spaniel', 'Dachshund', 'Dalmatian', 
+            'Doberman Pinscher', 'German Shepherd', 'Golden Retriever', 'Great Dane', 
+            'Jack Russell Terrier', 'Labrador Retriever', 'Maltese', 'Pomeranian', 
+            'Poodle', 'Pug', 'Rottweiler', 'Shih Tzu', 'Siberian Husky', 'Other'
+        ],
+        'Cat': [
+            'Abyssinian', 'American Shorthair', 'Bengal', 'Birman', 'British Shorthair', 
+            'Exotic Shorthair', 'Maine Coon', 'Persian', 'Puspin', 'Ragdoll', 
+            'Russian Blue', 'Siamese', 'Sphynx', 'Other'
+        ],
         'Other': ['Other']
     };
 
+    // Initialize Select2 if available
+    const initSelect2 = () => {
+        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+            $(breedSelect).select2({
+                dropdownParent: $(breedSelect).closest('.modal'),
+                width: '100%',
+                placeholder: 'Search or select breed...'
+            });
+        }
+    };
+
+    initSelect2();
+
     // Handle species change
-    speciesSelect.addEventListener('change', function () {
-        const selected = this.value;
+    const updateBreeds = (selected, selectedBreed = null) => {
+        if (!selected) return;
+        
+        // Normalize selected to Title Case for breeds lookup (handles 'dog', 'DOG', etc.)
+        const normalizedSelected = selected.charAt(0).toUpperCase() + selected.slice(1).toLowerCase();
 
         // 1. Reset breed dropdown
         breedSelect.innerHTML = '<option value="" selected disabled>Select Breed</option>';
 
-        // 2. Hide "Other" input and reset it
-        otherContainer.classList.add('d-none');
-        otherInput.required = false;
-        otherInput.value = '';
+        // 2. Hide "Other" input and reset it if not "Other"
+        if (selectedBreed !== 'Other') {
+            if (otherContainer) otherContainer.classList.add('d-none');
+            if (otherInput) {
+                otherInput.required = false;
+                otherInput.value = '';
+            }
+        }
 
         // 3. Populate breeds for selected species
-        if (breeds[selected]) {
-            breeds[selected].forEach(breed => {
+        if (breeds[normalizedSelected]) {
+            breedSelect.disabled = false;
+            breeds[normalizedSelected].forEach(breed => {
                 const option = document.createElement('option');
                 option.value = breed;
                 option.textContent = breed;
+                if (breed === selectedBreed) {
+                    option.selected = true;
+                }
                 breedSelect.appendChild(option);
             });
+        } else {
+            breedSelect.disabled = true;
         }
 
-        // Auto-select "Other" if the species is "Other" to immediately open the manual input
+        // Trigger Select2 update
+        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+            $(breedSelect).trigger('change');
+        }
+
+        // Auto-select "Other" if the species is "Other"
         if (selected === 'Other') {
             breedSelect.value = 'Other';
             breedSelect.dispatchEvent(new Event('change'));
+            if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                $(breedSelect).trigger('change');
+            }
         }
+    };
+
+    speciesSelect.addEventListener('change', function () {
+        updateBreeds(this.value);
     });
+
+    // Handle initial state if pre-selected
+    if (config.initialSpecies) {
+        speciesSelect.value = config.initialSpecies;
+        updateBreeds(config.initialSpecies, config.initialBreed);
+        if (config.initialBreed === 'Other' && otherInput) {
+            otherInput.value = config.otherBreedValue || '';
+        }
+    }
 
     // Handle breed change
     breedSelect.addEventListener('change', function () {
@@ -63,6 +120,11 @@ function initializePetBreedLogic(config) {
                     otherInput.focus();
                 }, 100);
             }
+            // Swap name for submission if needed (specifically for admin view logic)
+            if (config.swapNameOnOther) {
+                breedSelect.name = 'breed_dropdown';
+                otherInput.name = 'breed';
+            }
         } else {
             if (otherContainer) {
                 otherContainer.classList.add('d-none');
@@ -71,6 +133,11 @@ function initializePetBreedLogic(config) {
             if (otherInput) {
                 otherInput.required = false;
                 otherInput.value = '';
+            }
+            // Reset names
+            if (config.swapNameOnOther) {
+                breedSelect.name = 'breed';
+                otherInput.name = 'other_breed';
             }
         }
     });

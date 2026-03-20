@@ -7,7 +7,7 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
             <div>
                 <h2 class="fw-bold mb-1">Archive Center</h2>
-                <p class="text-muted small mb-0">Restore or permanently remove deleted records.</p>
+                <p class="text-muted small mb-0">Restore or reactivate archived records.</p>
             </div>
         </div>
 
@@ -23,12 +23,6 @@
                 <a class="nav-link rounded-pill px-4 {{ $tab === 'staff' ? 'active bg-orange' : 'bg-light text-dark' }}"
                     href="{{ route('admin.archive', ['tab' => 'staff']) }}">
                     <i data-lucide="users" class="me-2 size-18"></i> Staff
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link rounded-pill px-4 {{ $tab === 'vaccines' ? 'active bg-orange' : 'bg-light text-dark' }}"
-                    href="{{ route('admin.archive', ['tab' => 'vaccines']) }}">
-                    <i data-lucide="package" class="me-2 size-18"></i> Vaccines
                 </a>
             </li>
         </ul>
@@ -91,14 +85,6 @@
                                     <th>Deleted At</th>
                                     <th class="text-end pe-4">Actions</th>
                                 </tr>
-                            @elseif($tab === 'vaccines')
-                                <tr>
-                                    <th class="ps-4">Vaccine Name</th>
-                                    <th>Batch No</th>
-                                    <th>Stock</th>
-                                    <th>Deleted At</th>
-                                    <th class="text-end pe-4">Actions</th>
-                                </tr>
                             @endif
                         </thead>
                         <tbody>
@@ -120,10 +106,6 @@
                                     @elseif($tab === 'staff')
                                         <td class="ps-4 fw-bold text-dark">{{ $item->name }}</td>
                                         <td>{{ $item->email }}</td>
-                                    @elseif($tab === 'vaccines')
-                                        <td class="ps-4 fw-bold text-dark">{{ $item->name }}</td>
-                                        <td>{{ $item->batch_no }}</td>
-                                        <td>{{ $item->stock }}</td>
                                     @endif
                                     <td class="small text-muted">
                                         @if($item->trashed())
@@ -139,21 +121,12 @@
                                         <div class="btn-group shadow-sm rounded-pill overflow-hidden">
                                             @php
                                                 $restoreRoute = route("admin.{$tab}.restore", $item->id);
-                                                $deleteRoute = route("admin.{$tab}.force-delete", $item->id);
                                             @endphp
                                             <form action="{{ $restoreRoute }}" method="POST" class="d-inline">
                                                 @csrf
-                                                <button class="btn btn-sm btn-success px-3 border-0 rounded-0">
+                                                <button class="btn btn-sm btn-success px-4 rounded-pill">
                                                     <i data-lucide="rotate-ccw" class="size-14 me-1"></i>
                                                     {{ $item->trashed() ? 'Restore' : 'Reactivate' }}
-                                                </button>
-                                            </form>
-                                            <form action="{{ $deleteRoute }}" method="POST" class="d-inline"
-                                                onsubmit="return confirm('PERMANENTLY DELETE this record? This cannot be undone.')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="btn btn-sm btn-danger px-3 border-0 rounded-0">
-                                                    <i data-lucide="trash-2" class="size-14 me-1"></i> Final Delete
                                                 </button>
                                             </form>
                                         </div>

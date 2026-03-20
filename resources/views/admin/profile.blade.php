@@ -116,38 +116,6 @@
                                     emergency pet alerts.</p>
                             </div>
                         </div>
-
-                        {{-- NEW: Secrets Management Card --}}
-                        <div class="card border-0 shadow-sm rounded-4 mt-4 bg-dark text-white">
-                            <div class="card-body p-4">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 text-white">
-                                        <i data-lucide="key" class="me-2 size-18"></i> Secrets Management
-                                    </h6>
-                                    <span class="badge {{ config('services.google_ai.key') ? 'bg-success' : 'bg-danger' }}">
-                                        {{ config('services.google_ai.key') ? 'CONFIGURED' : 'NOT SET' }}
-                                    </span>
-                                </div>
-                                <div class="bg-white bg-opacity-10 rounded-3 p-3">
-                                    <label class="small text-white-50 d-block mb-1">Google AI Studio API Key</label>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <code class="text-warning">
-                                            @if(config('services.google_ai.key'))
-                                                {{ Str::mask(config('services.google_ai.key'), '*', 4, -4) }}
-                                            @else
-                                                No key found in .env
-                                            @endif
-                                        </code>
-                                        <button class="btn btn-sm btn-outline-light rounded-pill px-3 py-1 fw-bold"
-                                            onclick="Swal.fire('Secrets Info', 'To update this key, please edit the <b>GOOGLE_AI_API_KEY</b> in your <code>.env</code> file for maximum security.', 'info')">
-                                            MANAGE
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="text-white-50 mt-3 d-block">This key enables AI-powered pet care insights
-                                    across the system.</small>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

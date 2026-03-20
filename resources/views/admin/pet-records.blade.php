@@ -121,6 +121,11 @@
                                                     </a>
                                                 </li>
                                                 <li>
+                                                    <a class="dropdown-item py-2" href="{{ route('admin.reports.pet-medical-history', $pet->id) }}" target="_blank">
+                                                        <i class="bi bi-file-pdf me-2 text-danger"></i> Medical History (PDF)
+                                                    </a>
+                                                </li>
+                                                <li>
                                                     <a class="dropdown-item py-2" href="{{ route('admin.vaccination-status', ['search' => $pet->name]) }}">
                                                         <i class="bi bi-shield-check me-2 text-success"></i> Vax Status
                                                     </a>
@@ -180,6 +185,7 @@
     }
 </style>
 @push('scripts')
+<script src="{{ asset('assets/js/pet-registration.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // 1. Initialize Searchable Owner Dropdown (Choices.js)
@@ -195,66 +201,15 @@
             });
         }
 
-        // 2. Dynamic Breed Selection Logic
-        const speciesSelect = document.getElementById('speciesSelect');
-        const breedSelect = document.getElementById('breedSelect');
-        const otherBreedInput = document.getElementById('otherBreedInput');
-
-        const dogBreeds = [
-            'Aspin', 'Shih Tzu', 'Pomeranian', 'Pug', 'Chihuahua',
-            'Golden Retriever', 'Labrador Retriever', 'Siberian Husky',
-            'German Shepherd', 'Poodle', 'Beagle', 'Bulldog', 'Rottweiler',
-            'Dachshund', 'Yorkshire Terrier', 'Boxer', 'Doberman Pinscher',
-            'Corgi', 'Maltese', 'Bichon Frise', 'Chow Chow', 'Dalmatian', 'Other'
-        ];
-
-        const catBreeds = [
-            'Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Ragdoll',
-            'British Shorthair', 'Sphynx', 'Abyssinian', 'Scottish Fold',
-            'Russian Blue', 'Bengal', 'American Shorthair', 'Himalayan',
-            'Norwegian Forest Cat', 'Oriental Shorthair', 'Other'
-        ];
-
-        if (speciesSelect) {
-            speciesSelect.addEventListener('change', function () {
-                const selectedSpecies = this.value;
-                breedSelect.innerHTML = '<option value="" selected disabled>Select Breed</option>';
-                otherBreedInput.classList.add('d-none');
-
-                breedSelect.name = 'breed';
-                otherBreedInput.name = 'other_breed';
-                otherBreedInput.required = false;
-
-                let breeds = selectedSpecies === 'Dog' ? dogBreeds : (selectedSpecies === 'Cat' ? catBreeds : []);
-
-                if (breeds.length > 0) {
-                    breedSelect.disabled = false;
-                    breeds.forEach(breed => {
-                        const option = document.createElement('option');
-                        option.value = breed;
-                        option.textContent = breed;
-                        breedSelect.appendChild(option);
-                    });
-                } else {
-                    breedSelect.disabled = true;
-                }
-            });
-        }
-
-        if (breedSelect) {
-            breedSelect.addEventListener('change', function () {
-                if (this.value === 'Other') {
-                    otherBreedInput.classList.remove('d-none');
-                    otherBreedInput.required = true;
-                    // Swap names so "breed" carries the manual text input
-                    breedSelect.name = 'breed_dropdown';
-                    otherBreedInput.name = 'breed';
-                } else {
-                    otherBreedInput.classList.add('d-none');
-                    otherBreedInput.required = false;
-                    breedSelect.name = 'breed';
-                    otherBreedInput.name = 'other_breed';
-                }
+        // 2. Dynamic Breed Selection Logic (Centralized)
+        if (typeof initializePetBreedLogic === 'function') {
+            initializePetBreedLogic({
+                speciesId: 'speciesSelect',
+                breedId: 'breedSelect',
+                breedContainerId: null, // No specific container needed for admin view
+                otherContainerId: null, // Handled inside logic
+                otherInputId: 'otherBreedInput',
+                swapNameOnOther: true
             });
         }
 

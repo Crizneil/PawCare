@@ -23,6 +23,43 @@
     <link href="assets/css/jquery.fancybox.css" rel="stylesheet">
     <link href="assets/css/odometer-theme-default.css" rel="stylesheet">
     <link href="assets/sass/style.css" rel="stylesheet">
+
+    <style>
+        /* Modern Text Reveal Animation */
+        .hero-reveal-1,
+        .hero-reveal-2,
+        .hero-reveal-3,
+        .hero-reveal-btn {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
+        }
+
+        .hero-section.start-animation .hero-reveal-1 {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.1s;
+        }
+
+        .hero-section.start-animation .hero-reveal-2 {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.3s;
+        }
+
+        .hero-section.start-animation .hero-reveal-3 {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.5s;
+        }
+
+        .hero-section.start-animation .hero-reveal-btn {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.7s;
+        }
+    </style>
 </head>
 
 <body>
@@ -119,10 +156,10 @@
         <section class="hero-section">
             <div class="hero-inner-slider">
                 <div class="hero-inner">
-                    <h2>Trusted Pet Care Service</h2>
-                    <h3>Trusted Veterinary Care for Healthy, Happy Pets.</h3>
-                    <p>Providing safe vaccinations and digital record management you can rely on.</p>
-                    <a href="{{ route('login') }}" class="theme-btn-s2">Update your Pet's Records</a>
+                    <h2 class="hero-reveal-1">Trusted Pet Care Service</h2>
+                    <h3 class="hero-reveal-2">Trusted Veterinary Care for Healthy, Happy Pets.</h3>
+                    <p class="hero-reveal-3">Providing safe vaccinations and digital record management you can rely on.</p>
+                    <a href="{{ route('login') }}" class="theme-btn-s2 hero-reveal-btn">Update your Pet's Records</a>
                 </div>
             </div>
             <div class="hero-image">
@@ -543,7 +580,6 @@
     <script src="assets/js/jquery-plugin-collection.js"></script>
     <!-- Custom script for this template -->
     <script src="assets/js/script.js"></script>
-    @include('partials._chat_widget')
 </body>
 
 

@@ -35,37 +35,146 @@
                     </form>
                 </div>
 
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm p-4 text-center h-100">
-                            <h6 class="text-muted text-uppercase fw-bold small">Total Patients</h6>
-                            <h2 class="display-5 fw-bold text-dark mb-0">{{ $totalPets ?? 0 }}</h2>
-                        </div>
+        {{-- Skeleton Loader (Visible initially) --}}
+        <div id="skeleton-loader">
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm p-4 h-100">
+                        <div class="skeleton skeleton-title mb-4"></div>
+                        <div class="skeleton" style="height: 300px;"></div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm p-4 text-center h-100" style="border-left: 5px solid #d35400;">
-                            <h6 class="text-uppercase fw-bold small" style="color: #d35400;">Active Staff Members</h6>
-                            <h2 class="display-5 fw-bold mb-0" style="color: #d35400;">{{ $totalStaff ?? 0 }}</h2>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm p-4 h-100">
+                        <div class="skeleton skeleton-title mb-4"></div>
+                        <div class="skeleton-circle mx-auto mb-4" style="width: 200px; height: 200px;"></div>
+                        <div class="skeleton skeleton-text mt-4"></div>
+                        <div class="skeleton skeleton-text"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-4">
+                        <div class="skeleton skeleton-title mb-4"></div>
+                        <div class="skeleton skeleton-text mb-2"></div>
+                        <div class="skeleton skeleton-text mb-2"></div>
+                        <div class="skeleton skeleton-text"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Actual Content (Hidden initially) --}}
+        <div id="actual-content" style="display: none;">
+            <div class="row g-4 mb-4">
+                {{-- Charts Row --}}
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Vaccination Status Distribution</h5>
+                            <i data-lucide="bar-chart-3" class="text-muted"></i>
+                        </div>
+                        <canvas id="vaxChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm p-4 h-100">
+                        <h5 class="fw-bold mb-4">Patient Demographics</h5>
+                        <canvas id="speciesChart" style="max-height: 250px;"></canvas>
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Dogs</span>
+                                <span class="fw-bold small">{{ $speciesStats['dogs'] ?? 0 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small">Cats</span>
+                                <span class="fw-bold small">{{ $speciesStats['cats'] ?? 0 }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Low Stock Alert --}}
-                @if(isset($lowStockVaccines) && $lowStockVaccines->count() > 0)
-                    <div class="alert alert-danger border-0 shadow-sm rounded-lg d-flex align-items-center mb-4">
-                        <i data-lucide="alert-triangle" class="me-3 size-24"></i>
-                        <div>
-                            <h6 class="fw-bold mb-1">Low Inventory Alert</h6>
-                            <p class="small mb-0">The following items are running low on stock:
-                                <strong>{{ $lowStockVaccines->pluck('name')->implode(', ') }}</strong>.
-                                Please restock soon to avoid shortages.
-                            </p>
+                {{-- Notifications/Upcoming Row --}}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">
+                                <i data-lucide="bell" class="me-2 text-primary"></i> Upcoming Vaccinations
+                            </h5>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3">NEXT 14 DAYS</span>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="border-0 small fw-bold text-muted ps-3">PET</th>
+                                        <th class="border-0 small fw-bold text-muted">OWNER</th>
+                                        <th class="border-0 small fw-bold text-muted">LAST VACCINE</th>
+                                        <th class="border-0 small fw-bold text-muted text-center">DUE DATE</th>
+                                        <th class="border-0 small fw-bold text-muted text-end pe-3">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($upcomingVaccinations ?? [] as $vax)
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-light rounded-circle p-2 me-3">
+                                                        <i data-lucide="{{ strtolower($vax->pet->species) === 'dog' ? 'dog' : 'cat' }}" class="text-primary size-20"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark">{{ $vax->pet->name }}</div>
+                                                        <div class="text-muted small">{{ $vax->pet->pet_id }}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="small fw-semibold text-dark">{{ $vax->pet->user->name ?? 'N/A' }}</div>
+                                                <div class="text-muted" style="font-size: 11px;">{{ $vax->pet->user->phone ?? 'N/A' }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary-subtle text-secondary small">{{ $vax->vaccine_name }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold {{ \Carbon\Carbon::parse($vax->next_due_date)->isPast() ? 'text-danger' : 'text-primary' }}">
+                                                    {{ \Carbon\Carbon::parse($vax->next_due_date)->format('M d, Y') }}
+                                                </div>
+                                                <div class="text-muted" style="font-size: 10px;">
+                                                    {{ \Carbon\Carbon::parse($vax->next_due_date)->diffForHumans() }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <a href="{{ route('admin.pet-records', ['general_search' => $vax->pet->pet_id]) }}" 
+                                                   class="btn btn-sm btn-outline-primary rounded-pill px-3">View Record</a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">No upcoming vaccinations identified in the next 14 days.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                @endif
+                </div>
 
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 text-center h-100">
+                        <h6 class="text-muted text-uppercase fw-bold small">Total Patients</h6>
+                        <h2 class="display-5 fw-bold text-dark mb-0">{{ $totalPets ?? 0 }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 text-center h-100" style="border-left: 5px solid #d35400;">
+                        <h6 class="text-uppercase fw-bold small" style="color: #d35400;">Active Staff Members</h6>
+                        <h2 class="display-5 fw-bold mb-0" style="color: #d35400;">{{ $totalStaff ?? 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div class="alert alert-info border-0 shadow-sm rounded-lg d-flex align-items-center">
+                <div class="alert alert-info border-0 shadow-sm rounded-lg d-flex align-items-center mt-4">
                     <i data-lucide="info" class="me-3"></i>
                     <div>
                         <h6 class="fw-bold mb-0">System Status</h6>
@@ -76,76 +185,113 @@
             </div>
         </div>
     </div>
+@endsection
 
-    {{-- Logic for Rejection Modals --}}
-        @foreach($requests ?? [] as $req)
-                    @php /** @var \App\Models\UserRequest $req */ @endphp
-            <div class="modal fade" id="rejectModal{{ $req?->id }}" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow">
-                        <div class="modal-header border-0">
-                            <h5 class="modal-title fw-bold">Reject Request</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route('admin.requests.update', $req?->id ?? 0) }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="status" value="rejected">
-                            <div class="modal-body">
-                                <label class="small fw-bold text-uppercase text-muted">Reason for Rejection</label>
-                                <textarea name="remarks" class="form-control bg-light border-0 mt-2" rows="3"
-                                    placeholder="Explain why..." required></textarea>
-                            </div>
-                            <div class="modal-footer border-0">
-                                <button type="button" class="btn btn-link text-muted text-decoration-none"
-                                    data-bs-dismiss="modal">CANCEL</button>
-                                <button type="submit" class="btn btn-danger rounded-pill px-4">CONFIRM REJECTION</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        @endforeach
- <script>
-    const scanInput = document.getElementById('scanInput');
+@push('scripts')
+<script>
+    // --- Chart Data from Backend ---
+    const vaxData = @json($vaccinationStats ?? []);
+    const speciesData = @json($speciesStats ?? []);
 
-    // 1. Maintain focus more aggressively
-    const keepFocus = () => {
-        if (document.activeElement !== scanInput) {
+    $(document).ready(function() {
+        // Handle Skeleton Loader Toggle
+        setTimeout(() => {
+            $('#skeleton-loader').fadeOut(300, function() {
+                $('#actual-content').fadeIn(400);
+            });
+        }, 800);
+
+        // 1. Vaccination Status Chart
+        const vaxCtx = document.getElementById('vaxChart');
+        if (vaxCtx) {
+            new Chart(vaxCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Fully Vaccinated', 'Partially Vaccinated', 'Due Soon', 'Overdue', 'Unvaccinated'],
+                    datasets: [{
+                        label: 'Status Count',
+                        data: [
+                            vaxData.fully_vaccinated || 0, 
+                            vaxData.partially_vaccinated || 0, 
+                            vaxData.due_soon || 0, 
+                            vaxData.overdue || 0, 
+                            vaxData.unvaccinated || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(25, 135, 84, 0.7)', // Success
+                            'rgba(13, 110, 253, 0.7)', // Info/Blue
+                            'rgba(255, 193, 7, 0.7)',  // Warning
+                            'rgba(220, 53, 69, 0.7)',  // Danger
+                            'rgba(108, 117, 125, 0.7)' // Muted
+                        ],
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // 2. Species Pie Chart
+        const speciesCtx = document.getElementById('speciesChart');
+        if (speciesCtx) {
+            new Chart(speciesCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Dogs', 'Cats'],
+                    datasets: [{
+                        data: [speciesData.dogs || 0, speciesData.cats || 0],
+                        backgroundColor: ['#d35400', '#f1c40f'],
+                        hoverOffset: 4,
+                        borderWidth: 5,
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        const scanInput = document.getElementById('scanInput');
+        if (scanInput) {
+            // 1. Maintain focus more aggressively
+            const keepFocus = () => {
+                if (document.activeElement !== scanInput) {
+                    scanInput.focus();
+                }
+            };
             scanInput.focus();
-        }
-    };
+            document.addEventListener('click', () => setTimeout(keepFocus, 500));
 
-    window.addEventListener('load', () => scanInput.focus());
-    // Refocus if user clicks anywhere, but don't interrupt typing
-    document.addEventListener('click', () => {
-        setTimeout(keepFocus, 500);
-    });
+            // 2. Enhanced Detection Logic
+            scanInput.addEventListener('input', function () {
+                const val = this.value.trim();
+                if (val.includes('http') || val.startsWith('WALK-') || val.startsWith('PC-')) {
+                    this.classList.add('is-valid');
+                    setTimeout(() => this.form.submit(), 300);
+                }
+            });
 
-    // 2. Enhanced Detection Logic
-    scanInput.addEventListener('input', function () {
-        const val = this.value.trim();
-
-        // Check if it's a full URL OR a specific Pet ID format (WALK- or PC-)
-        const isUrl = val.includes('http');
-        const isWalkIn = val.startsWith('WALK-');
-        const isRegistered = val.startsWith('PC-'); // Assuming your IDs start with PC-
-
-        if (isUrl || isWalkIn || isRegistered) {
-            // Visual feedback that something is happening
-            scanInput.classList.add('is-valid');
-
-            // Short delay to allow hardware scanner to finish sending characters
-            setTimeout(() => {
-                this.form.submit();
-            }, 300);
-        }
-    });
-
-    // 3. Handle the "Enter" key (most scanners send 'Enter' at the end)
-    scanInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            this.form.submit();
+            scanInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') this.form.submit();
+            });
         }
     });
 </script>
-@endsection
+@endpush

@@ -7,17 +7,19 @@ use App\Models\Appointment;
 use App\Models\User;
 use App\Models\UserRequest;
 use App\Models\Vaccination;
-use App\Models\VaccineInventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class StaffController extends Controller
 {
+    use \App\Traits\AppointmentValidation;
+
     public function dashboard()
     {
         return view('staff.dashboard', [
@@ -25,7 +27,6 @@ class StaffController extends Controller
                 ->whereIn('status', ['approved', 'checked-in'])
                 ->get(),
             'dueForVaccination' => Pet::notDeceased()->where('status', 'needs_booster')->limit(5)->get(),
-            'lowStock' => VaccineInventory::whereColumn('stock', '<=', 'low_stock_threshold')->get(),
             'recentVaccinations' => Vaccination::whereHas('pet', function ($q) {
                 $q->notDeceased();
             })->with('pet')->latest()->limit(5)->get(),
@@ -46,7 +47,7 @@ class StaffController extends Controller
 
             // If current time is 15 mins past schedule (diff < -15)
             if (now()->diffInMinutes($scheduledTime, false) < -15) {
-                $apt->update(['status' => 'missed']);
+                DB::table('appointments')->where('id', $apt->id)->update(['status' => 'missed']);
             }
         }
         $query = Appointment::with(['user', 'pet']);
@@ -96,15 +97,11 @@ class StaffController extends Controller
             $appointment->administered_by = auth()->user()->name;
             $appointment->status = 'completed';
 
-            // 2. Run Medical Services Logic (Vaccination/Inventory)
-            $recordName = $appointment->vaccine_name ?? $appointment->service_type;
-            $inventory = VaccineInventory::where('name', $recordName)->first();
             $medicalServices = ['Vaccination', 'Deworming', 'Check-up', 'Kapon'];
+            $batchNo = 'MANUAL-' . date('Ymd');
+            $finalName = $appointment->vaccine_name ?? $appointment->service_type;
 
             if (in_array($appointment->service_type, $medicalServices)) {
-                $finalName = $inventory ? $inventory->name : $recordName;
-                $batchNo = $inventory ? $inventory->batch_no : 'MANUAL-'.date('Ymd');
-
                 $pet = Pet::find($appointment->pet_id);
                 if ($pet) {
                     // Update Pet Medical State
@@ -126,10 +123,6 @@ class StaffController extends Controller
                     ]);
                 }
 
-                // Deduct from Vaccine Inventory
-                if ($inventory && $inventory->stock > 0) {
-                    $inventory->decrement('stock', 1);
-                }
                 $appointment->batch_no = $batchNo;
                 $appointment->vaccine_name = $finalName;
                 $appointment->next_due_date = now()->addYear();
@@ -239,6 +232,14 @@ class StaffController extends Controller
             'city' => $request->city ?? 'Meycauayan City',
             'province' => $request->province ?? 'Bulacan',
         ]);
+
+        // --- NEW: Anti-Rabies Validation ---
+        if ($request->service_type === 'Anti-Rabies') {
+            $error = $this->checkAntiRabiesEligibility($pet->id, $request->schedule_date);
+            if ($error) {
+                return back()->withErrors(['service_type' => $error])->withInput();
+            }
+        }
 
         // 5. Create the Appointment
         Appointment::create([
@@ -369,38 +370,9 @@ class StaffController extends Controller
         $history = $query->latest('date_administered')->paginate(15)->appends($request->all());
 
         $staffList = User::where('role', 'staff')->get();
-        $vaccineList = VaccineInventory::select('name')->distinct()->get();
+        $vaccineList = Vaccination::select('vaccine_name as name')->distinct()->get();
 
         return view('staff.vaccination-history', compact('history', 'staffList', 'vaccineList'));
-    }
-    public function vaccineInventory()
-    {
-        $vaccines = VaccineInventory::latest()->get();
-        return view('staff.vaccine-inventory', compact('vaccines'));
-    }
-    public function useVaccineInventory(Request $request, $id)
-    {
-        $vaccine = VaccineInventory::findOrFail($id);
-        if ($vaccine->stock > 0) {
-            $vaccine->decrement('stock', 1);
-            return back()->with('success', "One dose of {$vaccine->name} deducted.");
-        }
-        return back()->with('error', 'Out of stock!');
-    }
-    public function updateVaccine(Request $request, $id)
-    {
-        $request->validate([
-            'stock' => 'required|integer|min:0',
-            'expiry_date' => 'required|date',
-        ]);
-
-        $vaccine = VaccineInventory::findOrFail($id);
-        $vaccine->update([
-            'stock' => $request->stock,
-            'expiry_date' => $request->expiry_date,
-        ]);
-
-        return back()->with('success', "Inventory for {$vaccine->name} updated!");
     }
 
     public function profile()
@@ -417,15 +389,7 @@ class StaffController extends Controller
             'next_due_date' => 'required|date',
         ]);
 
-        $inventory = VaccineInventory::where('name', $request->vaccine_name)->first();
-
-        if (!$inventory || $inventory->stock <= 0) {
-            return back()->with('error', "Insufficient stock for {$request->vaccine_name}!");
-        }
-
-        $actualBatchNo = $inventory->batch_no;
-        $inventory->decrement('stock', 1);
-
+        $actualBatchNo = 'MANUAL-' . date('Ymd');
         // 1. Create Vaccination Record
         Vaccination::create([
             'pet_id' => $id,
