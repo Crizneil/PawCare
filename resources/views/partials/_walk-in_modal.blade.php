@@ -103,7 +103,6 @@
                                 <option value="" selected disabled>Species</option>
                                 <option value="Dog">Dog</option>
                                 <option value="Cat">Cat</option>
-                                <option value="Other">Other</option>
                             </select>
                         </div>
                         <div class="col-6">
