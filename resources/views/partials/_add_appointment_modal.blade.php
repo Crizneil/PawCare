@@ -44,7 +44,6 @@
                                     class="form-control rounded-pill bg-light border-0" required>
                                     <option value="Dog">Dog</option>
                                     <option value="Cat">Cat</option>
-                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
