@@ -27,9 +27,10 @@
                 {{-- Left Side: Pet Info --}}
                 <div class="cr80-left">
                     <div class="d-flex align-items-center mb-2">
-                        <img src="{{ $pet->image_url ?? 'https://ui-avatars.com/api/?name=' . $pet->name . '&background=fce7d6&color=primary' }}"
+                        <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . $pet->name . '&background=fdfbf7&color=d35400' }}"
                             class="rounded-circle shadow-sm"
-                            style="width: 0.5in; height: 0.5in; object-fit: cover; border: 2px solid #fff; flex-shrink: 0;">
+                            style="width: 0.5in; height: 0.5in; object-fit: cover; border: 2px solid #fff; flex-shrink: 0;"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                         <div class="ms-2" style="min-width: 0;">
                             <h1 class="cr80-title text-truncate">{{ $pet->name }}</h1>
                             <p class="cr80-subtitle text-truncate">{{ $pet->breed ?? 'Mixed/Other' }}</p>
@@ -105,10 +106,10 @@
             height: 2.125in;
             margin: 0 auto;
             position: relative;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-top: 5px solid var(--bs-primary);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            background: #fdfbf7;
+            border: 1px solid #e8e4d9;
+            border-top: 5px solid #d35400;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
             border-radius: 0.5rem;
             /* ~1/8 inch radius typical for CR80 */
             overflow: hidden;
@@ -124,7 +125,7 @@
 
         .cr80-right {
             width: 35%;
-            background-color: #f8f9fa;
+            background-color: #fff9f0;
             border-left: 1px solid #dee2e6;
             display: flex;
             flex-direction: column;

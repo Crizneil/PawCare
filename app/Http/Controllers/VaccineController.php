@@ -8,6 +8,8 @@ use Carbon\Carbon;
 use App\Models\Pet;
 use App\Models\Vaccination;
 use App\Models\Appointment;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\TelegramAlertNotification;
 
 class VaccineController extends Controller
 {
@@ -33,7 +35,7 @@ class VaccineController extends Controller
             'status' => 'required|string',
         ]);
 
-        Vaccination::create([
+        $vaccination = Vaccination::create([
             'pet_id' => $id,
             'vaccine_name' => $request->vaccine_name,
             'date_administered' => $request->date_administered,
@@ -44,6 +46,13 @@ class VaccineController extends Controller
             'staff_id' => auth()->id(), // Track who did it
         ]);
 
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram vaccination alert: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Vaccination record added successfully!');
     }
@@ -89,7 +98,7 @@ class VaccineController extends Controller
         $finalBatchNo = $request->batch_no ?? 'N/A';
 
         // Create History Record
-        $pet->vaccinations()->create([
+        $vaccination = $pet->vaccinations()->create([
             'appointment_id' => $request->appointment_id,
             'vaccine_name' => $request->vaccine_name,
             'date_administered' => $request->date_administered,
@@ -99,6 +108,14 @@ class VaccineController extends Controller
             'remarks' => $request->remarks,
             'admin_id' => auth()->id(),
         ]);
+
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram vaccination update alert: ' . $e->getMessage());
+        }
 
         // ---  UPDATE THE APPOINTMENT RECORD ---
         if ($request->appointment_id) {

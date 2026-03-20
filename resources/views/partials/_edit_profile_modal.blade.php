@@ -15,7 +15,13 @@
                         {{-- Profile Picture --}}
                         <div class="col-md-12 mb-2">
                             <label class="form-label small fw-bold text-muted text-uppercase">Profile Picture</label>
-                            <input type="file" name="profile_image" class="form-control rounded-pill border-light bg-light">
+                            <div class="input-group">
+                                <input type="file" name="profile_image" class="form-control rounded-start-pill border-light bg-light">
+                                <button type="button" class="btn btn-outline-secondary btn-camera-trigger rounded-end-pill px-3">
+                                    <i data-lucide="camera" style="width: 18px;"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" name="profile_image_base64" id="profile_image_base64">
                             <small class="text-muted ms-2">Leave blank to keep current picture.</small>
                         </div>
 

@@ -16,10 +16,11 @@
             <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100">
                 <div class="card-body">
                     <div class="position-relative d-inline-block mb-4">
-                        <img src="{{ auth()->user()->profile_image ? asset('storage/' . auth()->user()->profile_image) : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->name) . '&background=d35400&color=fff&size=150' }}"
-                             class="rounded-circle shadow-sm border border-4 border-white"
-                             alt="Profile Picture"
-                             style="width: 140px; height: 140px; object-fit: cover;">
+                        <img src="{{ auth()->user()->profile_image ? '/storage/' . auth()->user()->profile_image : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->name) . '&background=d35400&color=fff&size=150' }}"
+                             class="rounded-circle shadow-sm border border-4 border-white mb-3" 
+                             style="width: 140px; height: 140px; object-fit: cover;"
+                             onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=d35400&color=fff&size=150'"
+                             alt="Profile Picture">
                         <span class="position-absolute bottom-0 end-0 bg-success border border-2 border-white rounded-circle" style="width: 18px; height: 18px;" title="Online"></span>
                     </div>
 

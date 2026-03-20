@@ -80,12 +80,22 @@
                                     </td>
 
                                     <td data-label="Pet Info">
-                                        <div class="fw-bold text-dark">{{ $pet->name }}</div>
-                                        <small class="text-muted">{{ $pet->breed ?? 'Hybrid' }}</small>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0 me-3">
+                                                <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}" 
+                                                     class="rounded-circle border shadow-sm"
+                                                     style="width: 40px; height: 40px; object-fit: cover;"
+                                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ $pet->name }}</div>
+                                                <small class="text-muted">{{ $pet->breed ?? 'Hybrid' }}</small>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <td data-label="Type">
-                                        <span class="badge bg-blue-light text-primary text-capitalize">
+                                        <span class="badge text-capitalize" style="background-color: #fce7d6; color: #d35400; border: 1px solid #fbc8a4;">
                                             {{ $pet->type ?? $pet->species ?? 'Dog' }}
                                         </span>
                                     </td>

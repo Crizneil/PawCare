@@ -12,6 +12,8 @@ use App\Models\ActivityLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AppointmentConfirmedEmail;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\TelegramAlertNotification;
 
 class PetController extends Controller
 {
@@ -145,6 +147,14 @@ class PetController extends Controller
         }
 
         $appointment->update(['status' => 'cancelled']);
+
+        // --- NEW: Send Telegram Notification to Admin/Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($appointment, 'appointment_cancelled'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram cancellation alert: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Appointment cancelled successfully.');
     }
@@ -284,9 +294,14 @@ class PetController extends Controller
             // Send the appointment confirmation email to the owner
             try {
                 Mail::to(auth()->user()->email)->send(new AppointmentConfirmedEmail($appointment));
+                
+                // --- NEW: Send Telegram Notification to Admin/Owner ---
+                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                    ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
+
             } catch (\Exception $e) {
                 // Log the error or handle it silently so it doesn't interrupt the booking process
-                \Log::error('Failed to send appointment confirmation email: ' . $e->getMessage());
+                \Log::error('Failed to send notifications: ' . $e->getMessage());
             }
 
             return redirect()->route('pet-owner.appointments')->with('success', 'Appointment requested!');
@@ -326,11 +341,16 @@ class PetController extends Controller
             ? $request->other_breed
             : $request->breed;
 
-        // 3. Handle File Upload (Existing logic is fine)
+        // 3. Handle File/Base64 Upload (Save RELATIVE path for consistency)
         $imagePath = null;
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('profiles', 'public');
-            $imagePath = '/storage/' . $path;
+        if ($request->filled('image_base64')) {
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $imagePath = $imageName;
+        } elseif ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('profiles', 'public');
         }
 
         // 4. Determine the Owner
@@ -340,7 +360,7 @@ class PetController extends Controller
         $ownerRecord = \App\Models\User::find($ownerId);
 
         // 5. Create the pet record
-        Pet::create([
+        $pet = Pet::create([
             'pet_id' => 'PC-2026-' . rand(1000, 9999),
             'user_id' => $ownerId,
             'name' => $request->name,
@@ -354,6 +374,14 @@ class PetController extends Controller
             'last_date' => now(),
             'vaccine_type' => 'None',
         ]);
+
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram pet registration alert: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Pet registered successfully!');
     }
@@ -471,22 +499,22 @@ class PetController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'species' => 'required',
-            'pet_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // 2MB Max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'image_base64' => 'nullable|string',
         ]);
 
         $pet = Pet::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
 
-        if ($request->hasFile('pet_image')) {
-            // Define the folder path
-            $folder = 'pets';
-            $file = $request->file('pet_image');
-            $filename = time() . '_' . $file->getClientOriginalName();
-
-            // Store the file in the public disk
-            $path = $file->storeAs($folder, $filename, 'public');
-
-            // Save the URL to the database
-            $pet->image_url = '/storage/' . $path;
+        if ($request->filled('image_base64')) {
+            if ($pet->image_url) Storage::disk('public')->delete($pet->image_url);
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $pet->image_url = $imageName;
+        } elseif ($request->hasFile('image')) {
+            if ($pet->image_url) Storage::disk('public')->delete($pet->image_url);
+            $pet->image_url = $request->file('image')->store('profiles', 'public');
         }
 
         $oldStatus = $pet->status;
@@ -522,6 +550,7 @@ class PetController extends Controller
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'profile_image_base64' => 'nullable|string',
         ]);
 
         $data = $request->only([
@@ -529,9 +558,16 @@ class PetController extends Controller
             'house_no', 'street', 'barangay', 'city', 'province'
         ]);
 
-        if ($request->hasFile('profile_image')) {
-            $path = $request->file('profile_image')->store('profile_images', 'public');
-            $data['profile_image'] = $path;
+        if ($request->filled('profile_image_base64')) {
+            if ($user->profile_image) Storage::disk('public')->delete($user->profile_image);
+            $imageData = $request->input('profile_image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $data['profile_image'] = $imageName;
+        } elseif ($request->hasFile('profile_image')) {
+            if ($user->profile_image) Storage::disk('public')->delete($user->profile_image);
+            $data['profile_image'] = $request->file('profile_image')->store('profiles', 'public');
         }
 
         $user->update($data);

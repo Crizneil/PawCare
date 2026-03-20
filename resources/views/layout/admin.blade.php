@@ -14,6 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
 
     <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/newicon.png') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -383,6 +384,41 @@
         <option value="Bordetella (Kennel Cough)">
         <option value="Deworming">
     </datalist>
+
+    {{-- GLOBAL IMAGE CROP MODAL --}}
+    <div class="modal fade" id="imageCropModal" tabindex="-1" data-bs-backdrop="static" style="z-index: 2000;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-0 bg-dark text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold"><i data-lucide="scissors" class="me-2"></i> Crop & Adjust Photo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 bg-light">
+                    <div id="camera-container" class="d-none position-relative">
+                        <video id="webcam" autoplay playsinline class="w-100 bg-black" style="max-height: 500px;"></video>
+                        <canvas id="snapshot-canvas" class="d-none"></canvas>
+                        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
+                            <button id="take-snapshot" class="btn btn-orange btn-lg rounded-circle shadow p-3">
+                                <i data-lucide="camera" style="width: 32px; height: 32px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cropper-container">
+                        <img id="image-to-crop" src="" alt="Crop Me" style="max-width: 100%; display: block;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-white rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="apply-crop" class="btn btn-orange rounded-pill px-4 fw-bold shadow-sm d-none">
+                        Apply & Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="{{ asset('assets/js/image-handler.js') }}"></script>
 </body>
 
 </html>

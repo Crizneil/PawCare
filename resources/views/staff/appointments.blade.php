@@ -92,7 +92,7 @@
                                     <div class="d-flex align-items-center gap-3">
                                         <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
                                             style="width: 45px; height: 45px;">
-                                            <img src="https://ui-avatars.com/api/?name={{ urlencode($apt->pet_name) }}&background=random&color=fff&rounded=true"
+                                            <img src="https://ui-avatars.com/api/?name={{ urlencode($apt->pet_name) }}&background=fdfbf7&color=d35400&rounded=true"
                                                 alt="Pet" class="w-100 h-100 object-fit-cover">
                                         </div>
                                         <div>

@@ -84,12 +84,11 @@
             (strtolower($user->role) === 'staff' ? route('staff.profile') : route('pet-owner.profile'))
         }}" class="position-relative">
 
-            <img src="{{ $user->profile_image
-                ? asset('storage/' . $user->profile_image)
-                : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=d35400&color=fff' }}"
+            <img src="{{ $user->profile_image ? '/storage/' . $user->profile_image : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=d35400&color=fff' }}"
                  class="rounded-circle border shadow-sm"
                  style="width:42px; height:42px; object-fit:cover;"
-                 alt="Profile Picture">
+                 alt="Profile Picture"
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=d35400&color=fff'">
 
             <span class="position-absolute bottom-0 end-0 bg-success border border-2 border-white rounded-circle"
                   style="width:12px; height:12px;">

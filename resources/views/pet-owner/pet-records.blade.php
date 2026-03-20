@@ -21,14 +21,15 @@
 <div class="row">
     @forelse(Auth::user()->pets as $pet)
     <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100" style="background-color: #fdfbf7;">
             <div class="card-body p-4">
                 {{-- Header with Image and Name --}}
                 <div class="d-flex align-items-center mb-4 position-relative">
                     <div class="position-relative">
-                        <img src="{{ $pet->image_url ? asset($pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fce7d6&color=primary' }}"
+                        <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                             class="rounded-circle border border-3 border-white shadow-sm {{ $pet->status === 'DECEASED' ? 'grayscale opacity-75' : '' }}"
-                            style="width: 80px; height: 80px; object-fit: cover;">
+                            style="width: 80px; height: 80px; object-fit: cover;"
+                            onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                         @if($pet->status === 'DECEASED')
                         <div
                             class="position-absolute bottom-0 start-50 translate-middle-x bg-dark text-white tiny-badge px-2 rounded-pill shadow-sm">
@@ -44,7 +45,8 @@
                             @endif
                         </h4>
                         <span
-                            class="badge rounded-pill {{ $pet->status === 'DECEASED' ? 'bg-secondary-subtle text-secondary' : 'bg-primary-subtle text-primary border border-primary' }} px-3">
+                            class="badge rounded-pill {{ $pet->status === 'DECEASED' ? 'bg-secondary-subtle text-secondary' : 'px-3' }}"
+                            style="{{ $pet->status !== 'DECEASED' ? 'background-color: #fdfbf7; color: #d35400; border: 1px solid #fce7d6;' : '' }}">
                             {{ ucfirst($pet->species) }}
                         </span>
                     </div>
@@ -70,7 +72,7 @@
                 </div>
 
                 {{-- REAL Vaccination Status --}}
-                <div class="bg-light rounded-3 p-3 mb-4">
+                <div class="rounded-3 p-3 mb-4" style="background-color: #faf8ef; border: 1px solid #eee;">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="small fw-bold text-dark">Status</span>
 

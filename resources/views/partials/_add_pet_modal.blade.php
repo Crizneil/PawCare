@@ -5,8 +5,9 @@
                 <h5 class="modal-title fw-bold" id="addPetModalLabel">Register New Pet</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.pets.store') }}" method="POST">
+            <form action="{{ route('admin.pets.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="image_base64" id="pet_add_image_base64">
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         {{-- Searchable Owner Dropdown --}}
@@ -25,8 +26,11 @@
                                 <img id="petImagePreview" src="https://ui-avatars.com/api/?name=Pet&background=fce7d6&color=ff6600"
                                     class="rounded-circle border border-4 border-white shadow"
                                     style="width: 120px; height: 120px; object-fit: cover;">
-                                <label for="petImageInput" class="position-absolute bottom-0 end-0 bg-orange text-white rounded-circle p-2 shadow-sm" style="cursor: pointer;">
-                                    <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
+                                <label class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 shadow-sm btn-camera-trigger" style="cursor: pointer; width: 36px; height: 36px;" title="Take Photo">
+                                    <i data-lucide="camera" style="width: 20px; height: 20px;"></i>
+                                </label>
+                                <label for="petImageInput" class="position-absolute bottom-0 start-0 bg-orange text-white rounded-circle p-2 shadow-sm" style="cursor: pointer; width: 36px; height: 36px;" title="Upload Photo">
+                                    <i data-lucide="upload" style="width: 20px; height: 20px;"></i>
                                     <input type="file" name="image" id="petImageInput" class="d-none" accept="image/*">
                                 </label>
                             </div>

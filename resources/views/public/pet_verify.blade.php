@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-light">
+<body style="background-color: #fcfaf2;">
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -22,14 +22,15 @@
 
                 <div class="card-body p-4 text-center">
                     {{-- Pet Image --}}
-                    <img src="{{ $pet->image_url ?? 'https://ui-avatars.com/api/?name='.$pet->name }}"
+                    <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name='.urlencode($pet->name).'&background=fdfbf7&color=d35400' }}"
                          class="rounded-circle border border-4 border-white shadow-sm mb-3"
-                         style="width: 120px; height: 120px; margin-top: -60px; object-fit: cover;">
+                         style="width: 120px; height: 120px; margin-top: -60px; object-fit: cover;"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
 
                     <h2 class="fw-bold text-dark mb-1">{{ $pet->name }}</h2>
-                    <span class="badge rounded-pill bg-primary px-3 mb-4">{{ $pet->pet_id }}</span>
+                    <span class="badge rounded-pill px-3 mb-4" style="background-color: #fdfbf7; color: #d35400; border: 1px solid #fce7d6;">#{{ $pet->pet_id }}</span>
 
-                    <div class="row g-3 text-start bg-light p-3 rounded-3 mb-4">
+                    <div class="row g-3 text-start p-3 rounded-3 mb-4" style="background-color: #faf8ef; border: 1px solid #eee;">
                         <div class="col-6">
                             <label class="text-muted small fw-bold text-uppercase">Species</label>
                             <p class="fw-bold mb-0">{{ ucfirst($pet->species) }}</p>

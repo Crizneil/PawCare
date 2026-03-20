@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 use App\Mail\WelcomeEmail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\TelegramAlertNotification;
 
 class AdminController extends Controller
 {
@@ -221,6 +223,14 @@ class AdminController extends Controller
         Mail::to($appointment->user->email)
             ->send(new AppointmentReminder($appointment, 'approved'));
 
+        // Send Telegram alert
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($appointment, 'appointment_approved'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram approval alert: ' . $e->getMessage());
+        }
+
         return back()->with('success', 'Appointment Approved and owner notified!');
     }
 
@@ -250,6 +260,14 @@ class AdminController extends Controller
         Mail::to($appointment->user->email)
             ->send(new AppointmentReminder($appointment, 'rejected'));
 
+        // Send Telegram alert
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($appointment, 'appointment_rejected'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram rejection alert: ' . $e->getMessage());
+        }
+
         return back()->with('success', 'Appointment rejected and owner notified.');
     }
 
@@ -274,6 +292,14 @@ class AdminController extends Controller
         // Send reschedule email
         Mail::to($appointment->user->email)
             ->send(new AppointmentReminder($appointment, 'rescheduled'));
+
+        // Send Telegram alert
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($appointment, 'appointment_rescheduled'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram reschedule alert: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Appointment rescheduled and owner notified.');
     }
@@ -326,10 +352,23 @@ class AdminController extends Controller
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'gender' => 'required|string|in:Male,Female',
+            'profile_image' => 'nullable|image|max:2048',
+            'profile_image_base64' => 'nullable|string',
         ], [
             'email.unique' => 'An account with this email address already exists.',
             'phone.unique' => 'An account with this mobile number already exists.',
         ]);
+
+        $imagePath = null;
+        if ($request->filled('profile_image_base64')) {
+            $imageData = $request->input('profile_image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $imagePath = $imageName;
+        } elseif ($request->hasFile('profile_image')) {
+            $imagePath = $request->file('profile_image')->store('profiles', 'public');
+        }
 
         // 2. Generate a secure random password
         $rawPassword = Str::random(8);
@@ -344,6 +383,7 @@ class AdminController extends Controller
             'phone' => $request->phone,
             'gender' => $request->gender,
             'role' => 'owner',
+            'profile_image' => $imagePath,
 
             // Granular Address Fields
             'house_no' => $request->house_no,
@@ -365,6 +405,11 @@ class AdminController extends Controller
         // 5. Send Automated Welcome Email
         try {
             Mail::to($user->email)->send(new WelcomeEmail($user, $rawPassword));
+
+            // --- NEW: Send Telegram Notification to Clinic Owner ---
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($user, 'account_created'));
+
         } catch (\Exception $e) {
             return back()->with('error', 'Owner registered, but email failed: ' . $e->getMessage());
         }
@@ -432,8 +477,17 @@ class AdminController extends Controller
 
         $data = $request->all();
 
-        // Handle File Upload
-        if ($request->hasFile('profile_image')) {
+        // Handle File/Base64 Upload
+        if ($request->filled('profile_image_base64')) {
+            // Delete old
+            if ($user->profile_image) Storage::delete('public/' . $user->profile_image);
+            
+            $imageData = $request->input('profile_image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $data['profile_image'] = $imageName;
+        } elseif ($request->hasFile('profile_image')) {
             // Delete old image if it exists
             if ($user->profile_image) {
                 Storage::delete('public/' . $user->profile_image);
@@ -550,7 +604,20 @@ class AdminController extends Controller
             'species' => 'required|string|in:Dog,Cat',
             'breed' => 'nullable|string|max:255',
             'birthdate' => 'required|date|before_or_equal:today',
+            'image' => 'nullable|image|max:2048',
+            'image_base64' => 'nullable|string',
         ]);
+
+        $imagePath = null;
+        if ($request->filled('image_base64')) {
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $imagePath = $imageName;
+        } elseif ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('profiles', 'public');
+        }
 
         $year = date('Y');
         $count = Pet::withTrashed()->count() + 1;
@@ -565,6 +632,7 @@ class AdminController extends Controller
             'birthday' => $request->birthdate,
             'gender' => $request->gender, // Need to pass default gender to satisfy schema
             'owner' => User::find($request->user_id)->name ?? 'Unknown',
+            'image_url' => $imagePath,
             'status' => 'Verified', // Pets added by Admin are automatically verified
         ]);
 
@@ -572,6 +640,14 @@ class AdminController extends Controller
             'CREATE_PET',
             "Admin successfully registered a new pet ({$pet->name}) for owner ID: {$pet->user_id}"
         );
+
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram pet registration alert (Admin): ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Pet successfully registered! Pet ID: ' . $unique_id);
     }
@@ -582,6 +658,8 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'breed' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:2048',
+            'image_base64' => 'nullable|string',
         ]);
 
         $pet = Pet::findOrFail($id);
@@ -592,11 +670,25 @@ class AdminController extends Controller
         $oldStatus = $pet->status;
         $newStatus = $request->status ?? $pet->status;
 
-        $pet->update([
+        $updateData = [
             'name' => $request->name,
             'breed' => $request->breed,
             'status' => $newStatus,
-        ]);
+        ];
+
+        if ($request->filled('image_base64')) {
+            if ($pet->image_url) Storage::delete('public/' . $pet->image_url);
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $updateData['image_url'] = $imageName;
+        } elseif ($request->hasFile('image')) {
+            if ($pet->image_url) Storage::delete('public/' . $pet->image_url);
+            $updateData['image_url'] = $request->file('image')->store('profiles', 'public');
+        }
+
+        $pet->update($updateData);
 
         if ($oldStatus !== 'DECEASED' && $newStatus === 'DECEASED') {
             session()->flash('status_changed', [
@@ -822,7 +914,7 @@ class AdminController extends Controller
                     return back()->withErrors(['appointment_time' => 'Sorry, this time slot has just been booked by someone else. Please choose another time.'])->withInput();
                 }
 
-                Appointment::create([
+                $appointment = Appointment::create([
                     'user_id' => $user->id,
                     'pet_id' => $pet->id,
                     'pet_name' => $pet->name,
@@ -833,6 +925,14 @@ class AdminController extends Controller
                     'service_type' => $request->service_type,
                     'status' => 'approved', // Admin bookings are auto-approved
                 ]);
+
+                // --- NEW: Send Telegram Notification to Admin/Owner ---
+                try {
+                    Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                        ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send Telegram notification (Admin): ' . $e->getMessage());
+                }
 
                 return back()->with('success', 'Appointment scheduled successfully!');
             });

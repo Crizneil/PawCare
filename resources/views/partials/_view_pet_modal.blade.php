@@ -1,6 +1,6 @@
 <div class="modal fade" id="viewPetModal{{ $pet->id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 rounded-4 shadow">
+        <div class="modal-content border-0 rounded-4 shadow" style="background-color: #fdfbf7;">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold text-dark ps-2 pt-2">Pet Record Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -14,9 +14,10 @@
                         <div class="mb-3 mt-3">
 
                             @if($pet->image_url)
-                                <img src="{{ asset($pet->image_url) }}"
+                                <img src="{{ '/storage/' . $pet->image_url }}"
                                      class="rounded-4 shadow-sm border"
-                                     style="width:100%; height:200px; object-fit:cover;">
+                                     style="width:100%; height:200px; object-fit:cover;"
+                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400&size=200'">
                             @else
                                 <div class="bg-light rounded-4 d-flex align-items-center justify-content-center border"
                                      style="height:200px;">

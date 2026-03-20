@@ -53,6 +53,32 @@
         </div>
     </div>
 
+    {{-- Telegram Join Notification --}}
+    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background-color: #fdfbf7; border: 1px solid #fce7d6 !important;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-info-subtle p-3 rounded-circle me-3">
+                    <i data-lucide="send" class="text-info"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="fw-bold text-dark mb-1">Get Real-time Notifications!</h5>
+                    <p class="text-muted small mb-0">
+                        Join our Telegram for instant appointment updates and vaccination reminders.
+                    </p>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        <i data-lucide="info" class="me-1 d-inline-block" style="width: 12px; height: 12px; vertical-align: middle;"></i>
+                        No Telegram? No problem! You'll still receive all updates directly here in your dashboard.
+                    </small>
+                </div>
+                <div class="ms-3">
+                    <a href="https://t.me/PawCareAlerts_bot" target="_blank" class="btn btn-orange rounded-pill px-4 shadow-sm">
+                        <i data-lucide="external-link" class="me-1" style="width: 14px; height: 14px;"></i> Connect Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Reminders & Announcements --}}
     @if(isset($vaccineReminder))
         <div class="alert alert-warning border-0 shadow-sm rounded-4 d-flex align-items-center mb-4 p-3">
@@ -86,13 +112,14 @@
                         <div class="flip-card-front p-4 rounded-4 shadow-sm border-0">
                             <div class="d-flex align-items-center mb-4">
                                 <div class="me-3">
-                                    <img src="{{ $pet->image_url ?? 'https://ui-avatars.com/api/?name=' . $pet->name }}"
+                                    <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                                          class="rounded-circle border border-4 border-white shadow-sm"
-                                         style="width: 85px; height: 85px; object-fit: cover;">
+                                         style="width: 85px; height: 85px; object-fit: cover;"
+                                         onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                                 </div>
                                 <div class="flex-grow-1">
                                     <h3 class="fw-bold mb-0 text-dark">{{ $pet->name }}</h3>
-                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3">{{ $pet->breed ?? 'Unknown Breed' }}</span>
+                                    <span class="badge rounded-pill px-3" style="background-color: #fdfbf7; color: #d35400; border: 1px solid #fce7d6;">{{ $pet->breed ?? 'Unknown Breed' }}</span>
                                     <div class="mt-1">
                                         <small class="text-muted"><i data-lucide="cake" class="me-1" style="width: 12px;"></i> Born: {{ $pet->birthday ?? 'N/A' }}</small>
                                     </div>
@@ -117,18 +144,18 @@
                             </div>
 
                             <div class="medical-info flex-grow-1">
-                                <div class="mb-3 p-3 rounded-4" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
-                                    <p class="mb-2 fw-bold text-uppercase small text-white-50">Last Vaccination</p>
+                                <div class="mb-3 p-3 rounded-4" style="background: #fdfbf7; border: 1px solid #fce7d6;">
+                                    <p class="mb-2 fw-bold text-uppercase small text-muted">Last Vaccination</p>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold">{{ $pet->vaccine_name ?? 'No Record' }}</span>
+                                        <span class="fw-bold text-dark">{{ $pet->vaccine_name ?? 'No Record' }}</span>
                                         <span class="badge bg-white text-success px-2">{{ $pet->last_date ? \Carbon\Carbon::parse($pet->last_date)->format('M d, Y') : 'N/A' }}</span>
                                     </div>
                                 </div>
 
-                                <div class="mb-4 p-3 rounded-4" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
-                                    <p class="mb-2 fw-bold text-uppercase small text-white-50">Next Vaccination Due</p>
+                                <div class="mb-4 p-3 rounded-4" style="background: #fdfbf7; border: 1px solid #fce7d6;">
+                                    <p class="mb-2 fw-bold text-uppercase small text-muted">Next Vaccination Due</p>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold">Scheduled</span>
+                                        <span class="fw-bold text-dark">Scheduled</span>
                                         <span class="badge bg-white text-danger px-2">{{ $pet->next_date ? \Carbon\Carbon::parse($pet->next_date)->format('M d, Y') : 'Not Scheduled' }}</span>
                                     </div>
                                 </div>

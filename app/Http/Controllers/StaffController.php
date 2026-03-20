@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeEmail;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\TelegramAlertNotification;
 
 class StaffController extends Controller
 {
@@ -112,7 +114,7 @@ class StaffController extends Controller
                     ]);
 
                     // Create History Record
-                    Vaccination::create([
+                    $vaccination = Vaccination::create([
                         'pet_id' => $pet->id,
                         'staff_id' => auth()->id(),
                         'vaccine_name' => $finalName,
@@ -121,6 +123,14 @@ class StaffController extends Controller
                         'batch_no' => $batchNo,
                         'status' => 'Up to Date'
                     ]);
+
+                    // --- NEW: Send Telegram Notification to Clinic Owner ---
+                    try {
+                        Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                            ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send Telegram vaccination alert (Staff): ' . $e->getMessage());
+                    }
                 }
 
                 $appointment->batch_no = $batchNo;
@@ -140,6 +150,15 @@ class StaffController extends Controller
             }
 
             $appointment->save();
+
+            // Send Telegram alert
+            try {
+                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                    ->notify(new TelegramAlertNotification($appointment, 'appointment_status_updated'));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send Telegram status update alert: ' . $e->getMessage());
+            }
+
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
         }
     }
@@ -242,7 +261,7 @@ class StaffController extends Controller
         }
 
         // 5. Create the Appointment
-        Appointment::create([
+        $appointment = Appointment::create([
             'user_id' => $userId,
             'pet_id' => $pet->id,
             'pet_name' => $pet->name,
@@ -253,6 +272,25 @@ class StaffController extends Controller
             'service_type' => $request->service_type,
             'status' => 'approved',
         ]);
+
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
+            
+            if ($userId) {
+                // Also notify about the new account if it was created
+                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                    ->notify(new TelegramAlertNotification(User::find($userId), 'account_created'));
+            }
+            
+            // Also notify about the pet registration
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram walk-in alerts: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Walk-in appointment created and welcome email sent to ' . $ownerName);
     }
@@ -391,7 +429,7 @@ class StaffController extends Controller
 
         $actualBatchNo = 'MANUAL-' . date('Ymd');
         // 1. Create Vaccination Record
-        Vaccination::create([
+        $vaccination = Vaccination::create([
             'pet_id' => $id,
             'staff_id' => auth()->id(),
             'vaccine_name' => $request->vaccine_name,
@@ -399,6 +437,14 @@ class StaffController extends Controller
             'next_due_date' => $request->next_due_date,
             'batch_no' => $actualBatchNo,
         ]);
+
+        // --- NEW: Send Telegram Notification to Clinic Owner ---
+        try {
+            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send Telegram vaccination alert (Staff Manual): ' . $e->getMessage());
+        }
 
         // 2. Update Pet Medical Record
         $pet = Pet::findOrFail($id);
@@ -530,6 +576,14 @@ class StaffController extends Controller
             $plainPassword = 'PawCare2026';
             $owner->password = Hash::make($plainPassword);
             $owner->save();
+
+            // --- NEW: Send Telegram Notification to Clinic Owner ---
+            try {
+                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
+                    ->notify(new TelegramAlertNotification($owner, 'account_created'));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send Telegram account activation alert: ' . $e->getMessage());
+            }
         }
 
         // 2. Send the Welcome Email

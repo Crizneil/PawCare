@@ -48,9 +48,10 @@
                         <tr>
                             <td class="ps-4" data-label="Pet">
                                 <div class="d-flex align-items-center">
-                                    <img src="{{ $pet->image_url ?? 'https://ui-avatars.com/api/?name=' . $pet->name }}"
-                                        class="rounded-circle me-3"
-                                        style="width:40px;height:40px;object-fit:cover;">
+                                    <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
+                                        class="rounded-circle me-3 shadow-sm border"
+                                        style="width:40px;height:40px;object-fit:cover;"
+                                        onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                                     <div>
                                         <div class="fw-bold small">{{ $pet->name }}</div>
                                         <small class="text-muted">{{ $pet->unique_id }}</small>

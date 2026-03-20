@@ -11,6 +11,13 @@
       0 => 'Barryvdh\\DomPDF\\ServiceProvider',
     ),
   ),
+  'laravel-notification-channels/telegram' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'NotificationChannels\\Telegram\\TelegramServiceProvider',
+    ),
+  ),
   'laravel/pail' => 
   array (
     'providers' => 

@@ -8995,20 +8995,21 @@ body {
 }
 
 .flip-card-front {
-    background: white;
+    background: #fdfbf7;
     color: black;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0,0,0,0.05);
 }
 
 .flip-card-back {
-    background: #1f2937; /* Dark Slate */
-    color: white;
+    background: #fff9f0; /* Light Cream instead of Dark Slate */
+    color: #333; /* Dark text for light background */
     transform: rotateY(180deg);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e8e4d9;
 }
 body {
-    background-color: #f8ede3;
+    background-color: #fcfaf2;
 }
 .table-responsive {
     border-radius: 18px;

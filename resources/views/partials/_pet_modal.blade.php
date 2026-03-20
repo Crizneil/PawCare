@@ -5,10 +5,20 @@
                 <h5 class="fw-bold mb-0">Update Pet: {{ $pet->name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.pets.update', $pet->id) }}" method="POST">
+            <form action="{{ route('admin.pets.update', $pet->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Pet Image</label>
+                        <div class="input-group">
+                            <input type="file" name="image" class="form-control rounded-start-pill bg-light border-0">
+                            <button type="button" class="btn btn-outline-secondary btn-camera-trigger rounded-end-pill px-3">
+                                <i data-lucide="camera" style="width: 18px;"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="image_base64" id="pet_image_base64_{{ $pet->id }}">
+                    </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-muted">Pet Name</label>
                         <input type="text" name="name" class="form-control rounded-pill bg-light border-0"

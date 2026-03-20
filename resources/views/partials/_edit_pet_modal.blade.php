@@ -14,9 +14,10 @@
                         <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block"
                             style="cursor: pointer;">
                             <img id="preview{{ $pet->id }}"
-                                src="{{ $pet->image_url ? asset($pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) }}"
+                                src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                                 class="rounded-circle shadow-sm border border-3 border-white"
-                                style="width: 120px; height: 120px; object-fit: cover;">
+                                style="width: 120px; height: 120px; object-fit: cover;"
+                                onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                             <div class="bg-orange rounded-circle position-absolute bottom-0 end-0 p-2 text-white shadow-sm"
                                 style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
                                 <i data-lucide="camera" style="width: 16px; height: 16px;"></i>

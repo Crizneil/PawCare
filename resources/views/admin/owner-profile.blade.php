@@ -9,7 +9,7 @@
         <h3 class="fw-bold mb-0">Owner Profile</h3>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4">
+    <div class="card border-0 shadow-sm rounded-4" style="background-color: #fdfbf7;">
         <div class="card-body">
             <h5 class="fw-bold mb-3">Owner Information</h5>
             <div class="row mb-4">
@@ -88,7 +88,7 @@
     </div>
 
     {{-- REGISTERED PETS WITH STATUS BADGES --}}
-    <div class="card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card border-0 shadow-sm rounded-4 mt-4" style="background-color: #fdfbf7;">
         <div class="card-body">
             <h5 class="fw-bold mb-3">Registered Pets</h5>
             @if($owner->pets->count() > 0)
