@@ -53,6 +53,6 @@ class User extends Authenticatable
     }
     public function getFullAddressAttribute()
     {
-        return "{$this->house_number} - {$this->street}, {$this->barangay}, {$this->city}, {$this->province}";
+        return "{$this->house_no} - {$this->street}, {$this->barangay}, {$this->city}, {$this->province}";
     }
 }

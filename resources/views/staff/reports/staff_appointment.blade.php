@@ -1,66 +1,60 @@
 <head>
     <meta charset="UTF-8">
-    <title>OFFICIAL APPOINTMENT REPORT - {{ strtoupper($type) }}</title>
+    <title>OFFICIAL DAILY APPOINTMENT REPORT</title>
     <style>
         /* Base Setup */
         @page { margin: 15mm; }
-        html, body { height: 100%; margin: 0; padding: 0; }
-        body { font-family: 'Helvetica', sans-serif; color: #000; line-height: 1.4; }
+        body { font-family: 'Helvetica', sans-serif; color: #000; line-height: 1.4; margin: 0; padding: 0; }
 
-        /* Print Wrapper: Essential for forcing footer to bottom in Browser Print */
-        .print-wrapper {
-            display: flex;
-            flex-direction: column;
-            min-height: 95vh; /* Pushes content to fill the page height */
-        }
-        .content-area { flex: 1; }
+        /* Use standard block display instead of flex for PDF stability */
+        .print-wrapper { width: 100%; }
 
         /* Header Styles */
-        .official-header { text-align: center; margin-bottom: 20px; }
+        .official-header { text-align: center; margin-bottom: 10px; }
         .official-header p { margin: 0; font-size: 13px; }
-        .official-header .republic { text-transform: uppercase; font-weight: bold; font-size: 15px; }
-        .official-header .location { text-transform: uppercase; font-weight: bold; font-size: 13px; }
-        .official-header .office { font-weight: bold; font-size: 17px; margin-top: 8px; display: block; }
+        .official-header .republic { text-transform: uppercase; font-weight: bold; font-size: 14px; }
+        .official-header .office { font-weight: bold; font-size: 16px; margin-top: 5px; display: block; }
 
-        .report-title { text-align: center; font-weight: bold; font-size: 18px; text-transform: uppercase; text-decoration: underline; margin: 15px 0 5px 0; }
-        .generation-meta { text-align: center; font-size: 11px; margin-bottom: 20px; }
+        .report-title { text-align: center; font-weight: bold; font-size: 18px; text-transform: uppercase; text-decoration: underline; margin: 20px 0 5px 0; }
+        .generation-meta { text-align: center; font-size: 11px; margin-bottom: 25px; color: #333; }
 
-        /* Table Styling */
-        table.appointment-table { width: 100%; border-collapse: collapse; }
-        .appointment-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 8px; font-size: 11px; text-align: left; text-transform: uppercase; }
-        .appointment-table td { border: 1px solid #000; padding: 8px; font-size: 11px; }
-
-        /* FOOTER LOGIC */
-
-        /* 1. PDF Mode: Absolute bottom pinning */
-        .pdf-footer {
-            position: fixed;
-            bottom: -10mm;
-            left: 0;
-            right: 0;
-            height: 180px;
-            background-color: white;
-        }
-
-        /* 2. Preview/Browser Mode: Pushed by Flexbox */
-        .preview-footer {
+        /* Fixed Summary Stats Box using Table for Alignment */
+        .summary-stats {
             width: 100%;
-            margin-top: auto; /* This is the magic for Flexbox */
-            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #000;
+            background-color: #fcfcfc;
+        }
+        .summary-header {
+            background-color: #f2f2f2;
+            padding: 8px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+        }
+        .stat-table { width: 100%; border-collapse: collapse; }
+        .stat-table td {
+            padding: 10px 15px;
+            font-size: 12px;
+            width: 20%; /* Ensures 5 equal columns */
+            text-align: center;
         }
 
-        @media print {
-            .no-print { display: none !important; }
-            .print-wrapper { min-height: 98vh; }
-            .preview-footer { margin-top: auto; }
-        }
+        /* Main Appointment Table */
+        table.appointment-table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        .appointment-table th { background-color: #eee; border: 1px solid #000; padding: 8px; font-size: 11px; text-align: left; text-transform: uppercase; }
+        .appointment-table td { border: 1px solid #000; padding: 8px; font-size: 11px; word-wrap: break-word; }
 
-        /* Signature Styling */
-        .sig-table { width: 100%; border: none; }
-        .sig-box { width: 45%; text-align: center; border: none !important; vertical-align: bottom; }
-        .sig-line { border-bottom: 1px solid #000; margin-top: 35px; margin-bottom: 5px; width: 80%; margin-left: auto; margin-right: auto; }
+        /* Footer Alignment */
+        .page-footer-container { width: 100%; margin-top: 50px; }
+        .sig-table { width: 100%; border: none; border-collapse: collapse; }
+        .sig-box { width: 45%; text-align: center; vertical-align: bottom; }
+        .sig-line { border-bottom: 1px solid #000; margin-top: 45px; margin-bottom: 5px; width: 85%; margin-left: auto; margin-right: auto; }
         .sig-name { font-weight: bold; text-transform: uppercase; font-size: 12px; margin: 0; }
-        .footer-note { text-align: center; font-size: 9px; color: #555; border-top: 1px solid #ccc; padding-top: 8px; margin-top: 10px; width: 100%; }
+        .footer-note { text-align: center; font-size: 9px; color: #555; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 30px; }
+
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
@@ -76,67 +70,56 @@
 
         <div class="official-header">
             <p class="republic">Republic of the Philippines</p>
-            <p class="location">Province of Bulacan</p>
-            <p class="location">City of Meycauayan</p>
+            <p class="republic">Province of Bulacan | City of Meycauayan</p>
             <span class="office">Office of the City Veterinarian (PawCare)</span>
         </div>
 
-        <div class="report-title">{{ $reportTitle }}</div>
+        <div class="report-title">Daily Appointment & Vaccination Summary</div>
         <div class="generation-meta">
-            Type: {{ ucfirst($type) }} | Date Generated: {{ now()->format('F d, Y h:i A') }}
+            Report Date: <strong>{{ now()->format('F d, Y') }}</strong> | Generated: {{ now()->format('h:i A') }}
+        </div>
+
+        {{-- ACCOMPLISHMENT OVERVIEW: Fixed with Table for perfect alignment --}}
+        <div class="summary-stats">
+            <div class="summary-header">Accomplishment Overview</div>
+            <table class="stat-table">
+                <tr>
+                    <td>Total Appointments: <br><strong>{{ $summaryData['total'] ?? count($data) }}</strong></td>
+                    <td>Anti-Rabies: <br><strong>{{ $summaryData['anti_rabies'] ?? 0 }}</strong></td>
+                    <td>5-in-1: <br><strong>{{ $summaryData['five_in_one'] ?? 0 }}</strong></td>
+                    <td>4-in-1: <br><strong>{{ $summaryData['four_in_one'] ?? 0 }}</strong></td>
+                    <td>Deworming: <br><strong>{{ $summaryData['deworming'] ?? 0 }}</strong></td>
+                </tr>
+            </table>
         </div>
 
         <table class="appointment-table">
             <thead>
-                @if($filter == 'summary')
-                    <tr>
-                        <th>Date</th>
-                        <th>Completed</th>
-                        <th>Missed</th>
-                        <th>Cancelled</th>
-                        <th>Total</th>
-                    </tr>
-                @else
-                    <tr>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Pet Owner</th>
-                        <th>Pet Name</th>
-                        <th>Service Type</th>
-                        <th>Status</th>
-                    </tr>
-                @endif
+                <tr>
+                    <th style="width: 15%;">Time</th>
+                    <th style="width: 30%;">Pet Owner</th>
+                    <th style="width: 25%;">Pet Name</th>
+                    <th style="width: 30%;">Service Rendered</th>
+                </tr>
             </thead>
             <tbody>
-                @if($filter == 'summary' && !empty($summaryData))
+                @forelse($data as $apt)
                     <tr>
-                        <td>{{ $summaryData['date'] }}</td>
-                        <td style="color: green; font-weight: bold;">{{ $summaryData['completed'] }}</td>
-                        <td style="color: red;">{{ $summaryData['missed'] }}</td>
-                        <td style="color: #666;">{{ $summaryData['cancelled'] }}</td>
-                        <td style="font-weight: bold; background-color: #f9f9f9;">{{ $summaryData['total'] }}</td>
+                        <td>{{ \Carbon\Carbon::parse($apt->appointment_time)->format('h:i A') }}</td>
+                        <td>{{ $apt->pet->owner ?? ($apt->user->name ?? 'Guest') }}</td>
+                        <td>{{ $apt->pet_name }}</td>
+                        <td>{{ ucfirst($apt->service_type) }}</td>
                     </tr>
-                @else
-                    @forelse($data as $apt)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($apt->appointment_date)->format('M d, Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($apt->appointment_time)->format('h:i A') }}</td>
-                            <td>{{ $apt->pet->owner ?? ($apt->user->name ?? 'Guest') }}</td>
-                            <td>{{ $apt->pet_name }}</td>
-                            <td>{{ ucfirst($apt->service_type) }}</td>
-                            <td>{{ strtoupper($apt->status) }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" style="text-align: center;">No appointments found for this period.</td>
-                        </tr>
-                    @endforelse
-                @endif
+                @empty
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 20px;">No appointments recorded for this date.</td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
 
-    <div class="page-footer-container {{ request()->has('pdf') ? 'pdf-footer' : 'preview-footer' }}">
+    <div class="page-footer-container">
         <table class="sig-table">
             <tr>
                 <td class="sig-box">
@@ -145,7 +128,7 @@
                     <p class="sig-name">{{ auth()->user()->name }}</p>
                     <p style="margin:0; font-size: 10px;">Clinic Staff / Data Officer</p>
                 </td>
-                <td style="width: 10%; border: none;"></td>
+                <td style="width: 10%;"></td>
                 <td class="sig-box">
                     <p style="margin:0; font-size: 11px;">Noted By:</p>
                     <div class="sig-line"></div>
@@ -155,7 +138,7 @@
             </tr>
         </table>
         <div class="footer-note">
-            This is an official document generated by the PawCare System for the City of Meycauayan.
+            This official document is generated by the PawCare System. Any alterations without authorization are strictly prohibited.
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@
             <div>
                 <h2 class="fw-bold mb-0">Appointment Availability</h2>
                 <p class="text-muted small">Select an available date on the calendar below to set an appointment.</p>
-                
+
                 {{-- Today's Quick Status Badge --}}
                 @php
                     $statusText = 'Available Slot';
@@ -218,8 +218,7 @@
                                     {{-- Updated Service List --}}
                                     <select id="service_type_select" name="service_type" class="form-select bg-light" required>
                                         <option value="">Please Select Service(s) Here.</option>
-                                        <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
-                                        <option value="vaccination">General Vaccination</option>
+                                        <option value="vaccination">Vaccination</option>
                                         <option value="deworming">Deworming</option>
                                         <option value="check-up">Check-up</option>
                                         <option value="kapon">Kapon</option>
@@ -235,7 +234,7 @@
                         </div>
                     </div>
                     <div class="modal-footer border-top p-3 bg-light d-flex justify-content-end gap-2">
-                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="saveAppointmentBtn" 
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="saveAppointmentBtn"
                             {{ ($totalBookedToday >= $totalSlots || $userBookedToday >= 2) ? 'disabled' : '' }}>
                             Save Appointment
                         </button>
@@ -434,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let availabilityData = {};
     let ownerBookedDates = {};
     let isFetching = false;
-    
+
     // SERVER-SIDE USER ID LOG
     console.log("[JS DEBUG] Logic is checking for User ID:", {{ auth()->id() ?? 'null' }});
 
@@ -465,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log("[API DEBUG] Raw response:", data);
             availabilityData = data.booked_slots || {};
             ownerBookedDates = data.owner_booked_dates || {};
-            
+
             // Dynamically update the DOM since FullCalendar's dayCellDidMount ran before the API returned
             updateAllCalendarCells();
         } catch (err) {
@@ -486,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (option.value === "") return;
             const originalText = option.getAttribute('data-original-text') || option.text;
             if (!option.hasAttribute('data-original-text')) option.setAttribute('data-original-text', originalText);
-            
+
             if (busyPetIds.includes(option.value)) {
                 option.disabled = true;
                 option.text = originalText + " (Already Scheduled)";
@@ -529,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const dayOfWeek = cellDate.getDay();
             const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
-            
+
             // 3. Create & Apply new indicator matching backend truth
             const indicator = document.createElement('div');
             indicator.className = 'availability-indicator';
@@ -618,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const totalBookedCount = Array.isArray(bookedTimes) ? bookedTimes.length : Object.keys(bookedTimes).length;
             const ownerAppointments = ownerBookedDates[dateStr] || [];
             const ownerCount = Array.isArray(ownerAppointments) ? ownerAppointments.length : Object.keys(ownerAppointments).length;
-            
+
             // LOG RAW DATA FOR EVERY DATE WITH BOOKINGS
             if (ownerCount > 0 || totalBookedCount > 0) {
                 console.log(`[Calendar Debug] Date: ${dateStr}, My Count: ${ownerCount}, Total Count: ${totalBookedCount}, Raw My Data:`, ownerAppointments);
@@ -682,12 +681,12 @@ document.addEventListener('DOMContentLoaded', function () {
             updatePetOptions(dateStr);
             serviceSelect.value = "";
             timeSelect.innerHTML = '<option value="">Please select a service first</option>';
-            
+
             // Modal Status Badge Logic
             const statusBadge = document.getElementById('modalStatusBadge');
             let badgeHtml = '';
             let isDateFull = false;
-            
+
             if (ownerCount >= 2) {
                 badgeHtml = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Limit Reached (2/2)</span>';
                 isDateFull = true;
@@ -700,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 badgeHtml = '<span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">Available Slot</span>';
             }
             if (statusBadge) statusBadge.innerHTML = badgeHtml;
-            
+
             const saveBtn = document.getElementById('saveAppointmentBtn');
             if (saveBtn) saveBtn.disabled = isDateFull;
 

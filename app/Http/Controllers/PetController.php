@@ -122,7 +122,8 @@ class PetController extends Controller
             ->count();
 
         // 2. Fetch the owner's appointment history
-        $appointments = Appointment::where('user_id', auth()->id())
+        $appointments = Appointment::with('vaccination')
+            ->where('user_id', auth()->id())
             ->where('status', '!=', 'cancelled')
             ->latest()
             ->paginate(10);
@@ -229,7 +230,7 @@ class PetController extends Controller
             'address' => 'required|string'
         ]);
 
-        // Prevent bookings on clinic closed days (Saturday & Sunday)
+        // 1. Prevent bookings on clinic closed days (Saturday & Sunday)
         $appointmentDate = Carbon::parse($request->appointment_date);
         if ($appointmentDate->isWeekend()) {
             return back()
@@ -241,14 +242,35 @@ class PetController extends Controller
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        // Business rule: only VERIFIED / ACTIVE pets can be booked
+        // 2. Business rule: only VERIFIED / ACTIVE pets can be booked
         if (!in_array($pet->status, ['ACTIVE', 'Verified'], true)) {
             return back()
                 ->withErrors(['pet_id' => 'Only verified pets with active status can be booked for appointments.'])
                 ->withInput();
         }
 
-        // --- NEW: Anti-Rabies Validation ---
+        // --- NEW: Vaccination Frequency Validation (Prevents Human Error) ---
+        $restrictedServices = ['Anti-Rabies', '5in1', '4in1', 'FVRCP'];
+
+        if (in_array($request->service_type, $restrictedServices)) {
+            // Check if pet had this specific vaccine in the last 365 days
+            $lastVaccine = Appointment::where('pet_id', $pet->id)
+                ->where('service_type', $request->service_type)
+                // We check for 'completed', 'Done', OR 'approved' (to prevent booking two for the future)
+                ->whereIn('status', ['completed', 'Done', 'approved', 'rescheduled'])
+                ->where('appointment_date', '>', Carbon::parse($request->appointment_date)->subDays(365))
+                ->first();
+
+            if ($lastVaccine) {
+                $formattedDate = Carbon::parse($lastVaccine->appointment_date)->format('M d, Y');
+                return back()
+                    ->withErrors(['service_type' => "This pet already has a record for {$request->service_type} on {$formattedDate}. Core vaccines are only required once a year."])
+                    ->withInput();
+            }
+        }
+        // --- End of New Validation ---
+
+        // 3. Existing Anti-Rabies Specific Validation (from your Trait)
         if ($request->service_type === 'Anti-Rabies') {
             $error = $this->checkAntiRabiesEligibility($pet->id, $request->appointment_date);
             if ($error) {
@@ -256,11 +278,10 @@ class PetController extends Controller
             }
         }
 
-        // Double Booking Prevention
+        // 4. Double Booking Prevention & Transaction
         return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $pet) {
-            // Convert time format for database strictly before checking (e.g., "08:00" to "08:00:00")
             $formattedTime = date('H:i:s', strtotime($request->appointment_time));
-            // Check if the user already has a pending appointment for this pet to avoid spam
+
             $duplicate = Appointment::where('pet_id', $pet->id)
                 ->where('status', 'pending')
                 ->exists();
@@ -276,7 +297,7 @@ class PetController extends Controller
                 ->exists();
 
             if ($existing) {
-                return back()->withErrors(['appointment_time' => 'Sorry, this time slot has just been booked by someone else. Please choose another time.'])->withInput();
+                return back()->withErrors(['appointment_time' => 'Sorry, this time slot has just been booked by someone else.'])->withInput();
             }
 
             $appointment = Appointment::create([
@@ -291,16 +312,11 @@ class PetController extends Controller
                 'address' => $request->address
             ]);
 
-            // Send the appointment confirmation email to the owner
             try {
                 Mail::to(auth()->user()->email)->send(new AppointmentConfirmedEmail($appointment));
-                
-                // --- NEW: Send Telegram Notification to Admin/Owner ---
                 Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
                     ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
-
             } catch (\Exception $e) {
-                // Log the error or handle it silently so it doesn't interrupt the booking process
                 \Log::error('Failed to send notifications: ' . $e->getMessage());
             }
 

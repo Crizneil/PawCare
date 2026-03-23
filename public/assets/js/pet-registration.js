@@ -9,15 +9,15 @@ function initializePetBreedLogic(config) {
 
     const breeds = {
         'Dog': [
-            'Aspin', 'Beagle', 'Bulldog (English)', 'Bulldog (French)', 'Bulldog (American)', 
-            'Chihuahua', 'Chow Chow', 'Cocker Spaniel', 'Dachshund', 'Dalmatian', 
-            'Doberman Pinscher', 'German Shepherd', 'Golden Retriever', 'Great Dane', 
-            'Jack Russell Terrier', 'Labrador Retriever', 'Maltese', 'Pomeranian', 
+            'Aspin', 'Beagle', 'Bulldog',
+            'Chihuahua', 'Chow Chow', 'Cocker Spaniel', 'Dachshund', 'Dalmatian',
+            'Doberman Pinscher', 'German Shepherd', 'Golden Retriever', 'Great Dane',
+            'Jack Russell Terrier', 'Labrador Retriever', 'Maltese', 'Pomeranian',
             'Poodle', 'Pug', 'Rottweiler', 'Shih Tzu', 'Siberian Husky', 'Other'
         ],
         'Cat': [
-            'Abyssinian', 'American Shorthair', 'Bengal', 'Birman', 'British Shorthair', 
-            'Exotic Shorthair', 'Maine Coon', 'Persian', 'Puspin', 'Ragdoll', 
+            'Abyssinian', 'American Shorthair', 'Bengal', 'Birman', 'British Shorthair',
+            'Exotic Shorthair', 'Maine Coon', 'Persian', 'Puspin', 'Ragdoll',
             'Russian Blue', 'Siamese', 'Sphynx', 'Other'
         ],
         'Other': ['Other']
@@ -39,7 +39,7 @@ function initializePetBreedLogic(config) {
     // Handle species change
     const updateBreeds = (selected, selectedBreed = null) => {
         if (!selected) return;
-        
+
         // Normalize selected to Title Case for breeds lookup (handles 'dog', 'DOG', etc.)
         const normalizedSelected = selected.charAt(0).toUpperCase() + selected.slice(1).toLowerCase();
 

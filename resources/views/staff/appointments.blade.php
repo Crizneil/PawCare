@@ -15,21 +15,6 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                         {{-- Updated to use the new master route: staff.generate-report --}}
-                        <li>
-                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'today']) }}" target="_blank">
-                                Today's Appointments
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'completed']) }}" target="_blank">
-                                Completed Appointments
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'missed']) }}" target="_blank">
-                                Missed Appointments
-                            </a>
-                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item fw-bold" href="{{ route('staff.generate-report', ['type' => 'appointments', 'filter' => 'summary']) }}" target="_blank">

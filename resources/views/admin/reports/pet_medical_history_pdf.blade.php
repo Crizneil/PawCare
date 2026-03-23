@@ -7,19 +7,19 @@
         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #d35400; padding-bottom: 10px; }
         .logo { font-size: 24px; font-weight: bold; color: #d35400; }
         .report-title { font-size: 18px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        
+
         .section { margin-bottom: 25px; }
         .section-title { background: #f8f9fa; padding: 8px 12px; font-weight: bold; border-left: 4px solid #d35400; margin-bottom: 15px; }
-        
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background-color: #f2f2f2; text-align: left; padding: 10px; font-size: 12px; border-bottom: 1px solid #ddd; }
         td { padding: 10px; font-size: 12px; border-bottom: 1px solid #eee; }
-        
+
         .pet-info { display: table; width: 100%; }
         .pet-info-col { display: table-cell; width: 50%; vertical-align: top; }
         .label { font-weight: bold; color: #666; font-size: 11px; }
         .value { margin-bottom: 8px; font-size: 13px; }
-        
+
         .footer { position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 5px; }
     </style>
 </head>
@@ -33,8 +33,8 @@
         <strong>OFFICE OF THE CITY VETERINARIAN</strong>
     </div>
     <div style="font-size: 10px; color: #444; margin-bottom: 10px; line-height: 1.4;">
-        Meycauayan City Hall, Gulod Road, Brgy. Camalig, City of Meycauayan, Bulacan<br>
-        Contact: (044) 228 2825 | FB: @CityVeterinaryOfficeMeycauayan
+        MacArthur Hwy, Saluysoy, City of Meycauayan, Bulacan<br>
+        Contact: (044) 919 8020 | FB: @CityVeterinaryOfficeMeycauayan
     </div>
     <div class="report-title" style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; font-weight: bold;">Official Pet Medical History Record</div>
 </div>
@@ -45,10 +45,10 @@
         <div class="pet-info-col">
             <div class="label">PET NAME</div>
             <div class="value" style="font-size: 16px; font-weight: bold; color: #000;">{{ $pet->name }}</div>
-            
+
             <div class="label">OFFICIAL PET ID</div>
             <div class="value">{{ $pet->pet_id }}</div>
-            
+
             <div class="label">SPECIES / BREED</div>
             <div class="value">{{ $pet->species }} / {{ $pet->breed }}</div>
 
@@ -58,10 +58,10 @@
         <div class="pet-info-col">
             <div class="label">REGISTERED OWNER</div>
             <div class="value" style="font-size: 14px; font-weight: bold;">{{ $pet->user->name }}</div>
-            
+
             <div class="label">CONTACT NUMBER</div>
             <div class="value">{{ $pet->user->phone }}</div>
-            
+
             <div class="label">RESIDENTIAL ADDRESS</div>
             <div class="value" style="font-size: 11px;">
                 {{ $pet->user->house_number }} {{ $pet->user->street }}, {{ $pet->user->barangay }},<br>
@@ -132,8 +132,8 @@
 
 <div style="margin-top: 40px; padding: 10px; border: 1px dashed #ccc; background-color: #fcfcfc;">
     <p style="font-size: 9px; color: #777; margin: 0; line-height: 1.3;">
-        <strong>NOTICE:</strong> This document serves as an official medical record from the **Office of the City Veterinarian - Meycauayan**. 
-        Any unauthorized alteration, tampering, or reproduction of this record is strictly prohibited and may be subject to legal action under applicable laws. 
+        <strong>NOTICE:</strong> This document serves as an official medical record from the **Office of the City Veterinarian - Meycauayan**.
+        Any unauthorized alteration, tampering, or reproduction of this record is strictly prohibited and may be subject to legal action under applicable laws.
         For verification, please Scan the QR code on the Pet's Digital ID.
     </p>
 </div>

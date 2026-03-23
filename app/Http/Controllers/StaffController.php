@@ -277,13 +277,13 @@ class StaffController extends Controller
         try {
             Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
                 ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
-            
+
             if ($userId) {
                 // Also notify about the new account if it was created
                 Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
                     ->notify(new TelegramAlertNotification(User::find($userId), 'account_created'));
             }
-            
+
             // Also notify about the pet registration
             Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
                 ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
@@ -658,12 +658,10 @@ class StaffController extends Controller
     }
     public function generateReport(Request $request)
     {
-        // 1. Capture parameters from the request
-        // 'type' is usually the category (vaccination_history vs appointments)
-        // 'filter' is the specific subset (today, completed, missed)
         $reportCategory = $request->get('type');
         $filter = $request->get('filter', 'today');
         $type = ($reportCategory === 'vaccination_history') ? 'vaccination' : $filter;
+        $today = now()->toDateString();
         $summaryData = [];
 
         // --- CASE A: VACCINATION HISTORY REPORT ---
@@ -672,85 +670,78 @@ class StaffController extends Controller
             $reportTitle = "VACCINATION HISTORY REPORT";
             $viewPath = 'staff.reports.vaccination_history_report';
 
-            // Quick Period Filters
             if ($request->filled('period')) {
                 $period = $request->get('period');
-                if ($period == 'today') {
-                    $query->whereDate('date_administered', today());
-                } elseif ($period == 'weekly') {
-                    $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
-                } elseif ($period == 'monthly') {
-                    $query->whereMonth('date_administered', now()->month)
-                        ->whereYear('date_administered', now()->year);
-                }
+                if ($period == 'today') $query->whereDate('date_administered', today());
+                elseif ($period == 'weekly') $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
+                elseif ($period == 'monthly') $query->whereMonth('date_administered', now()->month)->whereYear('date_administered', now()->year);
             }
 
-            // Manual Date Range
             if ($request->filled('start_date') && $request->filled('end_date')) {
                 $query->whereBetween('date_administered', [$request->start_date, $request->end_date]);
             }
 
-            // Dropdown Specific Filters
-            if ($request->filled('vaccine_name')) {
-                $query->where('vaccine_name', $request->vaccine_name);
-            }
-            if ($request->filled('staff_id')) {
-                $query->where('staff_id', $request->staff_id);
-            }
+            if ($request->filled('vaccine_name')) $query->where('vaccine_name', $request->vaccine_name);
+            if ($request->filled('staff_id')) $query->where('staff_id', $request->staff_id);
 
             $data = $query->latest('date_administered')->get();
 
         } else {
-        // --- CASE B: APPOINTMENT REPORTS ---
-        $query = Appointment::with(['pet', 'user']);
-        $viewPath = 'staff.reports.staff_appointment';
-        $today = today();
+            // --- CASE B: DAILY ACCOMPLISHMENT / APPOINTMENT REPORTS ---
+            $viewPath = 'staff.reports.staff_appointment';
 
-        // Calculate the 4 specific counts for the Summary Table
-        $summaryData = [
-            'date'      => $today->format('M d, Y'),
-            'completed' => Appointment::whereDate('appointment_date', $today)->whereIn('status', ['done', 'completed'])->count(),
-            'missed'    => Appointment::whereDate('appointment_date', $today)->where('status', 'missed')->count(),
-            'cancelled' => Appointment::whereDate('appointment_date', $today)->where('status', 'cancelled')->count(),
-            'total'     => Appointment::whereDate('appointment_date', $today)->count(),
-        ];
+            // Fetch ALL data for today to calculate the Overview counts accurately
+            $allToday = Appointment::whereDate('appointment_date', $today)->get();
 
-        switch ($filter) {
-            case 'completed':
-                $query->whereIn('status', ['done', 'completed']);
-                $reportTitle = "COMPLETED APPOINTMENTS REPORT";
-                break;
-            case 'missed':
-                $query->where('status', 'missed');
-                $reportTitle = "MISSED APPOINTMENTS REPORT";
-                break;
-            case 'today':
-                // Specifically for the "Today" list view
-                $query->whereDate('appointment_date', $today);
-                $reportTitle = "TODAY'S APPOINTMENTS REPORT";
-                break;
-            case 'summary':
-            default:
-                // Specifically for the Executive Summary with the stats table
-                $query->whereDate('appointment_date', $today);
-                $reportTitle = "DAILY APPOINTMENT SUMMARY";
-                break;
+            // Specific Accomplishment counts for the City Vet Summary
+            $summaryData = [
+                'date'        => now()->format('M d, Y'),
+                'total'       => $allToday->count(),
+                'anti_rabies' => $allToday->filter(fn($a) => str_contains($a->service_type, 'Rabies'))->count(),
+                'five_in_one' => $allToday->filter(fn($a) => str_contains($a->service_type, '5-in-1'))->count(),
+                'four_in_one' => $allToday->filter(fn($a) => str_contains($a->service_type, '4-in-1'))->count(),
+                'deworming'   => $allToday->filter(fn($a) => str_contains($a->service_type, 'Deworming'))->count(),
+                // Keeping your old status counts for the internal dashboard summary if needed
+                'completed'   => $allToday->whereIn('status', ['done', 'completed'])->count(),
+                'missed'      => $allToday->where('status', 'missed')->count(),
+            ];
+
+            // Filtering what actually shows in the main table
+            $query = Appointment::with(['pet', 'user'])->whereDate('appointment_date', $today);
+
+            switch ($filter) {
+                case 'completed':
+                    $query->whereIn('status', ['done', 'completed']);
+                    $reportTitle = "COMPLETED APPOINTMENTS REPORT";
+                    break;
+                case 'missed':
+                    $query->where('status', 'missed');
+                    $reportTitle = "MISSED APPOINTMENTS REPORT";
+                    break;
+                default:
+                    $reportTitle = "DAILY ACCOMPLISHMENT SUMMARY";
+                    break;
+            }
+
+            $data = $query->orderBy('appointment_time', 'asc')->get();
         }
-        $data = $query->orderBy('appointment_time', 'asc')->get();
-    }
 
-    // Pass $summaryData to both PDF and View
-    if ($request->has('pdf')) {
-        $pdf = Pdf::loadView($viewPath, compact('data', 'reportTitle', 'type', 'summaryData', 'filter'))
-                    ->setPaper('a4', 'portrait');
-        return $pdf->download("PawCare_Daily_Summary.pdf");
-    }
+        // PDF or View Return
+        if ($request->has('pdf')) {
+            $pdf = Pdf::loadView($viewPath, compact('data', 'reportTitle', 'type', 'summaryData', 'filter'))
+                        ->setPaper('a4', 'portrait');
+            return $pdf->download("PawCare_Report_" . now()->format('Y-m-d') . ".pdf");
+        }
 
-    return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
+        return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
     }
     public function getPetsByOwner($userId)
 {
-    $pets = Pet::where('user_id', $userId)->get();
+   $pets = Pet::where('user_id', $userId)
+                ->notDeceased()
+                ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
+                ->get();
+
     return response()->json($pets);
 }
 }

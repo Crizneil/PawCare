@@ -1,10 +1,10 @@
-<div class="modal fade" id="walkInModal" tabindex="-1">
+<div class="modal fade" id="walkInModal" tabindex="-1" aria-modal="true" role="dialog">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0">
                 <div class="d-flex align-items-center">
                     <div class="bg-orange-subtle p-2 rounded-3 me-3">
-                        <i data-lucide="walking" class="text-orange"></i>
+                        <i data-lucide="footprints" class="text-orange"></i>
                     </div>
                     <h5 class="fw-bold text-dark m-0">New Walk-in Patient</h5>
                 </div>
@@ -138,12 +138,10 @@
                             <label class="small fw-bold text-muted px-2">Service</label>
                                 <select name="service_type" id="walkinService" class="form-select bg-light" required>
                                     <option value="">Select Service(s)</option>
-                                    <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
-                                    <option value="Vaccination">General Vaccination</option>
+                                    <option value="Anti-Rabies">Vaccination</option>
                                     <option value="Deworming">Deworming</option>
                                     <option value="Check-up">Check-up</option>
                                     <option value="Kapon">Kapon</option>
-                                    <option value="Other">Other</option>
                                 </select>
                         </div>
                     </div>
@@ -168,9 +166,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    let tsOwner, tsPet;
     const ownerSearchSelect = document.getElementById('ownerSearchSelect');
     const petNameSelect = document.getElementById('petNameSelect');
-    let tsOwner, tsPet;
 
     // Initialize TomSelect for Owner
     if (ownerSearchSelect && typeof TomSelect !== "undefined") {
@@ -207,6 +205,22 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+    // FIX: Modal Accessibility & Cleanup Logic
+        const walkInModalEl = document.getElementById('walkInModal');
+        if (walkInModalEl) {
+            walkInModalEl.addEventListener('show.bs.modal', function () {
+                this.removeAttribute('aria-hidden');
+            });
+
+            walkInModalEl.addEventListener('hidden.bs.modal', function () {
+                if (tsOwner) tsOwner.clear(true);
+                if (tsPet) {
+                    tsPet.clear(true);
+                    tsPet.clearOptions();
+                }
+                document.body.focus();
+            });
+        }
 
     // Initialize TomSelect for Pet Name
     if (petNameSelect && typeof TomSelect !== "undefined") {
@@ -241,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (statusExisting.checked) {
             existingSection.style.setProperty('display', 'block', 'important');
             newSection.style.setProperty('display', 'none', 'important');
-            
+
             // Show Select, Hide Input
             petNameSelectContainer.style.display = 'block';
             petNameInputContainer.style.display = 'none';
@@ -250,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
             petNameInput.removeAttribute('name');
             petNameInput.required = false;
             petSelectionHint.textContent = 'Select existing pet from the list';
-            
+
             newSection.querySelectorAll('input, select').forEach(i => i.required = false);
         } else {
             existingSection.style.setProperty('display', 'none', 'important');
@@ -267,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (tsOwner) tsOwner.clear();
             if (tsPet) tsPet.clearOptions();
-            
+
             // Reset Pet Details for New Owner
             petNameInput.value = '';
             speciesSelect.value = '';
@@ -323,32 +337,56 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (tsPet) {
-        tsPet.on('change', function(value) {
-            const selectedOption = this.options[value];
-            if (selectedOption && selectedOption.info) {
-                const pet = JSON.parse(selectedOption.info);
-                
-                // Auto-fill
-                speciesSelect.value = pet.species;
-                speciesSelect.dispatchEvent(new Event('change'));
+   if (tsPet) {
+    tsPet.on('change', function(value) {
+        const selectedOption = this.options[value];
+        if (selectedOption && selectedOption.info) {
+            const pet = JSON.parse(selectedOption.info);
 
-                // Small delay to let the breed logic populate
-                setTimeout(() => {
-                    if (breedSelect) {
-                        breedSelect.value = pet.breed;
-                        if (pet.breed === 'Other') {
-                            document.getElementById('walkinOtherBreedContainer').classList.remove('d-none');
-                            document.getElementById('walkinOtherBreedInput').value = pet.other_breed || '';
-                        }
+            // 1. Set basic fields
+            speciesSelect.value = pet.species;
+            genderSelect.value = pet.gender;
+            birthdayInput.value = pet.birthday;
+
+            // 2. Manually trigger the species change to rebuild the Breed list
+            // Assuming initializePetBreedLogic set up a listener on speciesSelect
+            speciesSelect.dispatchEvent(new Event('change'));
+
+            // 3. Use a slightly longer timeout or a function to "Wait and Set"
+            // This ensures the breed dropdown is populated before we select the value
+            setTimeout(() => {
+                const bSelect = document.getElementById('walkinBreedSelect');
+                const otherContainer = document.getElementById('walkinOtherBreedContainer');
+                const otherInput = document.getElementById('walkinOtherBreedInput');
+
+                // Clean the pet breed string
+                const targetBreed = pet.breed ? pet.breed.trim() : '';
+
+                // Check if the breed exists in the newly populated dropdown
+                let breedExists = false;
+                for (let i = 0; i < bSelect.options.length; i++) {
+                    if (bSelect.options[i].value === targetBreed) {
+                        breedExists = true;
+                        break;
                     }
-                    genderSelect.value = pet.gender;
-                    birthdayInput.value = pet.birthday;
-                }, 150);
-            }
-        });
-    }
+                }
 
+                if (breedExists) {
+                    bSelect.value = targetBreed;
+                    otherContainer.classList.add('d-none');
+                    otherInput.value = '';
+                } else if (targetBreed !== '') {
+                    // If it's a custom breed not in your standard list
+                    bSelect.value = 'Other';
+                    otherContainer.classList.remove('d-none');
+                    otherInput.value = targetBreed;
+                    // Ensure the "Other" input actually has the name attribute if needed
+                    otherInput.name = 'other_breed';
+                }
+            }, 500); // 500ms is usually enough for the DOM to update breeds
+        }
+    });
+}
     // --- Form Submit Validation ---
     const walkinForm = document.getElementById('walkinForm');
     if (walkinForm) {

@@ -164,3 +164,49 @@
     @include('partials._vax_modal')
 @endforeach
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const vaxContainers = document.querySelectorAll('.modal-content');
+
+    vaxContainers.forEach(container => {
+        const nameInput = container.querySelector('.vax-name-input');
+        const dateAdminInput = container.querySelector('.vax-date-input');
+        const dueDateInput = container.querySelector('.vax-due-input');
+
+        if (nameInput && dateAdminInput && dueDateInput) {
+            const calculateDueDate = () => {
+                const vaxName = nameInput.value.toLowerCase();
+                const adminDateValue = dateAdminInput.value;
+
+                if (!adminDateValue) return;
+
+                const adminDate = new Date(adminDateValue);
+                if (isNaN(adminDate.getTime())) return;
+
+                const targetVaccines = ['anti rabies', '5 in 1', '4 in 1', '5-in-1', '4-in-1', 'anti-rabies'];
+
+                if (targetVaccines.some(v => vaxName.includes(v))) {
+                    const nextYear = new Date(adminDate);
+                    nextYear.setFullYear(nextYear.getFullYear() + 1);
+
+                    // Correcting for timezone offset to ensure the date doesn't jump back a day
+                    const year = nextYear.getFullYear();
+                    const month = String(nextYear.getMonth() + 1).padStart(2, '0');
+                    const day = String(nextYear.getDate()).padStart(2, '0');
+
+                    dueDateInput.value = `${year}-${month}-${day}`;
+                }else {
+                    // Clear the due date if the vaccine doesn't require a 1-year follow-up
+                    dueDateInput.value = '';
+                }
+            };
+
+            nameInput.addEventListener('input', calculateDueDate);
+            // Change is better for date inputs to ensure the user has finished picking
+            dateAdminInput.addEventListener('change', calculateDueDate);
+        }
+    });
+});
+</script>
+@endpush

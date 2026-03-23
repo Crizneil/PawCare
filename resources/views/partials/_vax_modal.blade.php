@@ -13,9 +13,21 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Vaccine Brand/Name</label>
-                        <input type="text" name="vaccine_name" list="vaccineOptions" class="form-control rounded-3 vax-name-input" placeholder="Choose or type vaccine name..." required>
-                   </div>
+                        <label class="form-label small fw-bold">Vaccine</label>
+                        <input type="text"
+                            name="vaccine_name"
+                            list="vaccineOptions{{ $pet->id }}"
+                            class="form-control rounded-3 vax-name-input"
+                            placeholder="Select or type vaccine..."
+                            required>
+
+                        <datalist id="vaccineOptions{{ $pet->id }}">
+                            <option value="Anti-Rabies">
+                            <option value="5-in-1">
+                            <option value="4-in-1">
+                            <option value="Deworming">
+                        </datalist>
+                    </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold">Date Administered</label>
