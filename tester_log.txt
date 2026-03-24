@@ -1,0 +1,1 @@
+Validation Result: This pet already has an active appointment for Anti-Rabies on Mar 25, 2026. Please wait for this to be marked as 'Done' before booking the same service again.
