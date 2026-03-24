@@ -80,7 +80,7 @@ class StaffController extends Controller
         ]);
     }
 
-    public function updateAppointmentStatus(Request $request, $id,)
+    public function updateAppointmentStatus(Request $request, $id)
     {
         $request->validate([
             'status' => 'required|string'
@@ -92,7 +92,6 @@ class StaffController extends Controller
 
         if (in_array($checkStatus, ['done', 'completed'])) {
 
-            // 1. Prevent double processing
             if ($appointment->status === 'Done' || $appointment->status === 'completed') {
                 return back()->with('info', 'This appointment is already processed.');
             }
@@ -100,40 +99,64 @@ class StaffController extends Controller
             $appointment->administered_by = auth()->user()->name;
             $appointment->status = 'completed';
 
-            $medicalServices = ['Vaccination', 'Deworming', 'Check-up', 'Kapon'];
             $batchNo = 'MANUAL-' . date('Ymd');
             $finalName = $appointment->vaccine_name ?? $appointment->service_type;
 
+            // Default values to prevent "undefined variable" errors later
+            $isProcedure = in_array(strtolower($appointment->service_type), ['check-up', 'kapon']);
+            $nextDueDate = null;
+
             if ($this->isMedicalService($appointment->service_type)) {
                 $pet = Pet::find($appointment->pet_id);
+
                 if ($pet) {
-                    $interval = $this->getServiceInterval($finalName);
-                    
-                    // Update Pet Medical State
-                    $pet->update([
-                        'vaccine_type' => $finalName,
-                        'last_date' => now(),
-                        'next_date' => now()->addDays($interval),
-                    ]);
+                    if ($isProcedure) {
+                        // 1. Logic for Kapon and Check-up
+                        $pet->update([
+                            'last_date' => now(),
+                            'next_date' => null,
+                        ]);
 
-                    // Create History Record
-                    $vaccination = Vaccination::create([
-                        'pet_id' => $pet->id,
-                        'staff_id' => auth()->id(),
-                        'vaccine_name' => $finalName,
-                        'date_administered' => now(),
-                        'next_due_date' => now()->addDays($interval),
-                        'batch_no' => $batchNo,
-                        'status' => 'Up to Date'
-                    ]);
+                        $history = Vaccination::create([
+                            'pet_id' => $pet->id,
+                            'staff_id' => auth()->id(),
+                            'vaccine_name' => $finalName,
+                            'date_administered' => now(),
+                            'next_due_date' => null,
+                            'batch_no' => 'PROCEDURE',
+                            'status' => 'Completed'
+                        ]);
 
-                    // --- NEW: Send Telegram Notification to Clinic Owner ---
-                    $this->sendTelegramNotification($vaccination, 'vaccination_updated');
+                        // No Telegram for procedures to keep it quiet, or keep if you wish
+                    } else {
+                        // 2. Standard Vaccination Logic
+                        $interval = $this->getServiceInterval($finalName);
+                        $nextDueDate = now()->addDays($interval);
+
+                        $pet->update([
+                            'vaccine_type' => $finalName,
+                            'last_date' => now(),
+                            'next_date' => $nextDueDate,
+                        ]);
+
+                        $vaccination = Vaccination::create([
+                            'pet_id' => $pet->id,
+                            'staff_id' => auth()->id(),
+                            'vaccine_name' => $finalName,
+                            'date_administered' => now(),
+                            'next_due_date' => $nextDueDate,
+                            'batch_no' => $batchNo,
+                            'status' => 'Up to Date'
+                        ]);
+
+                        $this->sendTelegramNotification($vaccination, 'vaccination_updated');
+                    }
                 }
 
-                $appointment->batch_no = $batchNo;
+                // Update appointment details using the variables set above
+                $appointment->batch_no = $isProcedure ? 'N/A' : $batchNo;
                 $appointment->vaccine_name = $finalName;
-                $appointment->next_due_date = now()->addDays($interval);
+                $appointment->next_due_date = $nextDueDate;
                 $appointment->administered_by = auth()->user()->name;
             }
 
@@ -141,15 +164,12 @@ class StaffController extends Controller
             return back()->with('success', "Patient treatment is now Complete");
 
         } else {
-            // Handle simple status updates like 'checked-in', 'late', etc.
             $appointment->status = $newStatus;
             if (!$appointment->status) {
                 return back()->with('error', 'Invalid status provided.');
             }
 
             $appointment->save();
-
-            // Send Telegram alert
             $this->sendTelegramNotification($appointment, 'appointment_status_updated');
 
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
@@ -231,7 +251,7 @@ class StaffController extends Controller
             if (is_numeric($request->pet_name)) {
                 $pet = Pet::where('user_id', $userId)->where('id', $request->pet_name)->first();
             }
-            
+
             // If not found by ID, try searching by name for this owner
             if (!$pet) {
                 $pet = Pet::where('user_id', $userId)
@@ -447,7 +467,7 @@ class StaffController extends Controller
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
         $this->sendTelegramNotification($vaccination, 'vaccination_updated');
-        
+
         $interval = $this->getServiceInterval($request->vaccine_name);
 
         // 2. Update Pet Medical Record

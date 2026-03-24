@@ -118,7 +118,7 @@
                 @forelse($data as $record)
                     <tr>
                         <td>{{ \Carbon\Carbon::parse($record->date_administered)->format('M d, Y') }}</td>
-                        <td>{{ $record->pet->name }} (ID: #{{ $record->pet_id }})</td>
+                        <td>{{ $record->pet->name }}</td>
                         <td>{{ $record->vaccine_name }}</td>
                         <td>{{ $record->batch_no ?? 'N/A' }}</td>
                         <td>{{ $record->staff->name ?? 'System' }}</td>

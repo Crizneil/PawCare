@@ -221,7 +221,6 @@
                                         <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
                                         <option value="5in1">5-in-1 Vaccination</option>
                                         <option value="4in1">4-in-1 Vaccination</option>
-                                        <option value="FVRCP">FVRCP Vaccination</option>
                                         <option value="Deworming">Deworming</option>
                                         <option value="Check-up">Check-up</option>
                                         <option value="Kapon">Kapon</option>

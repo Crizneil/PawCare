@@ -52,8 +52,8 @@
             <div class="label">SPECIES / BREED</div>
             <div class="value">{{ $pet->species }} / {{ $pet->breed }}</div>
 
-            <div class="label">GENDER / WEIGHT</div>
-            <div class="value">{{ $pet->gender }} / {{ $pet->weight ?? '---' }}kg</div>
+            <div class="label">GENDER</div>
+            <div class="value">{{ $pet->gender }}</div>
         </div>
         <div class="pet-info-col">
             <div class="label">REGISTERED OWNER</div>
