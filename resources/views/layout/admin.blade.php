@@ -252,7 +252,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
-                    text: '{{ session('success') }}',
+                    text: {!! json_encode(session('success')) !!},
                     timer: 3000,
                     showConfirmButton: false,
                     position: 'top-end',
@@ -264,7 +264,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: '{{ session('error') }}',
+                    text: {!! json_encode(session('error')) !!},
                     showConfirmButton: true
                 });
             @endif
@@ -273,7 +273,7 @@
                 Swal.fire({
                     icon: 'warning',
                     title: 'Warning!',
-                    html: '{!! implode("<br>", $errors->all()) !!}',
+                    html: {!! json_encode(implode("<br>", $errors->all())) !!},
                     showConfirmButton: true
                 });
             @endif

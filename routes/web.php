@@ -27,6 +27,41 @@ Route::view('/privacy', 'privacy')->name('privacy');
 Route::view('/service', 'service')->name('service');
 Route::view('/service-single', 'service-single')->name('service.single');
 
+Route::get('/test-validation-new', function() {
+    $results = [];
+    $pet = \App\Models\Pet::first();
+    if (!$pet) return response()->json(['error' => 'No pet found at all']);
+    $owner = \App\Models\User::find($pet->user_id);
+    if (!$owner) return response()->json(['error' => 'No owner found for pet', 'pet' => $pet]);
+    
+    $validator = new class { use \App\Traits\AppointmentValidation; };
+    
+    $results['pet'] = ['id' => $pet->id, 'name' => $pet->name];
+    
+    // Clean up
+    \App\Models\Appointment::where('pet_id', $pet->id)->where('appointment_date', '>=', now()->toDateString())->delete();
+    
+    $results['step1'] = $validator->checkServiceEligibility($pet->id, 'Anti-Rabies', now()->toDateString()) ?: "NULL - OK";
+    
+    \App\Models\Appointment::create([
+        'user_id' => $owner->id,
+        'pet_id' => $pet->id,
+        'pet_name' => $pet->name,
+        'species' => $pet->species,
+        'service_type' => 'Anti-Rabies',
+        'appointment_date' => now()->toDateString(),
+        'appointment_time' => '08:00',
+        'status' => 'approved'
+    ]);
+    
+    $results['step2'] = $validator->checkServiceEligibility($pet->id, 'Anti-Rabies', now()->toDateString()) ?: "NULL - FAILED";
+    $results['step3'] = $validator->checkServiceEligibility($pet->id, '5in1', now()->toDateString()) ?: "NULL - OK";
+    $results['step4'] = $validator->checkServiceEligibility($pet->id, 'Combination Vaccination (5-in-1)', now()->toDateString()) ?: "NULL - FAILED";
+
+    return response()->json($results);
+})->name('test-validation-new');
+
+
 // Publicly accessible pet profile for QR scanning (No Login Required)
 Route::get('/verify-pet/{pet_id}', [PetController::class, 'publicProfile'])->name('pet.public-profile');
 
@@ -99,6 +134,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/pets/{id}/restore-deceased', [AdminController::class, 'restoreDeceasedPet'])->name('pets.restore-deceased');
     Route::post('/pets/{id}/restore', [AdminController::class, 'restorePet'])->name('pets.restore');
     Route::post('/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('staff.restore');
+    Route::get('/owner/{id}/pets', [AdminController::class, 'getPetsByOwner'])->name('owner.pets');
 
     // Reports & Analytics Routes
     Route::get('/reports/appointments', [AdminReportController::class, 'appointmentReport'])->name('reports.appointments');

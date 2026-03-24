@@ -264,7 +264,16 @@ class StaffController extends Controller
         }
 
         // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
+        \Log::info('--- WALK-IN DEBUG ---', [
+            'pet_id' => $pet->id, 
+            'pet_name_req' => $request->pet_name,
+            'is_numeric_pet_name' => is_numeric($request->pet_name),
+            'service_type' => $request->service_type, 
+            'schedule_date' => $request->schedule_date
+        ]);
         $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->schedule_date);
+        \Log::info('checkServiceEligibility Error Output', ['error' => $error]);
+
         if ($error) {
             return back()->withErrors(['service_type' => $error])->withInput();
         }

@@ -27,7 +27,7 @@ trait AppointmentValidation
      * @param string $proposedDate
      * @return string|null Error message if not eligible, null otherwise.
      */
-    protected function checkServiceEligibility($petId, $serviceType, $proposedDate)
+    public function checkServiceEligibility($petId, $serviceType, $proposedDate)
     {
         $proposedDate = Carbon::parse($proposedDate);
         

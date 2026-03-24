@@ -1078,4 +1078,14 @@ class AdminController extends Controller
             'is_walkin' => false
         ]);
     }
+
+    public function getPetsByOwner($userId)
+    {
+        $pets = Pet::where('user_id', $userId)
+            ->notDeceased()
+            ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
+            ->get();
+
+        return response()->json($pets);
+    }
 }
