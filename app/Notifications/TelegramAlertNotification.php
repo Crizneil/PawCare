@@ -52,7 +52,6 @@ class TelegramAlertNotification extends Notification
 
             case 'account_created':
                 return TelegramMessage::create()
-                    ->to(env('TELEGRAM_CHAT_ID'))
                     ->content("*New Owner Registered!* 👤\n\n" .
                         "*Name:* " . $this->data->name . "\n" .
                         "*Email:* " . $this->data->email . "\n" .
@@ -61,7 +60,6 @@ class TelegramAlertNotification extends Notification
 
             case 'vaccination_updated':
                 return TelegramMessage::create()
-                    ->to(env('TELEGRAM_CHAT_ID'))
                     ->content("*Vaccination Updated!* 💉\n\n" .
                         "*Pet:* " . ($this->data->pet->name ?? 'Unknown') . "\n" .
                         "*Vaccine:* " . $this->data->vaccine_name . "\n" .
@@ -71,7 +69,6 @@ class TelegramAlertNotification extends Notification
 
             case 'pet_registered':
                 return TelegramMessage::create()
-                    ->to(env('TELEGRAM_CHAT_ID'))
                     ->content("*New Pet Registered!* 🐾\n\n" .
                         "*Name:* " . $this->data->name . "\n" .
                         "*Species:* " . $this->data->species . "\n" .
@@ -80,7 +77,6 @@ class TelegramAlertNotification extends Notification
 
             default:
                 return TelegramMessage::create()
-                    ->to(env('TELEGRAM_CHAT_ID'))
                     ->content("*PawCare Alert*\n\n" . json_encode($this->data));
         }
     }
@@ -103,7 +99,6 @@ class TelegramAlertNotification extends Notification
         }
 
         return TelegramMessage::create()
-            ->to(env('TELEGRAM_CHAT_ID'))
             ->content($content);
     }
 }

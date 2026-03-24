@@ -93,11 +93,15 @@
                                     class="form-control rounded-pill bg-light border-0" required>
                             </div>
                             <div class="col-md-12">
-                                <label class="small fw-bold text-muted">Service Type</label>
                                 <select name="service_type" class="form-control rounded-pill bg-light border-0"
                                     required>
-                                    <option value="checkup">General Checkup</option>
-                                    <option value="vaccination">Vaccination</option>
+                                    <option value="">Select Service</option>
+                                    <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
+                                    <option value="5in1">5-in-1 Vaccination</option>
+                                    <option value="4in1">4-in-1 Vaccination (Cat)</option>
+                                    <option value="Deworming">Deworming</option>
+                                    <option value="Check-up">Check-up</option>
+                                    <option value="Kapon">Kapon</option>
                                 </select>
                             </div>
                         </div>

@@ -18,6 +18,7 @@ use App\Notifications\TelegramAlertNotification;
 class PetController extends Controller
 {
     use \App\Traits\AppointmentValidation;
+    use \App\Traits\NotificationHelper;
 
     public function index(Request $request)
     {
@@ -151,9 +152,8 @@ class PetController extends Controller
 
         // --- NEW: Send Telegram Notification to Admin/Owner ---
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($appointment, 'appointment_cancelled'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($appointment, 'appointment_cancelled');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram cancellation alert: ' . $e->getMessage());
         }
 
@@ -249,34 +249,12 @@ class PetController extends Controller
                 ->withInput();
         }
 
-        // --- NEW: Vaccination Frequency Validation (Prevents Human Error) ---
-        $restrictedServices = ['Anti-Rabies', '5in1', '4in1', 'FVRCP'];
-
-        if (in_array($request->service_type, $restrictedServices)) {
-            // Check if pet had this specific vaccine in the last 365 days
-            $lastVaccine = Appointment::where('pet_id', $pet->id)
-                ->where('service_type', $request->service_type)
-                // We check for 'completed', 'Done', OR 'approved' (to prevent booking two for the future)
-                ->whereIn('status', ['completed', 'Done', 'approved', 'rescheduled'])
-                ->where('appointment_date', '>', Carbon::parse($request->appointment_date)->subDays(365))
-                ->first();
-
-            if ($lastVaccine) {
-                $formattedDate = Carbon::parse($lastVaccine->appointment_date)->format('M d, Y');
-                return back()
-                    ->withErrors(['service_type' => "This pet already has a record for {$request->service_type} on {$formattedDate}. Core vaccines are only required once a year."])
-                    ->withInput();
-            }
+        // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
+        $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->appointment_date);
+        if ($error) {
+            return back()->withErrors(['service_type' => $error])->withInput();
         }
-        // --- End of New Validation ---
-
-        // 3. Existing Anti-Rabies Specific Validation (from your Trait)
-        if ($request->service_type === 'Anti-Rabies') {
-            $error = $this->checkAntiRabiesEligibility($pet->id, $request->appointment_date);
-            if ($error) {
-                return back()->withErrors(['service_type' => $error])->withInput();
-            }
-        }
+        // --- End of Validation ---
 
         // 4. Double Booking Prevention & Transaction
         return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $pet) {
@@ -314,9 +292,8 @@ class PetController extends Controller
 
             try {
                 Mail::to(auth()->user()->email)->send(new AppointmentConfirmedEmail($appointment));
-                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                    ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
-            } catch (\Exception $e) {
+                $this->sendTelegramNotification($appointment, 'appointment_new');
+            } catch (\Throwable $e) {
                 \Log::error('Failed to send notifications: ' . $e->getMessage());
             }
 
@@ -393,9 +370,8 @@ class PetController extends Controller
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($pet, 'pet_registered');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram pet registration alert: ' . $e->getMessage());
         }
 

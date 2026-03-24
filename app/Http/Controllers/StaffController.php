@@ -21,6 +21,7 @@ use App\Notifications\TelegramAlertNotification;
 class StaffController extends Controller
 {
     use \App\Traits\AppointmentValidation;
+    use \App\Traits\NotificationHelper;
 
     public function dashboard()
     {
@@ -103,14 +104,16 @@ class StaffController extends Controller
             $batchNo = 'MANUAL-' . date('Ymd');
             $finalName = $appointment->vaccine_name ?? $appointment->service_type;
 
-            if (in_array($appointment->service_type, $medicalServices)) {
+            if ($this->isMedicalService($appointment->service_type)) {
                 $pet = Pet::find($appointment->pet_id);
                 if ($pet) {
+                    $interval = $this->getServiceInterval($finalName);
+                    
                     // Update Pet Medical State
                     $pet->update([
                         'vaccine_type' => $finalName,
                         'last_date' => now(),
-                        'next_date' => now()->addYear(),
+                        'next_date' => now()->addDays($interval),
                     ]);
 
                     // Create History Record
@@ -119,23 +122,18 @@ class StaffController extends Controller
                         'staff_id' => auth()->id(),
                         'vaccine_name' => $finalName,
                         'date_administered' => now(),
-                        'next_due_date' => now()->addYear(),
+                        'next_due_date' => now()->addDays($interval),
                         'batch_no' => $batchNo,
                         'status' => 'Up to Date'
                     ]);
 
                     // --- NEW: Send Telegram Notification to Clinic Owner ---
-                    try {
-                        Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                            ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to send Telegram vaccination alert (Staff): ' . $e->getMessage());
-                    }
+                    $this->sendTelegramNotification($vaccination, 'vaccination_updated');
                 }
 
                 $appointment->batch_no = $batchNo;
                 $appointment->vaccine_name = $finalName;
-                $appointment->next_due_date = now()->addYear();
+                $appointment->next_due_date = now()->addDays($interval);
                 $appointment->administered_by = auth()->user()->name;
             }
 
@@ -152,12 +150,7 @@ class StaffController extends Controller
             $appointment->save();
 
             // Send Telegram alert
-            try {
-                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                    ->notify(new TelegramAlertNotification($appointment, 'appointment_status_updated'));
-            } catch (\Exception $e) {
-                \Log::error('Failed to send Telegram status update alert: ' . $e->getMessage());
-            }
+            $this->sendTelegramNotification($appointment, 'appointment_status_updated');
 
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
         }
@@ -231,34 +224,51 @@ class StaffController extends Controller
         // 3. Handle Breed Logic
         $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
 
-        // 4. Create Pet Record
-        $petCount = Pet::withTrashed()->count() + 1;
-        $pet = Pet::create([
-            'user_id' => $userId,
-            'pet_id' => 'WALK-' . strtoupper(substr(uniqid(), -3)) . '-' . str_pad($petCount, 3, '0', STR_PAD_LEFT),
-            'name' => $request->pet_name,
-            'species' => $request->species,
-            'gender' => $request->gender,
-            'birthday' => $request->birthday ?? now(),
-            'breed' => $finalBreed,
-            'owner' => $ownerName,
-            'owner_phone' => $phone,
-            'owner_gender' => $request->owner_gender,
-            'status' => 'ACTIVE',
-            'house_no' => $request->house_no,
-            'street' => $request->street,
-            'barangay' => $request->barangay,
-            'city' => $request->city ?? 'Meycauayan City',
-            'province' => $request->province ?? 'Bulacan',
-        ]);
-
-        // --- NEW: Anti-Rabies Validation ---
-        if ($request->service_type === 'Anti-Rabies') {
-            $error = $this->checkAntiRabiesEligibility($pet->id, $request->schedule_date);
-            if ($error) {
-                return back()->withErrors(['service_type' => $error])->withInput();
+        // 4. Handle Pet Logic (Find Existing or Create New)
+        $pet = null;
+        if ($userId) {
+            // If existing owner, check if we received a specific Pet ID or just a Name
+            if (is_numeric($request->pet_name)) {
+                $pet = Pet::where('user_id', $userId)->where('id', $request->pet_name)->first();
+            }
+            
+            // If not found by ID, try searching by name for this owner
+            if (!$pet) {
+                $pet = Pet::where('user_id', $userId)
+                          ->where('name', $request->pet_name)
+                          ->first();
             }
         }
+
+        // If still no pet, create a new record
+        if (!$pet) {
+            $petCount = Pet::withTrashed()->count() + 1;
+            $pet = Pet::create([
+                'user_id' => $userId,
+                'pet_id' => 'WALK-' . strtoupper(substr(uniqid(), -3)) . '-' . str_pad($petCount, 3, '0', STR_PAD_LEFT),
+                'name' => $request->pet_name,
+                'species' => $request->species,
+                'gender' => $request->gender,
+                'birthday' => $request->birthday ?? now(),
+                'breed' => $finalBreed,
+                'owner' => $ownerName,
+                'owner_phone' => $phone,
+                'owner_gender' => $request->owner_gender,
+                'status' => 'ACTIVE',
+                'house_no' => $request->house_no,
+                'street' => $request->street,
+                'barangay' => $request->barangay,
+                'city' => $request->city ?? 'Meycauayan City',
+                'province' => $request->province ?? 'Bulacan',
+            ]);
+        }
+
+        // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
+        $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->schedule_date);
+        if ($error) {
+            return back()->withErrors(['service_type' => $error])->withInput();
+        }
+        // --- End of Validation ---
 
         // 5. Create the Appointment
         $appointment = Appointment::create([
@@ -275,20 +285,17 @@ class StaffController extends Controller
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
+            $this->sendTelegramNotification($appointment, 'appointment_new');
 
             if ($userId) {
                 // Also notify about the new account if it was created
-                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                    ->notify(new TelegramAlertNotification(User::find($userId), 'account_created'));
+                $this->sendTelegramNotification(User::find($userId), 'account_created');
             }
 
             // Also notify about the pet registration
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
+            $this->sendTelegramNotification($pet, 'pet_registered');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram walk-in alerts: ' . $e->getMessage());
         }
 
@@ -439,19 +446,16 @@ class StaffController extends Controller
         ]);
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
-        try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
-        } catch (\Exception $e) {
-            \Log::error('Failed to send Telegram vaccination alert (Staff Manual): ' . $e->getMessage());
-        }
+        $this->sendTelegramNotification($vaccination, 'vaccination_updated');
+        
+        $interval = $this->getServiceInterval($request->vaccine_name);
 
         // 2. Update Pet Medical Record
         $pet = Pet::findOrFail($id);
         $pet->update([
             'vaccine_type' => $request->vaccine_name,
             'last_date' => $request->date_administered,
-            'next_date' => $request->next_due_date,
+            'next_date' => $request->next_due_date, // Note: form usually provides this, but we've improved the default logic elsewhere
         ]);
 
         // 3. Update the Appointment status so the badge changes
@@ -578,12 +582,7 @@ class StaffController extends Controller
             $owner->save();
 
             // --- NEW: Send Telegram Notification to Clinic Owner ---
-            try {
-                Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                    ->notify(new TelegramAlertNotification($owner, 'account_created'));
-            } catch (\Exception $e) {
-                \Log::error('Failed to send Telegram account activation alert: ' . $e->getMessage());
-            }
+            $this->sendTelegramNotification($owner, 'account_created');
         }
 
         // 2. Send the Welcome Email

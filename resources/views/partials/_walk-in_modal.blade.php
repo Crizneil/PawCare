@@ -138,7 +138,9 @@
                             <label class="small fw-bold text-muted px-2">Service</label>
                                 <select name="service_type" id="walkinService" class="form-select bg-light" required>
                                     <option value="">Select Service(s)</option>
-                                    <option value="Anti-Rabies">Vaccination</option>
+                                    <option value="Anti-Rabies">Anti-Rabies Vaccination</option>
+                                    <option value="5in1">5-in-1 Vaccination</option>
+                                    <option value="4in1">4-in-1 Vaccination (Cat)</option>
                                     <option value="Deworming">Deworming</option>
                                     <option value="Check-up">Check-up</option>
                                     <option value="Kapon">Kapon</option>

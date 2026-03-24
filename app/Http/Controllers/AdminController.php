@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Pet;
 use App\Models\Appointment;
 use App\Models\ActivityLog;
+use App\Models\Vaccination;
 use App\Mail\AppointmentReminder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ use App\Notifications\TelegramAlertNotification;
 class AdminController extends Controller
 {
     use \App\Traits\AppointmentValidation;
+    use \App\Traits\NotificationHelper;
 
     public function dashboard()
     {
@@ -55,7 +57,7 @@ class AdminController extends Controller
         ];
 
         // Upcoming Vaccinations (Next 14 days)
-        $upcomingVaccinations = \App\Models\Vaccination::whereBetween('next_due_date', [now(), now()->addDays(14)])
+        $upcomingVaccinations = Vaccination::whereBetween('next_due_date', [now(), now()->addDays(14)])
             ->with(['pet', 'pet.user'])
             ->latest()
             ->get();
@@ -225,9 +227,8 @@ class AdminController extends Controller
 
         // Send Telegram alert
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($appointment, 'appointment_approved'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($appointment, 'appointment_approved');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram approval alert: ' . $e->getMessage());
         }
 
@@ -262,9 +263,8 @@ class AdminController extends Controller
 
         // Send Telegram alert
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($appointment, 'appointment_rejected'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($appointment, 'appointment_rejected');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram rejection alert: ' . $e->getMessage());
         }
 
@@ -295,9 +295,8 @@ class AdminController extends Controller
 
         // Send Telegram alert
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($appointment, 'appointment_rescheduled'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($appointment, 'appointment_rescheduled');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram reschedule alert: ' . $e->getMessage());
         }
 
@@ -321,15 +320,53 @@ class AdminController extends Controller
             return back()->with('error', 'This appointment is already closed.');
         }
 
-        // Mark as completed (use "Done" to match existing staff/admin logic)
+        // 1. Process Medical Records if it's a Vaccination/Deworming
+        $finalName = $appointment->vaccine_name ?? $appointment->service_type;
+
+        if ($this->isMedicalService($appointment->service_type)) {
+            $pet = Pet::find($appointment->pet_id);
+            if ($pet) {
+                $interval = $this->getServiceInterval($finalName);
+                $batchNo = 'ADMIN-' . date('Ymd');
+
+                // Update Pet's Digital Medical Card
+                $pet->update([
+                    'vaccine_type' => $finalName,
+                    'last_date' => now(),
+                    'next_date' => now()->addDays($interval),
+                ]);
+
+                // Create Formal Vaccination/History Record
+                $vaccination = Vaccination::create([
+                    'pet_id' => $pet->id,
+                    'staff_id' => auth()->id(), // Admin as the processor
+                    'vaccine_name' => $finalName,
+                    'date_administered' => now(),
+                    'next_due_date' => now()->addDays($interval),
+                    'batch_no' => $batchNo,
+                    'status' => 'Up to Date'
+                ]);
+
+                // Send Telegram Notification
+                $this->sendTelegramNotification($vaccination, 'vaccination_updated');
+
+                // Update Appointment fields for record keeping
+                $appointment->batch_no = $batchNo;
+                $appointment->vaccine_name = $finalName;
+                $appointment->next_due_date = now()->addDays($interval);
+                $appointment->administered_by = auth()->user()->name;
+            }
+        }
+
+        // Mark as completed (use "Done" to match existing staff/admin colors/labels)
         $appointment->update(['status' => 'Done']);
 
         ActivityLog::record(
             'MARK_DONE',
-            'Marked appointment as Done for pet: ' . $appointment->pet_name
+            'Marked appointment as Done and logged medical records for pet: ' . $appointment->pet_name
         );
 
-        return back()->with('success', 'Appointment marked as Done.');
+        return back()->with('success', 'Appointment marked as Done and vaccination record created.');
     }
     public function owners()
     {
@@ -407,10 +444,9 @@ class AdminController extends Controller
             Mail::to($user->email)->send(new WelcomeEmail($user, $rawPassword));
 
             // --- NEW: Send Telegram Notification to Clinic Owner ---
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($user, 'account_created'));
+            $this->sendTelegramNotification($user, 'account_created');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return back()->with('error', 'Owner registered, but email failed: ' . $e->getMessage());
         }
 
@@ -643,9 +679,8 @@ class AdminController extends Controller
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
         try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($pet, 'pet_registered'));
-        } catch (\Exception $e) {
+            $this->sendTelegramNotification($pet, 'pet_registered');
+        } catch (\Throwable $e) {
             \Log::error('Failed to send Telegram pet registration alert (Admin): ' . $e->getMessage());
         }
 
@@ -869,10 +904,17 @@ class AdminController extends Controller
 
             $user = User::findOrFail($request->user_id);
 
-            // Try to find an existing pet for this user with the same name
-            $pet = Pet::where('user_id', $user->id)
-                ->where('name', $request->pet_name)
-                ->first();
+            // 1. Try to find existing pet by ID or Name
+            $pet = null;
+            if (is_numeric($request->pet_name)) {
+                $pet = Pet::where('user_id', $user->id)->where('id', $request->pet_name)->first();
+            }
+
+            if (!$pet) {
+                $pet = Pet::where('user_id', $user->id)
+                    ->where('name', $request->pet_name)
+                    ->first();
+            }
 
             // If pet doesn't exist, create it with full details provided
             if (!$pet) {
@@ -891,13 +933,12 @@ class AdminController extends Controller
                 ]);
             }
 
-            // --- NEW: Anti-Rabies Validation ---
-            if ($request->service_type === 'Anti-Rabies') {
-                $error = $this->checkAntiRabiesEligibility($pet->id, $request->appointment_date);
-                if ($error) {
-                    return back()->withErrors(['service_type' => $error])->withInput();
-                }
+            // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
+            $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->appointment_date);
+            if ($error) {
+                return back()->withErrors(['service_type' => $error])->withInput();
             }
+            // --- End of Validation ---
 
             // Standardize time format for database
             $formattedTime = date('H:i:s', strtotime($request->appointment_time));
@@ -928,9 +969,8 @@ class AdminController extends Controller
 
                 // --- NEW: Send Telegram Notification to Admin/Owner ---
                 try {
-                    Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                        ->notify(new TelegramAlertNotification($appointment, 'appointment_new'));
-                } catch (\Exception $e) {
+                    $this->sendTelegramNotification($appointment, 'appointment_new');
+                } catch (\Throwable $e) {
                     \Log::error('Failed to send Telegram notification (Admin): ' . $e->getMessage());
                 }
 

@@ -269,6 +269,15 @@
                 });
             @endif
 
+            @if ($errors->any())
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Warning!',
+                    html: '{!! implode("<br>", $errors->all()) !!}',
+                    showConfirmButton: true
+                });
+            @endif
+
             @if(session('status_changed') && session('status_changed')['type'] === 'DECEASED')
                 Swal.fire({
                     title: 'In Loving Memory',

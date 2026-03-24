@@ -13,6 +13,7 @@ use App\Notifications\TelegramAlertNotification;
 
 class VaccineController extends Controller
 {
+    use \App\Traits\NotificationHelper;
     public function status(Request $request)
     {
         $query = Pet::notDeceased()->with(['user', 'latestVaccination']);
@@ -47,12 +48,7 @@ class VaccineController extends Controller
         ]);
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
-        try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
-        } catch (\Exception $e) {
-            \Log::error('Failed to send Telegram vaccination alert: ' . $e->getMessage());
-        }
+        $this->sendTelegramNotification($vaccination, 'vaccination_updated');
 
         return back()->with('success', 'Vaccination record added successfully!');
     }
@@ -72,22 +68,11 @@ class VaccineController extends Controller
         $pet = Pet::findOrFail($id);
 
         // --- AUTOMATION LOGIC ---
-        $status = 'fully_vaccinated'; // Default
-        if ($request->next_due_date) {
-            $dueDate = \Carbon\Carbon::parse($request->next_due_date);
-            $now = \Carbon\Carbon::now();
-
-            if ($now->gt($dueDate)) {
-                $status = 'overdue';
-            } elseif ($now->diffInDays($dueDate) <= 14) {
-                $status = 'due_soon';
-            }
-        }
-        // --- INVENTORY REDUCTION LOGIC ---
         $status = 'fully_vaccinated';
         if ($request->next_due_date) {
-            $dueDate = \Carbon\Carbon::parse($request->next_due_date);
-            $now = \Carbon\Carbon::now();
+            $dueDate = Carbon::parse($request->next_due_date);
+            $now = Carbon::now();
+
             if ($now->gt($dueDate)) {
                 $status = 'overdue';
             } elseif ($now->diffInDays($dueDate) <= 30) {
@@ -110,12 +95,7 @@ class VaccineController extends Controller
         ]);
 
         // --- NEW: Send Telegram Notification to Clinic Owner ---
-        try {
-            Notification::route('telegram', env('TELEGRAM_CHAT_ID'))
-                ->notify(new TelegramAlertNotification($vaccination, 'vaccination_updated'));
-        } catch (\Exception $e) {
-            \Log::error('Failed to send Telegram vaccination update alert: ' . $e->getMessage());
-        }
+        $this->sendTelegramNotification($vaccination, 'vaccination_updated');
 
         // ---  UPDATE THE APPOINTMENT RECORD ---
         if ($request->appointment_id) {
