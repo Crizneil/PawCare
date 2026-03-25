@@ -51,14 +51,16 @@
                         @forelse($pets as $pet)
                             @php
                                 $vax = $pet->latestVaccination;
-                                // Get the single most recent appointment
-                                $latestApt = $pet->appointments->sortByDesc('appointment_date')->first();
-                                $aptStatus = strtolower($latestApt->status ?? '');
 
-                                // SECURITY CHECK: Is the appointment today?
+                                // 1. Prioritize the specific appointment passed from the URL
+                                $targetAptId = request('appointment_id');
+                                $latestApt = $pet->appointments->where('id', $targetAptId)->first()
+                                            ?? $pet->appointments->sortByDesc('appointment_date')->first();
+
+                                $aptStatus = strtolower($latestApt->status ?? '');
                                 $isAppointedToday = $latestApt && \Carbon\Carbon::parse($latestApt->appointment_date)->isToday();
 
-                                // Only allow logging if the pet is "Checked-In" or "Approved" TODAY
+                                // 2. Logic to allow logging
                                 $canLogShot = $isAppointedToday && in_array($aptStatus, ['checked-in', 'approved']);
                             @endphp
 
@@ -127,11 +129,28 @@
 
                                 <td class="text-end pe-4" data-label="Actions">
                                     @if($canLogShot)
-                                        <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#updateVax{{ $pet->id }}">
-                                            <i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Log Shot
-                                        </button>
+                                        @php
+                                            $isProcedure = in_array(strtolower($latestApt->service_type), ['check-up', 'kapon']);
+                                        @endphp
+
+                                        @if($isProcedure)
+                                            {{-- Procedure Button --}}
+                                            <form action="{{ route('staff.appointments.update', $latestApt->id) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                <input type="hidden" name="status" value="completed">
+                                                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm"
+                                                        onclick="return confirm('Start and complete this procedure now?')">
+                                                    <i data-lucide="play-circle" class="me-1" style="width:14px;"></i> Start Procedure
+                                                </button>
+                                            </form>
+                                        @else
+                                            {{-- Vaccination Button --}}
+                                            <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#updateVax{{ $pet->id }}">
+                                                <i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Log Shot
+                                            </button>
+                                        @endif
                                     @else
                                         <span class="badge bg-light text-muted border">Completed</span>
                                     @endif

@@ -105,7 +105,7 @@
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill"
                                         style="letter-spacing: 0.3px; font-size: 0.75rem; font-weight: 600;">
                                         {{-- ucfirst() ensures only the first letter of the string is uppercase --}}
-                                        {{ ucfirst(strtolower($apt->service_type ?? 'general')) }}
+                                        {{ ucfirst(str_replace(['5in1', '4in1'], ['5-in-1', '4-in-1'], $apt->service_type)) }}
                                     </span>
                                 </td>
 
@@ -201,9 +201,12 @@
 
                                                 {{-- STAGE 3: Checked-In -> Actionable Services --}}
                                                 @if($currentStatus == 'checked-in')
-                                                    @if(stripos($apt->service_type, 'vaccination') !== false || stripos($apt->service_type, 'deworming') !== false)
+                                                    @if(stripos($apt->service_type, 'vaccination') !== false ||
+                                                        stripos($apt->service_type, 'deworming') !== false ||
+                                                        stripos($apt->service_type, 'kapon') !== false)
                                                         <li>
-                                                            <a class="dropdown-item py-2 text-primary fw-bold" href="{{ route('staff.vaccination-status', ['search' => $apt->pet_name, 'apt_id' => $apt->id]) }}">
+                                                            <a class="dropdown-item py-2 text-primary fw-bold"
+                                                                href="{{ route('staff.vaccination-status', ['search' => $apt->pet_name, 'appointment_id' => $apt->id]) }}">
                                                                 <i data-lucide="syringe" class="me-2" style="width: 16px;"></i> Start Procedure
                                                             </a>
                                                         </li>
@@ -254,13 +257,16 @@
 
     {{-- Modals Loop --}}
     @foreach($appointments as $apt)
-       @php
+        @php
             $currentStatus = strtolower($apt->status);
             $isCompleted = in_array($currentStatus, ['done', 'completed']);
             $isActionable = in_array($currentStatus, ['approved', 'rescheduled', 'pending', 'checked-in']);
+            // NEW: Check if the appointment is eligible for rescheduling
+            $canReschedule = in_array($currentStatus, ['late', 'missed', 'approved']);
         @endphp
 
-        @if($view == 'missed')
+        {{-- Change this condition --}}
+        @if($canReschedule)
             @include('partials._reschedule_modal', ['appointment' => $apt])
         @endif
 

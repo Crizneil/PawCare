@@ -491,6 +491,7 @@ class PetController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'species' => 'required',
+            'breed' => 'required',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'image_base64' => 'nullable|string',
         ]);
