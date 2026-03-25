@@ -82,7 +82,7 @@
                                     <td data-label="Pet Info">
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0 me-3">
-                                                <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}" 
+                                                <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                                                      class="rounded-circle border shadow-sm"
                                                      style="width: 40px; height: 40px; object-fit: cover;"
                                                      onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
@@ -183,57 +183,99 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <style>
-    /* Styling to match your Bootstrap theme */
+    /* 1. Force the inner container to match Bootstrap height */
     .choices__inner {
         background-color: #f8f9fa !important;
         border: 1px solid #dee2e6 !important;
         border-radius: 0.375rem !important;
-        min-height: 45px;
+        /* Adjust this min-height to match your "Pet Name" input height exactly */
+        min-height: 40px !important;
+        padding: 4px 12px !important;
+        display: flex;
+        align-items: center;
     }
+
+    /* 2. the height of the list/selected item */
+    .choices__list--single {
+        padding: 0 !important;
+        line-height: 1.5;
+    }
+
+    /* 3. Ensure the search input inside the dropdown doesn't add extra bulk */
+    .choices__input {
+        background-color: transparent !important;
+        font-size: 14px !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* 4. dropdown positioning and z-index */
     .choices__list--dropdown {
-        z-index: 1060 !important; /* Higher than Bootstrap modal */
+        z-index: 2000 !important;
+        background-color: white !important;
+        border-radius: 0.5rem !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* 5. Align the placeholder text and selected text vertically */
+    .choices__placeholder {
+        opacity: 1;
+        color: #6c757d; /* Standard Bootstrap muted color */
+    }
+    .choices__list--single .choices__item {
+    color: #212529 !important; /* Standard Bootstrap dark text */
+    opacity: 1 !important;
+    font-weight: 500;
+    }
+
+    /* Ensure the text remains visible even when the input is focused */
+    .choices__list--single .choices__item--selectable {
+        color: #212529 !important;
+    }
+
+    /* Fix for the "Bulldog" / selected breed looking less visible */
+    .choices__inner .choices__item {
+        font-size: 14px !important;
     }
 </style>
 @push('scripts')
 <script src="{{ asset('assets/js/pet-registration.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // 1. Initialize Searchable Owner Dropdown (Choices.js)
+        // 1. Initialize Owner Dropdown
         const ownerEl = document.getElementById('ownerSearchSelect');
         if (ownerEl) {
-            new Choices(ownerEl, {
+            new Choices(ownerEl, { searchEnabled: true, itemSelectText: '', allowHTML: true });
+        }
+
+        // 2. Initialize Breed Dropdown instance
+        const breedEl = document.getElementById('breedSelect');
+        let breedChoicesInstance = null;
+
+        if (breedEl) {
+            breedChoicesInstance = new Choices(breedEl, {
                 searchEnabled: true,
                 itemSelectText: '',
-                placeholderValue: 'Type name or email...',
-                searchPlaceholderValue: 'Search owners...',
-                shouldSort: false,
-                allowHTML: true, // Required for newer versions of Choices.js
+                allowHTML: true,
+                placeholder: true,
+                placeholderValue: 'Select Breed',
+                shouldSort: false
             });
         }
 
-        // 2. Dynamic Breed Selection Logic (Centralized)
-        if (typeof initializePetBreedLogic === 'function') {
-            initializePetBreedLogic({
-                speciesId: 'speciesSelect',
-                breedId: 'breedSelect',
-                breedContainerId: null, // No specific container needed for admin view
-                otherContainerId: null, // Handled inside logic
-                otherInputId: 'otherBreedInput',
-                swapNameOnOther: true
-            });
-        }
+        // 3. Link your external logic with the Choices instance
+        initializePetBreedLogic({
+            speciesId: 'speciesSelect',
+            breedId: 'breedSelect',
+            otherContainerId: 'otherBreedContainer', // Ensure this ID matches your HTML
+            otherInputId: 'otherBreedInput',       // Ensure this ID matches your HTML
+            swapNameOnOther: true
+        }, breedChoicesInstance);
 
-        // 3. Admin Scanner Auto-Modal Logic
+        // 4. Admin Scanner Logic
         const urlParams = new URLSearchParams(window.location.search);
-        const petIdParam = urlParams.get('pet_id') || urlParams.get('general_search');
-
-        if (petIdParam) {
+        if (urlParams.get('pet_id') || urlParams.get('general_search')) {
             const firstViewBtn = document.querySelector('[data-bs-target^="#viewPetModal"]');
-            if (firstViewBtn) {
-                setTimeout(() => {
-                    firstViewBtn.click();
-                }, 500);
-            }
+            if (firstViewBtn) setTimeout(() => firstViewBtn.click(), 500);
         }
     });
 </script>

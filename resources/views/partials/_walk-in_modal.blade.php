@@ -1,4 +1,4 @@
-<div class="modal fade" id="walkInModal" tabindex="-1" aria-modal="true" role="dialog">
+<div class="modal fade" id="walkInModal" tabindex="-1" role="dialog" aria-labelledby="walkInModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header border-0 bg-orange p-4">
@@ -23,8 +23,7 @@
                                 </div>
                                 <h5 class="fw-bold text-dark m-0">Owner Details</h5>
                             </div>
-                            
-                            {{-- 1. Owner Status Selection --}}
+
                             <div class="mb-4">
                                 <label class="small fw-bold text-muted mb-2 d-block">Owner Status</label>
                                 <div class="btn-group w-100" role="group">
@@ -36,7 +35,6 @@
                                 </div>
                             </div>
 
-                            {{-- 2. IF EXISTING: Search Owner --}}
                             <div id="existingOwnerSection" class="mb-4">
                                 <label class="small fw-bold text-muted mb-1">Search Owner</label>
                                 <div class="input-group mb-3">
@@ -52,7 +50,6 @@
                                 </div>
                             </div>
 
-                            {{-- 3. IF NEW OWNER: Registration Fields --}}
                             <div id="newOwnerSection" style="display: none;">
                                 <div class="row g-2 mb-2">
                                     <div class="col-6"><input type="text" name="first_name" class="form-control rounded-pill bg-light border-0" placeholder="First Name"></div>
@@ -65,7 +62,7 @@
                                 <label class="small fw-bold text-muted mb-2 ps-2">Home Address</label>
                                 <input type="text" name="street" class="form-control rounded-pill bg-white border-1 mb-2" placeholder="Street, Barangay">
                                 <input type="text" name="city" class="form-control rounded-pill bg-light border-1 mb-4" value="Meycauayan City, Bulacan" readonly>
-                                
+
                                 <div id="accountOptionSection" class="form-check form-switch p-3 bg-white border rounded-4 mb-3">
                                     <input class="form-check-input ms-1 shadow-none" type="checkbox" id="createAccountToggle" name="create_online_account" value="1" checked>
                                     <label class="form-check-label small fw-bold text-orange ps-3" for="createAccountToggle">Register Online Account?</label>
@@ -74,16 +71,15 @@
                         </div>
 
                         {{-- Right Column: Pet & Appointment --}}
-                        <div class="col-md-7 p-4">
+                        <div class="col-md-7 p-4 bg-white">
                             <div class="d-flex align-items-center mb-4">
                                 <div class="bg-orange-subtle p-2 rounded-circle me-3">
                                     <i data-lucide="dog" class="text-orange" size="20"></i>
                                 </div>
                                 <h5 class="fw-bold text-dark m-0">Pet & Visit Information</h5>
                             </div>
-                            
+
                             <div class="row g-3">
-                                {{-- Pet Detail Row 1 --}}
                                 <div class="col-6">
                                     <label class="small fw-bold text-muted mb-1">Pet Name</label>
                                     <div id="petNameSelectContainer">
@@ -100,7 +96,6 @@
                                     <input type="date" name="birthday" id="walkinBirthdayInput" max="{{ date('Y-m-d') }}" class="form-control rounded-pill bg-light border-0 px-3" value="{{ date('Y-m-d') }}" required>
                                 </div>
 
-                                {{-- Pet Detail Row 2 --}}
                                 <div id="walkinSpeciesCol" class="col-4">
                                     <label class="small fw-bold text-muted mb-1">Species</label>
                                     <select name="species" id="walkinSpeciesSelect" class="form-select rounded-pill bg-light border-0 px-1 text-center" required>
@@ -134,7 +129,7 @@
 
                                 <div class="col-12"><hr class="my-2 opacity-25"></div>
 
-                                {{-- Appointment Row --}}
+                                {{-- Appointment Details --}}
                                 <div class="col-4">
                                     <label class="small fw-bold text-muted mb-1">Date</label>
                                     <input type="date" name="schedule_date" min="{{ date('Y-m-d') }}" id="walkinDate" class="form-control rounded-pill bg-light border-0 px-3" value="{{ date('Y-m-d') }}" required>
@@ -151,20 +146,20 @@
                                         <option value="Kapon">Kapon</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-12 mb-4">
                                     <label class="small fw-bold text-muted mb-1">Time Slot</label>
                                     <select name="schedule_time" id="walkinTimeSlot" class="form-select rounded-pill bg-light border-0 px-3" required>
                                         <option value="" selected disabled>Select date first...</option>
                                     </select>
                                 </div>
+
+                                {{-- Submit Button placed inside the right column row --}}
+                                <div class="col-12 pt-2">
+                                    <button type="submit" class="btn btn-orange w-100 rounded-pill py-3 shadow-sm fw-bold">CREATE APPOINTMENT</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                </div>
-
-                <div class="modal-footer border-0 p-4">
-                    <button type="submit" class="btn btn-orange w-100 rounded-pill py-3 shadow-sm fw-bold">CREATE APPOINTMENT</button>
                 </div>
             </form>
         </div>
@@ -173,11 +168,11 @@
 
 <style>
     /* Nuclear Fix: Hide search bars (TomSelect/Select2) if underlying select is hidden */
-    select.d-none + .ts-wrapper, 
+    select.d-none + .ts-wrapper,
     select[style*="display: none"] + .ts-wrapper,
-    select.d-none + .select2-container, 
+    select.d-none + .select2-container,
     select[style*="display: none"] + .select2-container,
-    select.d-none ~ .select2-container, 
+    select.d-none ~ .select2-container,
     select[style*="display: none"] ~ .select2-container {
         display: none !important;
     }
@@ -188,13 +183,13 @@ document.addEventListener('DOMContentLoaded', function () {
     let tsOwner, tsPet;
     const ownerSearchSelect = document.getElementById('ownerSearchSelect');
     const petNameSelect = document.getElementById('petNameSelect');
-    
+
     // Define pet detail fields early for visibility in all functions
     const speciesSelect = document.getElementById('walkinSpeciesSelect');
     const breedSelect = document.getElementById('walkinBreedSelect');
     const genderSelect = document.getElementById('walkinGenderSelect');
     const birthdayInput = document.getElementById('walkinBirthdayInput');
-    
+
     const statusExisting = document.getElementById('statusExisting');
     const statusNew = document.getElementById('statusNew');
     const existingSection = document.getElementById('existingOwnerSection');
@@ -293,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Reset details for fresh start
             togglePetFields(true); // Default to locked for existing
-            
+
             newSection.querySelectorAll('input, select').forEach(i => i.required = false);
         } else {
             existingSection.style.setProperty('display', 'none', 'important');
@@ -316,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
             genderSelect.value = '';
             birthdayInput.value = "{{ date('Y-m-d') }}";
             togglePetFields(false); // Editable for new
-            
+
             if (typeof breedSelect !== 'undefined' && breedSelect) {
                 breedSelect.innerHTML = '<option value="" selected disabled>Select breed...</option>';
             }
@@ -451,15 +446,15 @@ document.addEventListener('DOMContentLoaded', function () {
     tsPet.on('change', function(value) {
         // Find the option data directly from TomSelect's internal storage
         const petData = tsPet.options[value];
-        
+
         if (petData && petData.info) {
             try {
                 const pet = JSON.parse(petData.info);
-                
+
                 // 1. Set basic fields
                 speciesSelect.value = pet.species;
                 genderSelect.value = pet.gender;
-                
+
                 if (pet.birthday) {
                     birthdayInput.value = pet.birthday.split(' ')[0];
                 }
@@ -471,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const targetBreed = pet.breed ? pet.breed.trim() : '';
                     let foundMatch = false;
                     for (let i = 0; i < breedSelect.options.length; i++) {
-                        if (breedSelect.options[i].value === targetBreed || 
+                        if (breedSelect.options[i].value === targetBreed ||
                             breedSelect.options[i].text.includes(targetBreed)) {
                             breedSelect.value = breedSelect.options[i].value;
                             foundMatch = true;
