@@ -104,7 +104,7 @@ class StaffController extends Controller
             $vaccines = ['Anti-Rabies', '5-in-1', '4-in-1 (Cat)', 'Vaccination'];
             $otherServices = ['Deworming', 'Check-up', 'Kapon'];
 
-            if (in_array($serviceType, array_merge($vaccines, $otherServices))) {
+            if ($this->isVaccinationService($appointment->service_type)) {
                 $pet = Pet::find($appointment->pet_id);
 
                 if ($pet) {

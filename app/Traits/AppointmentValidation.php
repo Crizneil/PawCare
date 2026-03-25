@@ -124,6 +124,30 @@ trait AppointmentValidation
     }
 
     /**
+     * Specifically check if a service is a Vaccination or Deworming
+     * (Items that should be recorded in the Vaccinations table)
+     */
+    public function isVaccinationService($serviceType)
+    {
+        // 1. Explicit check for common terms
+        $vaccineKeywords = ['Vaccination', 'Deworming'];
+        foreach ($vaccineKeywords as $word) {
+            if (str_contains(strtolower($serviceType), strtolower($word))) {
+                return true;
+            }
+        }
+
+        // 2. Check against defined intervals (actual vaccine products)
+        foreach (self::$serviceIntervals as $key => $days) {
+            if (str_contains(strtolower($serviceType), strtolower($key))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Legacy method for backward compatibility
      */
     protected function checkAntiRabiesEligibility($petId, $proposedDate)

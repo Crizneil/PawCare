@@ -323,7 +323,7 @@ class AdminController extends Controller
         // 1. Process Medical Records if it's a Vaccination/Deworming
         $finalName = $appointment->vaccine_name ?? $appointment->service_type;
 
-        if ($this->isMedicalService($appointment->service_type)) {
+        if ($this->isVaccinationService($appointment->service_type)) {
             $pet = Pet::find($appointment->pet_id);
             if ($pet) {
                 $interval = $this->getServiceInterval($finalName);
