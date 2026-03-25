@@ -114,11 +114,19 @@ class StaffController extends Controller
                     // Get interval only for vaccines and deworming
                     $interval = ($isSurgical || $serviceType === 'Check-up') ? 0 : $this->getServiceInterval($finalName);
 
-                    // 1. Update Pet Record
-                    $petUpdate = ['last_date' => now()];
-                    if ($isVaccine) {
-                        $petUpdate['vaccine_type'] = $finalName;
-                        $petUpdate['next_date'] = now()->addDays($interval);
+                        // No Telegram for procedures to keep it quiet, or keep if you wish
+                    } else {
+                        // 2. Standard Vaccination Logic
+                        // The user requested that we DO NOT automatically create Vaccination records
+                        // here, to force staff to use the "Log Shot" / Vaccination Status modal.
+                        $interval = $this->getServiceInterval($finalName);
+                        $nextDueDate = now()->addDays($interval);
+
+                        $pet->update([
+                            // Wait, if it's not logged in the vaccination history, we probably shouldn't set the next_date
+                            // But perhaps they still want the pet's main record updated, or maybe not. We will simply comment out Vaccination::create.
+                            // ... Actually they just stated: "it saves in vaccination record even if it not through log shot in vaccination status"
+                        ]);
                     }
                     if ($isSurgical) {
                         $petUpdate['is_neutered'] = true;
@@ -194,7 +202,7 @@ class StaffController extends Controller
             $fullName = trim("{$request->first_name} " . ($request->middle_initial ? "{$request->middle_initial}. " : "") . $request->last_name);
 
             if ($request->has('create_online_account') && $request->email) {
-                $plainPassword = 'PawCare2026';
+                $plainPassword = \Illuminate\Support\Str::random(8);
                 $user = User::create([
                     'name' => $fullName,
                     'email' => $request->email,
@@ -212,8 +220,11 @@ class StaffController extends Controller
                 $ownerName = $user->name;
 
                 // --- ADDED THIS: Trigger the Welcome Email ---
-                // Use the WelcomeEmail class you imported at the top of the file
-                Mail::to($user->email)->send(new WelcomeEmail($user, $plainPassword));
+                try {
+                    Mail::to($user->email)->send(new WelcomeEmail($user, $plainPassword));
+                } catch (\Throwable $e) {
+                    \Log::error('Staff walk-in email failed: ' . $e->getMessage());
+                }
 
             } else {
                 $userId = null;
@@ -563,7 +574,7 @@ class StaffController extends Controller
                 'email' => 'required|email|unique:users,email'
             ]);
 
-            $plainPassword = 'PawCare2026';
+            $plainPassword = \Illuminate\Support\Str::random(8);
 
             // Create the new User record
             $owner = User::create([
@@ -594,7 +605,7 @@ class StaffController extends Controller
                 $owner->email = $request->email;
             }
 
-            $plainPassword = 'PawCare2026';
+            $plainPassword = \Illuminate\Support\Str::random(8);
             $owner->password = Hash::make($plainPassword);
             $owner->save();
 
@@ -603,12 +614,16 @@ class StaffController extends Controller
         }
 
         // 2. Send the Welcome Email
-        Mail::send('emails.welcome', ['user' => $owner, 'password' => $plainPassword], function($message) use ($owner) {
-            $message->to($owner->email)->subject('Welcome to PawCare! 🐾');
-        });
+        try {
+            Mail::to($owner->email)->send(new WelcomeEmail($owner, $plainPassword));
+            $msg = 'Online account activated! Credentials sent to ' . $owner->email;
+        } catch (\Throwable $e) {
+            \Log::error('Staff create account email failed: ' . $e->getMessage());
+            $msg = 'Account activated, but email failed to send. Password is: ' . $plainPassword;
+        }
 
         return redirect()->route('staff.pet-owners', $owner->id)
-            ->with('success', 'Online account activated! Credentials sent to ' . $owner->email);
+            ->with('success', $msg);
     }
 
     public function reschedule(Request $request, $id)

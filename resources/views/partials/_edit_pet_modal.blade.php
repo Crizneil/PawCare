@@ -11,7 +11,7 @@
                 <div class="modal-body text-center">
                     {{-- Image Upload Section --}}
                     <div class="mb-4">
-                        <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block"
+                        <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block btn-camera-trigger"
                             style="cursor: pointer;">
                             <img id="preview{{ $pet->id }}"
                                 src="{{ $pet->image_url ? asset('storage/' . $pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
