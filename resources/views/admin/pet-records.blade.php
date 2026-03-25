@@ -82,10 +82,10 @@
                                     <td data-label="Pet Info">
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0 me-3">
-                                                <img src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
-                                                     class="rounded-circle border shadow-sm"
-                                                     style="width: 40px; height: 40px; object-fit: cover;"
-                                                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
+                                                <img src="{{ $pet->image_url ? asset('storage/' . $pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
+                                                    class="rounded-circle border shadow-sm"
+                                                    style="width: 40px; height: 40px; object-fit: cover;"
+                                                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                                             </div>
                                             <div>
                                                 <div class="fw-bold text-dark">{{ $pet->name }}</div>
@@ -180,8 +180,6 @@
 
     @include('partials._add_pet_modal')
 @endsection
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <style>
     /* 1. Force the inner container to match Bootstrap height */
     .choices__inner {
@@ -238,7 +236,9 @@
     }
 </style>
 @push('scripts')
-<script src="{{ asset('assets/js/pet-registration.js') }}"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="{{ asset('assets/js/pet-registration.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // 1. Initialize Owner Dropdown
@@ -278,5 +278,34 @@
             if (firstViewBtn) setTimeout(() => firstViewBtn.click(), 500);
         }
     });
+    document.addEventListener('change', function(e) {
+    // 1. Logic for ADD PET Modal
+    if (e.target && e.target.id === 'petImageInput') {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('petImagePreview').src = event.target.result;
+                const base64Input = document.getElementById('pet_add_image_base64');
+                if(base64Input) base64Input.value = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // 2. Logic for EDIT PET Modals (Handling the Loop)
+    if (e.target && e.target.id.startsWith('imageUpload')) {
+        const petId = e.target.id.replace('imageUpload', ''); // Get the ID (e.g., 20)
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const previewImg = document.getElementById('preview' + petId);
+                if(previewImg) previewImg.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
 </script>
 @endpush
