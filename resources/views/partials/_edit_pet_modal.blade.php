@@ -13,8 +13,8 @@
                     <div class="mb-4">
                         <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block btn-camera-trigger"
                             style="cursor: pointer;">
-                            <img id="petImagePreview{{ $pet->id }}"
-                                src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
+                            <img id="preview{{ $pet->id }}"
+                                src="{{ $pet->image_url ? asset('storage/' . $pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                                 class="rounded-circle shadow-sm border border-3 border-white"
                                 style="width: 120px; height: 120px; object-fit: cover;"
                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
@@ -24,8 +24,7 @@
                             </div>
                         </label>
                         <input type="file" name="image" id="imageUpload{{ $pet->id }}" class="d-none"
-                            accept="image/*">
-                        <input type="hidden" name="image_base64" id="pet_edit_image_base64_{{ $pet->id }}">
+                            accept="image/*" onchange="previewImage(this, '{{ $pet->id }}')">
                         <p class="small text-muted mt-2 mb-0">Tap photo to change</p>
                     </div>
 
@@ -46,10 +45,13 @@
                             <div class="col-6 mb-3">
                                 <label class="small fw-bold text-muted text-uppercase">Breed</label>
                                 <select name="breed" id="breedSelect{{ $pet->id }}" class="form-select rounded-pill bg-light border-0 px-3">
-                                    <option value="" selected disabled>Select Breed</option>
+                                    <option value="" disabled>Select Breed</option>
+                                    @if($pet->breed)
+                                        {{-- This ensures the recorded breed is visible immediately --}}
+                                        <option value="{{ $pet->breed }}" selected>{{ $pet->breed }}</option>
+                                    @endif
                                 </select>
                             </div>
-                            
                             {{-- Container for "Other" breed if needed --}}
                             <div class="col-12 mb-3 d-none" id="otherBreedContainer{{ $pet->id }}">
                                 <label class="small fw-bold text-muted text-uppercase">Specify Breed</label>

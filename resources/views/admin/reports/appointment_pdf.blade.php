@@ -84,7 +84,7 @@
 
     <div class="report-title">{{ strtoupper($range) }} APPOINTMENT SCHEDULE REPORT</div>
     <div class="generation-meta">
-        Range: {{ ucfirst($range) }} | Date: {{ now()->format('F d, Y h:i A') }}
+        Range: {{ ucfirst($range) }} | Date Generated: {{ now()->format('F d, Y h:i A') }}
     </div>
 
     <table class="appointment-table">

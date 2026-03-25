@@ -59,13 +59,13 @@ class StaffController extends Controller
             'upcoming' => $query->where('appointment_date', '>', today())
                                 ->whereIn('status', ['approved', 'rescheduled']),
 
-            'completed' => $query->whereIn('status', ['Done', 'completed']),
+            'completed' => $query->whereIn('status', ['done', 'completed']),
 
             'missed' => $query->whereIn('status', ['missed']), // Explicitly missed
 
             // Today's view now includes the active workflow statuses
             default => $query->whereDate('appointment_date', today())
-                                ->whereIn('status', ['pending', 'approved', 'checked-in', 'late']),
+                                ->whereIn('status', ['pending', 'approved', 'checked-in', 'late', 'rescheduled']),
         };
 
         $paginatedAppointments = $appointments->orderBy('appointment_date')
@@ -82,86 +82,76 @@ class StaffController extends Controller
 
     public function updateAppointmentStatus(Request $request, $id)
     {
-        $request->validate([
-            'status' => 'required|string'
-        ]);
+        $request->validate(['status' => 'required|string']);
 
         $newStatus = $request->status;
         $appointment = Appointment::findOrFail($id);
         $checkStatus = strtolower($newStatus);
 
         if (in_array($checkStatus, ['done', 'completed'])) {
-
-            if ($appointment->status === 'Done' || $appointment->status === 'completed') {
+            if ($appointment->status === 'completed' || $appointment->status === 'Done') {
                 return back()->with('info', 'This appointment is already processed.');
             }
 
-            $appointment->administered_by = auth()->user()->name;
             $appointment->status = 'completed';
+            $appointment->administered_by = auth()->user()->name;
 
-            $batchNo = 'MANUAL-' . date('Ymd');
-            $finalName = $appointment->vaccine_name ?? $appointment->service_type;
+            $serviceType = $appointment->service_type;
+            $finalName = $appointment->vaccine_name ?? $serviceType;
+            $batchNo = 'AUTO-' . date('Ymd');
 
-            // Default values to prevent "undefined variable" errors later
-            $isProcedure = in_array(strtolower($appointment->service_type), ['check-up', 'kapon']);
-            $nextDueDate = null;
+            // Separate Vaccinations from General Services
+            $vaccines = ['Anti-Rabies', '5-in-1', '4-in-1 (Cat)', 'Vaccination'];
+            $otherServices = ['Deworming', 'Check-up', 'Kapon'];
 
             if ($this->isVaccinationService($appointment->service_type)) {
                 $pet = Pet::find($appointment->pet_id);
 
                 if ($pet) {
-                    if ($isProcedure) {
-                        // 1. Logic for Kapon and Check-up
-                        $pet->update([
-                            'last_date' => now(),
-                            'next_date' => null,
-                        ]);
+                    $isVaccine = in_array($serviceType, $vaccines);
+                    $isSurgical = (strtolower($serviceType) === 'kapon');
 
-                        $history = Vaccination::create([
-                            'pet_id' => $pet->id,
-                            'staff_id' => auth()->id(),
-                            'vaccine_name' => $finalName,
-                            'date_administered' => now(),
-                            'next_due_date' => null,
-                            'batch_no' => 'PROCEDURE',
-                            'status' => 'Completed'
-                        ]);
+                    // Get interval only for vaccines and deworming
+                    $interval = ($isSurgical || $serviceType === 'Check-up') ? 0 : $this->getServiceInterval($finalName);
 
-                        // No Telegram for procedures to keep it quiet, or keep if you wish
-                    } else {
-                        // 2. Standard Vaccination Logic
-                        // The user requested that we DO NOT automatically create Vaccination records
-                        // here, to force staff to use the "Log Shot" / Vaccination Status modal.
-                        $interval = $this->getServiceInterval($finalName);
-                        $nextDueDate = now()->addDays($interval);
-
-                        $pet->update([
-                            // Wait, if it's not logged in the vaccination history, we probably shouldn't set the next_date
-                            // But perhaps they still want the pet's main record updated, or maybe not. We will simply comment out Vaccination::create.
-                            // ... Actually they just stated: "it saves in vaccination record even if it not through log shot in vaccination status"
-                        ]);
+                    // 1. Update Pet Record
+                    $petUpdate = ['last_date' => now()];
+                    if ($isVaccine) {
+                        $petUpdate['vaccine_type'] = $finalName;
+                        $petUpdate['next_date'] = now()->addDays($interval);
                     }
-                }
+                    if ($isSurgical) {
+                        $petUpdate['is_neutered'] = true;
+                    }
+                    $pet->update($petUpdate);
 
-                // Update appointment details using the variables set above
-                $appointment->batch_no = $isProcedure ? 'N/A' : $batchNo;
-                $appointment->vaccine_name = $finalName;
-                $appointment->next_due_date = $nextDueDate;
-                $appointment->administered_by = auth()->user()->name;
+                    // 2. Create History Record (Only if not already created)
+                    // This prevents the "Double Entry" issue
+                    $history = Vaccination::create([
+                        'pet_id' => $pet->id,
+                        'staff_id' => auth()->id(),
+                        'vaccine_name' => $finalName,
+                        'date_administered' => now(),
+                        'next_due_date' => ($interval > 0) ? now()->addDays($interval) : null,
+                        'batch_no' => $batchNo,
+                        'status' => $isVaccine ? 'Up to Date' : 'Completed'
+                    ]);
+
+                    $this->sendTelegramNotification($history, 'treatment_completed');
+
+                    // 3. Sync appointment record
+                    $appointment->batch_no = $batchNo;
+                    $appointment->next_due_date = ($interval > 0) ? now()->addDays($interval) : null;
+                }
             }
 
             $appointment->save();
             return back()->with('success', "Patient treatment is now Complete");
-
         } else {
+            // Handle simple status updates
             $appointment->status = $newStatus;
-            if (!$appointment->status) {
-                return back()->with('error', 'Invalid status provided.');
-            }
-
             $appointment->save();
             $this->sendTelegramNotification($appointment, 'appointment_status_updated');
-
             return back()->with('success', "Patient is now " . ucfirst($newStatus));
         }
     }
@@ -204,7 +194,7 @@ class StaffController extends Controller
             $fullName = trim("{$request->first_name} " . ($request->middle_initial ? "{$request->middle_initial}. " : "") . $request->last_name);
 
             if ($request->has('create_online_account') && $request->email) {
-                $plainPassword = \Illuminate\Support\Str::random(8);
+                $plainPassword = 'PawCare2026';
                 $user = User::create([
                     'name' => $fullName,
                     'email' => $request->email,
@@ -222,11 +212,8 @@ class StaffController extends Controller
                 $ownerName = $user->name;
 
                 // --- ADDED THIS: Trigger the Welcome Email ---
-                try {
-                    Mail::to($user->email)->send(new WelcomeEmail($user, $plainPassword));
-                } catch (\Throwable $e) {
-                    \Log::error('Staff walk-in email failed: ' . $e->getMessage());
-                }
+                // Use the WelcomeEmail class you imported at the top of the file
+                Mail::to($user->email)->send(new WelcomeEmail($user, $plainPassword));
 
             } else {
                 $userId = null;
@@ -278,10 +265,10 @@ class StaffController extends Controller
 
         // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
         \Log::info('--- WALK-IN DEBUG ---', [
-            'pet_id' => $pet->id, 
+            'pet_id' => $pet->id,
             'pet_name_req' => $request->pet_name,
             'is_numeric_pet_name' => is_numeric($request->pet_name),
-            'service_type' => $request->service_type, 
+            'service_type' => $request->service_type,
             'schedule_date' => $request->schedule_date
         ]);
         $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->schedule_date);
@@ -380,7 +367,15 @@ class StaffController extends Controller
         // 2. Filter logic: Show pets with RECENT activity or pending approved appointments
         $query->whereHas('appointments', function ($q) {
             $q->whereIn('status', ['approved', 'checked-in', 'Done', 'completed', 'rescheduled', 'late'])
-            ->whereIn('service_type', ['Vaccination', 'Deworming', 'Check-up', 'Kapon']);
+            ->whereIn('service_type', [
+                'Anti-Rabies',
+                '5-in-1', '5in1',
+                '4-in-1 (Cat)', '4in1',
+                'Deworming',
+                'Check-up',
+                'Kapon',
+                'Vaccination'
+            ]);
         });
 
         // Search Filter
@@ -568,7 +563,7 @@ class StaffController extends Controller
                 'email' => 'required|email|unique:users,email'
             ]);
 
-            $plainPassword = \Illuminate\Support\Str::random(8);
+            $plainPassword = 'PawCare2026';
 
             // Create the new User record
             $owner = User::create([
@@ -599,7 +594,7 @@ class StaffController extends Controller
                 $owner->email = $request->email;
             }
 
-            $plainPassword = \Illuminate\Support\Str::random(8);
+            $plainPassword = 'PawCare2026';
             $owner->password = Hash::make($plainPassword);
             $owner->save();
 
@@ -608,16 +603,12 @@ class StaffController extends Controller
         }
 
         // 2. Send the Welcome Email
-        try {
-            Mail::to($owner->email)->send(new WelcomeEmail($owner, $plainPassword));
-            $msg = 'Online account activated! Credentials sent to ' . $owner->email;
-        } catch (\Throwable $e) {
-            \Log::error('Staff create account email failed: ' . $e->getMessage());
-            $msg = 'Account activated, but email failed to send. Password is: ' . $plainPassword;
-        }
+        Mail::send('emails.welcome', ['user' => $owner, 'password' => $plainPassword], function($message) use ($owner) {
+            $message->to($owner->email)->subject('Welcome to PawCare! 🐾');
+        });
 
         return redirect()->route('staff.pet-owners', $owner->id)
-            ->with('success', $msg);
+            ->with('success', 'Online account activated! Credentials sent to ' . $owner->email);
     }
 
     public function reschedule(Request $request, $id)
@@ -715,37 +706,32 @@ class StaffController extends Controller
             // --- CASE B: DAILY ACCOMPLISHMENT / APPOINTMENT REPORTS ---
             $viewPath = 'staff.reports.staff_appointment';
 
-            // Fetch ALL data for today to calculate the Overview counts accurately
+            // 1. Fetch ALL data for today for accurate Overview counts
             $allToday = Appointment::whereDate('appointment_date', $today)->get();
 
-            // Specific Accomplishment counts for the City Vet Summary
+            // 2. Updated Summary Data with robust string matching
             $summaryData = [
                 'date'        => now()->format('M d, Y'),
                 'total'       => $allToday->count(),
-                'anti_rabies' => $allToday->filter(fn($a) => str_contains($a->service_type, 'Rabies'))->count(),
+                'anti_rabies' => $allToday->filter(fn($a) => stripos($a->service_type, 'rabies') !== false)->count(),
                 'five_in_one' => $allToday->filter(fn($a) => str_contains($a->service_type, '5-in-1'))->count(),
                 'four_in_one' => $allToday->filter(fn($a) => str_contains($a->service_type, '4-in-1'))->count(),
-                'deworming'   => $allToday->filter(fn($a) => str_contains($a->service_type, 'Deworming'))->count(),
-                // Keeping your old status counts for the internal dashboard summary if needed
+                'deworming'   => $allToday->filter(fn($a) => stripos($a->service_type, 'deworming') !== false)->count(),
                 'completed'   => $allToday->whereIn('status', ['done', 'completed'])->count(),
                 'missed'      => $allToday->where('status', 'missed')->count(),
             ];
 
-            // Filtering what actually shows in the main table
+            // 3. Filtering what shows in the main table based on dropdown
             $query = Appointment::with(['pet', 'user'])->whereDate('appointment_date', $today);
 
-            switch ($filter) {
-                case 'completed':
-                    $query->whereIn('status', ['done', 'completed']);
-                    $reportTitle = "COMPLETED APPOINTMENTS REPORT";
-                    break;
-                case 'missed':
-                    $query->where('status', 'missed');
-                    $reportTitle = "MISSED APPOINTMENTS REPORT";
-                    break;
-                default:
-                    $reportTitle = "DAILY ACCOMPLISHMENT SUMMARY";
-                    break;
+            if ($filter === 'completed') {
+                $query->whereIn('status', ['done', 'completed']);
+                $reportTitle = "COMPLETED APPOINTMENTS REPORT";
+            } elseif ($filter === 'missed') {
+                $query->where('status', 'missed');
+                $reportTitle = "MISSED APPOINTMENTS REPORT";
+            } else {
+                $reportTitle = "DAILY ACCOMPLISHMENT SUMMARY";
             }
 
             $data = $query->orderBy('appointment_time', 'asc')->get();

@@ -34,7 +34,7 @@ class AdminController extends Controller
 
         // Vaccination Status Data for Chart
         $pets = Pet::notDeceased()->with('vaccinations')->get();
-        
+
         $vaccinationStats = [
             'fully_vaccinated' => 0,
             'partially_vaccinated' => 0,
@@ -83,7 +83,6 @@ class AdminController extends Controller
         ));
     }
 
-    // --- NEW METHODS FOR SIDEBAR ---
 
     public function appointments(Request $request)
     {
@@ -130,9 +129,7 @@ class AdminController extends Controller
         return view('admin.appointments', compact('appointments', 'counts', 'owners'));
     }
 
-    /**
-     * API: Get all appointments for the FullCalendar master view.
-     */
+
     public function getAppointmentsApi(Request $request)
     {
         // Filter out cancelled appointments for the calendar view
@@ -178,9 +175,7 @@ class AdminController extends Controller
         return response()->json($events);
     }
 
-    /**
-     * API: Update appointment date/time from Master Calendar Drag-and-Drop
-     */
+
     public function updateDragAndDrop(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -506,7 +501,7 @@ class AdminController extends Controller
         if ($request->filled('profile_image_base64')) {
             // Delete old
             if ($user->profile_image) Storage::delete('public/' . $user->profile_image);
-            
+
             $imageData = $request->input('profile_image_base64');
             $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
             $imageName = 'profiles/' . uniqid() . '.png';
@@ -597,9 +592,7 @@ class AdminController extends Controller
         return view('admin.pet-records', compact('pets', 'owners', 'view'));
     }
 
-    /**
-     * Restore a pet that was marked as DECEASED (Status Only)
-     */
+
     public function restoreDeceasedPet($id)
     {
         $pet = Pet::findOrFail($id);
@@ -617,7 +610,6 @@ class AdminController extends Controller
 
         return back()->with('success', "Pet record for {$pet->name} has been restored to active status.");
     }
-    // --- ADD THESE METHODS FOR PET MANAGEMENT ---
 
 
     public function storePet(Request $request)
@@ -629,19 +621,24 @@ class AdminController extends Controller
             'species' => 'required|string|in:Dog,Cat',
             'breed' => 'nullable|string|max:255',
             'birthdate' => 'required|date|before_or_equal:today',
-            'image' => 'nullable|image|max:2048',
-            'image_base64' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $imagePath = null;
+        // 1. Check for Base64 first (Camera Capture)
         if ($request->filled('image_base64')) {
             $imageData = $request->input('image_base64');
+            // Strip the metadata
             $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
-            $imageName = 'profiles/' . uniqid() . '.png';
-            Storage::disk('public')->put($imageName, base64_decode($imageData));
-            $imagePath = $imageName;
-        } elseif ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('profiles', 'public');
+            $imageData = base64_decode($imageData);
+
+            $fileName = 'pets/' . uniqid() . '.png';
+            Storage::disk('public')->put($fileName, $imageData);
+            $imagePath = $fileName;
+        }
+        // 2. Fallback to standard file upload
+        else if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('pets', 'public');
         }
 
         $year = date('Y');
