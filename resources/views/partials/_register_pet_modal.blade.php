@@ -17,16 +17,17 @@
                     @csrf
 
                     <div class="text-center mb-4">
-                        <div class="position-relative d-inline-block">
+                        <div class="position-relative d-inline-block btn-camera-trigger" style="cursor: pointer;">
                             <img id="petImagePreview" src="https://ui-avatars.com/api/?name=Pet&background=fce7d6&color=ff6600"
                                 class="rounded-circle border border-4 border-white shadow"
                                 style="width: 120px; height: 120px; object-fit: cover;">
-                            <label for="petImageInput" class="position-absolute bottom-0 end-0 bg-orange text-white rounded-circle p-2 shadow-sm" style="cursor: pointer;">
+                            <label for="petImageInput" class="position-absolute bottom-0 end-0 bg-orange text-white rounded-circle p-2 shadow-sm" style="cursor: pointer; pointer-events: none;">
                                 <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
-                                <input type="file" name="image" id="petImageInput" class="d-none" accept="image/*">
                             </label>
+                            <input type="file" name="image" id="petImageInput" class="d-none" accept="image/*">
+                            <input type="hidden" name="image_base64" id="pet_add_image_base64">
                         </div>
-                        <p class="small text-muted mt-2">Click the camera to upload a photo</p>
+                        <p class="small text-muted mt-2">Click the photo to change</p>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-muted mb-1">Pet Name</label>
@@ -91,16 +92,6 @@
                 });
             } else {
                 console.error("The pet-registration.js file was not loaded correctly.");
-            }
-        });
-        document.getElementById('petImageInput').addEventListener('change', function(event) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const output = document.getElementById('petImagePreview');
-                output.src = reader.result;
-            };
-            if(event.target.files[0]) {
-                reader.readAsDataURL(event.target.files[0]);
             }
         });
     </script>

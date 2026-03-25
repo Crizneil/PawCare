@@ -57,7 +57,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #ececec;"></span>
-                <span>Closed (Friday - Sunday)</span>
+                <span>Closed (Saturday - Sunday)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rounded-circle" style="width: 12px; height: 12px; background-color: #f8f9fa;"></span>
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const ownerCount = Array.isArray(ownerAppointments) ? ownerAppointments.length : Object.keys(ownerAppointments).length;
 
             const dayOfWeek = cellDate.getDay();
-            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 6);
 
             // 3. Create & Apply new indicator matching backend truth
             const indicator = document.createElement('div');
@@ -626,7 +626,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const dayOfWeek = info.date.getDay();
-            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+            const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 6);
             const indicator = document.createElement('div');
             indicator.className = 'availability-indicator';
 
@@ -662,7 +662,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const todayCheck = new Date();
             todayCheck.setHours(0, 0, 0, 0);
 
-            if (info.date < todayCheck || [0, 5, 6].includes(dayOfWeek)) return;
+            if (info.date < todayCheck || [0, 6].includes(dayOfWeek)) return;
 
             let userBookingsToday = ownerBookedDates[dateStr] || [];
             if (typeof userBookingsToday === 'object' && !Array.isArray(userBookingsToday)) userBookingsToday = Object.values(userBookingsToday);

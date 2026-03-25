@@ -135,6 +135,11 @@ document.addEventListener('DOMContentLoaded', function () {
             currentPreview.src = base64Image;
         }
 
+        // Clear the file input so it does not submit the original large file alongside the base64, preserving validation
+        if (currentInput && currentInput.type === 'file') {
+            currentInput.value = '';
+        }
+
         cropModal.hide();
         if (cropper) cropper.destroy();
     });

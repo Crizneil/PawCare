@@ -23,10 +23,18 @@ function initializePetBreedLogic(config) {
         'Other': ['Other']
     };
 
-    // Initialize Select2 if available
-    const initSelect2 = () => {
-        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-            $(breedSelect).select2({
+    let tsBreed = null;
+
+    // Initialize TomSelect if available
+    const initTomSelect = () => {
+        if (typeof TomSelect !== 'undefined') {
+            tsBreed = new TomSelect(breedSelect, {
+                create: false,
+                sortField: { field: "text", direction: "asc" },
+                placeholder: 'Search or select breed...'
+            });
+        } else if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+             $(breedSelect).select2({
                 dropdownParent: $(breedSelect).closest('.modal'),
                 width: '100%',
                 placeholder: 'Search or select breed...'
@@ -34,19 +42,16 @@ function initializePetBreedLogic(config) {
         }
     };
 
-    initSelect2();
+    initTomSelect();
 
     // Handle species change
     const updateBreeds = (selected, selectedBreed = null) => {
         if (!selected) return;
 
-        // Normalize selected to Title Case for breeds lookup (handles 'dog', 'DOG', etc.)
+        // Normalize selected to Title Case for breeds lookup
         const normalizedSelected = selected.charAt(0).toUpperCase() + selected.slice(1).toLowerCase();
 
-        // 1. Reset breed dropdown
-        breedSelect.innerHTML = '<option value="" selected disabled>Select Breed</option>';
-
-        // 2. Hide "Other" input and reset it if not "Other"
+        // 1. Hide "Other" input and reset it if not "Other"
         if (selectedBreed !== 'Other') {
             if (otherContainer) otherContainer.classList.add('d-none');
             if (otherInput) {
@@ -55,33 +60,49 @@ function initializePetBreedLogic(config) {
             }
         }
 
-        // 3. Populate breeds for selected species
-        if (breeds[normalizedSelected]) {
-            breedSelect.disabled = false;
-            breeds[normalizedSelected].forEach(breed => {
-                const option = document.createElement('option');
-                option.value = breed;
-                option.textContent = breed;
-                if (breed === selectedBreed) {
-                    option.selected = true;
-                }
-                breedSelect.appendChild(option);
-            });
+        // 2. Populate breeds using TomSelect API if active, otherwise standard DOM
+        if (tsBreed) {
+            tsBreed.clear();
+            tsBreed.clearOptions();
+            if (breeds[normalizedSelected]) {
+                const newOptions = breeds[normalizedSelected].map(b => ({value: b, text: b}));
+                tsBreed.addOptions(newOptions);
+                tsBreed.enable();
+            } else {
+                tsBreed.disable();
+            }
+
+            if (selectedBreed) {
+                tsBreed.setValue(selectedBreed);
+            } else if (normalizedSelected === 'Other') {
+                tsBreed.setValue('Other');
+            }
+            
         } else {
-            breedSelect.disabled = true;
-        }
+            // Fallback for native/Select2
+            breedSelect.innerHTML = '<option value="" selected disabled>Select Breed</option>';
+            if (breeds[normalizedSelected]) {
+                breedSelect.disabled = false;
+                breeds[normalizedSelected].forEach(breed => {
+                    const option = document.createElement('option');
+                    option.value = breed;
+                    option.textContent = breed;
+                    if (breed === selectedBreed) {
+                        option.selected = true;
+                    }
+                    breedSelect.appendChild(option);
+                });
+            } else {
+                breedSelect.disabled = true;
+            }
 
-        // Trigger Select2 update
-        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-            $(breedSelect).trigger('change');
-        }
-
-        // Auto-select "Other" if the species is "Other"
-        if (selected === 'Other') {
-            breedSelect.value = 'Other';
-            breedSelect.dispatchEvent(new Event('change'));
             if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
                 $(breedSelect).trigger('change');
+            }
+
+            if (normalizedSelected === 'Other') {
+                breedSelect.value = 'Other';
+                breedSelect.dispatchEvent(new Event('change'));
             }
         }
     };
@@ -143,7 +164,6 @@ function initializePetBreedLogic(config) {
     });
 
     otherInput.addEventListener('input', function () {
-        if (breedSelect.value === 'Other') {
-        }
+        // Reserved for future dynamic logic
     });
 }

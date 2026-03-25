@@ -11,9 +11,9 @@
                 <div class="modal-body text-center">
                     {{-- Image Upload Section --}}
                     <div class="mb-4">
-                        <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block"
+                        <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block btn-camera-trigger"
                             style="cursor: pointer;">
-                            <img id="preview{{ $pet->id }}"
+                            <img id="petImagePreview{{ $pet->id }}"
                                 src="{{ $pet->image_url ? '/storage/' . $pet->image_url : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
                                 class="rounded-circle shadow-sm border border-3 border-white"
                                 style="width: 120px; height: 120px; object-fit: cover;"
@@ -23,8 +23,9 @@
                                 <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
                             </div>
                         </label>
-                        <input type="file" name="pet_image" id="imageUpload{{ $pet->id }}" class="d-none"
-                            accept="image/*" onchange="previewImage(this, '{{ $pet->id }}')">
+                        <input type="file" name="image" id="imageUpload{{ $pet->id }}" class="d-none"
+                            accept="image/*">
+                        <input type="hidden" name="image_base64" id="pet_edit_image_base64_{{ $pet->id }}">
                         <p class="small text-muted mt-2 mb-0">Tap photo to change</p>
                     </div>
 

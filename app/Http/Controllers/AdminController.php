@@ -336,19 +336,8 @@ class AdminController extends Controller
                     'next_date' => now()->addDays($interval),
                 ]);
 
-                // Create Formal Vaccination/History Record
-                $vaccination = Vaccination::create([
-                    'pet_id' => $pet->id,
-                    'staff_id' => auth()->id(), // Admin as the processor
-                    'vaccine_name' => $finalName,
-                    'date_administered' => now(),
-                    'next_due_date' => now()->addDays($interval),
-                    'batch_no' => $batchNo,
-                    'status' => 'Up to Date'
-                ]);
-
-                // Send Telegram Notification
-                $this->sendTelegramNotification($vaccination, 'vaccination_updated');
+                // The system now requires staff/admins to log vaccinations manually.
+                // We no longer automatically create a Vaccination record here.
 
                 // Update Appointment fields for record keeping
                 $appointment->batch_no = $batchNo;
@@ -366,7 +355,7 @@ class AdminController extends Controller
             'Marked appointment as Done and logged medical records for pet: ' . $appointment->pet_name
         );
 
-        return back()->with('success', 'Appointment marked as Done and vaccination record created.');
+        return back()->with('success', 'Appointment marked as Done.');
     }
     public function owners()
     {
@@ -447,7 +436,7 @@ class AdminController extends Controller
             $this->sendTelegramNotification($user, 'account_created');
 
         } catch (\Throwable $e) {
-            return back()->with('error', 'Owner registered, but email failed: ' . $e->getMessage());
+            return back()->with('error', 'Owner registered, but email failed! Password is: ' . $rawPassword);
         }
 
         return back()->with('success', 'New owner account successfully registered!');
