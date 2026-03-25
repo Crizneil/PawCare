@@ -34,7 +34,7 @@ class StaffController extends Controller
                 $q->notDeceased();
             })->with('pet')->latest()->limit(5)->get(),
 
-            'owners' => User::where('role', 'owner')->orderBy('name')->get()
+            'owners' => User::where('role', 'owner')->with('pets')->orderBy('name')->get()
         ]);
     }
 
@@ -76,7 +76,7 @@ class StaffController extends Controller
         return view('staff.appointments', [
             'appointments' => $paginatedAppointments,
             'view' => $view,
-            'owners' => User::where('role', 'owner')->orderBy('name')->get()
+            'owners' => User::where('role', 'owner')->with('pets')->orderBy('name')->get()
         ]);
     }
 

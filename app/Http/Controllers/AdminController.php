@@ -96,7 +96,7 @@ class AdminController extends Controller
         ];
 
         // 2. Fetch Owners for the "New Appointment" Modal dropdown
-        $owners = User::where('role', 'owner')->get();
+        $owners = User::where('role', 'owner')->with('pets')->orderBy('name')->get();
 
         // 3. Handle the Table Query & Filters
         $query = Appointment::with('user');
@@ -238,7 +238,7 @@ class AdminController extends Controller
     public function createAppointment()
     {
         // Fetch owners so the dropdown menu in your form actually works
-        $owners = User::where('role', 'owner')->get();
+        $owners = User::where('role', 'owner')->with('pets')->orderBy('name')->get();
 
         return view('admin.appointment-create', compact('owners'));
     }
@@ -592,7 +592,7 @@ class AdminController extends Controller
 
         // 4. Results and View
         $pets = $query->latest()->paginate(10)->appends($request->all());
-        $owners = User::where('role', 'owner')->get();
+        $owners = User::where('role', 'owner')->with('pets')->orderBy('name')->get();
 
         return view('admin.pet-records', compact('pets', 'owners', 'view'));
     }
