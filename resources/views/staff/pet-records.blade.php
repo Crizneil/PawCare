@@ -14,6 +14,9 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 flex-grow-1 flex-md-grow-0">
+                <button type="button" class="btn btn-orange rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addOwnerModal">
+                    <i data-lucide="user-plus" style="width: 18px;" class="me-2"></i> Add Owner
+                </button>
                 <form action="{{ route('staff.pet-records') }}" method="GET" class="d-inline">
                     <div class="input-group">
                         <input type="text" name="search" class="form-control border-0 shadow-sm rounded-pill px-3"
@@ -200,6 +203,8 @@
     @foreach ($pets as $pet)
         @include('partials._view_pet_modal')
     @endforeach
+
+    @include('partials._add_owner_modal', ['submitRoute' => route('staff.owners.store')])
 
     {{-- Scripts --}}
     @if(request()->has('search'))

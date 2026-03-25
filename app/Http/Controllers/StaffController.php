@@ -620,6 +620,84 @@ class StaffController extends Controller
             ->with('success', $msg);
     }
 
+    public function storeOwner(Request $request)
+    {
+        // 1. Validate under the "One-Account Policy"
+        $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_initial' => 'nullable|string|max:2',
+            'email' => 'required|email|unique:users',
+            'phone' => 'required|numeric|digits:11|unique:users',
+            'house_no' => 'required|string|max:255',
+            'street' => 'required|string|max:255',
+            'barangay' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
+            'gender' => 'required|string|in:Male,Female',
+            'profile_image' => 'nullable|image|max:2048',
+            'profile_image_base64' => 'nullable|string',
+        ], [
+            'email.unique' => 'An account with this email address already exists.',
+            'phone.unique' => 'An account with this mobile number already exists.',
+        ]);
+
+        $imagePath = null;
+        if ($request->filled('profile_image_base64')) {
+            $imageData = $request->input('profile_image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageName = 'profiles/' . uniqid() . '.png';
+            Storage::disk('public')->put($imageName, base64_decode($imageData));
+            $imagePath = $imageName;
+        } elseif ($request->hasFile('profile_image')) {
+            $imagePath = $request->file('profile_image')->store('profiles', 'public');
+        }
+
+        // 2. Generate a secure random password
+        $rawPassword = \Illuminate\Support\Str::random(8);
+
+        // 3. Create the Owner User
+        $fullName = trim($request->first_name . ' ' . ($request->middle_initial ? $request->middle_initial . ' ' : '') . $request->last_name);
+
+        $user = User::create([
+            'name' => $fullName,
+            'email' => $request->email,
+            'password' => Hash::make($rawPassword),
+            'phone' => $request->phone,
+            'gender' => $request->gender,
+            'role' => 'owner',
+            'profile_image' => $imagePath,
+
+            // Granular Address Fields
+            'house_no' => $request->house_no,
+            'street' => $request->street,
+            'barangay' => $request->barangay,
+            'city' => $request->city,
+            'province' => $request->province,
+
+            'address' => "{$request->house_no} {$request->street}, {$request->barangay}, {$request->city}, {$request->province}",
+        ]);
+
+        // 4. Record Activity
+        \App\Models\ActivityLog::record(
+            'CREATE_OWNER',
+            'Staff successfully created a new owner account for: ' . $user->name
+        );
+
+        // 5. Send Automated Welcome Email
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user, $rawPassword));
+
+            // --- Telegram Notification ---
+            $this->sendTelegramNotification($user, 'account_created');
+
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Owner registered, but email failed! Password is: ' . $rawPassword);
+        }
+
+        return back()->with('success', 'New owner account successfully registered!');
+    }
+
     public function reschedule(Request $request, $id)
     {
         $request->validate([
