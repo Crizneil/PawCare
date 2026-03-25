@@ -176,15 +176,23 @@
     select[style*="display: none"] ~ .select2-container {
         display: none !important;
     }
+    .ts-control {
+        border-radius: 50px !important; /* Matches your rounded-pill style */
+        padding: 10px 20px !important;
+        border: 1px solid #dee2e6 !important;
+    }
+
+    .ts-wrapper.single .ts-control {
+        background-color: #f8f9fa !important;
+    }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    let tsOwner, tsPet;
+    let tsOwner, tsPet, tsBreed; // Added tsBreed
     const ownerSearchSelect = document.getElementById('ownerSearchSelect');
     const petNameSelect = document.getElementById('petNameSelect');
 
-    // Define pet detail fields early for visibility in all functions
     const speciesSelect = document.getElementById('walkinSpeciesSelect');
     const breedSelect = document.getElementById('walkinBreedSelect');
     const genderSelect = document.getElementById('walkinGenderSelect');
@@ -201,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const genderDisplay = document.getElementById('walkinGenderDisplay');
     const breedDisplay = document.getElementById('walkinBreedDisplay');
 
-    // Initialize TomSelect for Owner
+    // 1. Initialize TomSelect for Owner
     if (ownerSearchSelect && typeof TomSelect !== "undefined") {
         tsOwner = new TomSelect('#ownerSearchSelect', {
             create: false,
@@ -236,65 +244,67 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-    // FIX: Modal Accessibility & Cleanup Logic
-        const walkInModalEl = document.getElementById('walkInModal');
-        if (walkInModalEl) {
-            walkInModalEl.addEventListener('show.bs.modal', function () {
-                this.removeAttribute('aria-hidden');
-            });
 
-            walkInModalEl.addEventListener('hidden.bs.modal', function () {
-                if (tsOwner) tsOwner.clear(true);
-                if (tsPet) {
-                    tsPet.clear(true);
-                    tsPet.clearOptions();
-                }
-                document.body.focus();
-            });
-        }
 
-    // Initialize TomSelect for Pet Name
+    // 2. Initialize TomSelect for Pet Name
     if (petNameSelect && typeof TomSelect !== "undefined") {
         tsPet = new TomSelect('#petNameSelect', {
-            create: false, // Changed to false as we have a separate input for new pets
+            create: false,
             placeholder: "Select pet from list...",
             allowEmptyOption: true,
-            searchField: ['text'],
-            render: {
-                option: function(data, escape) {
-                    return `<div class="py-2 px-3"><div class="fw-bold text-dark">${escape(data.text)}</div></div>`;
-                },
-                item: function(data, escape) {
-                    return `<div class="item"><span class="fw-bold text-dark">${escape(data.text)}</span></div>`;
-                }
+            searchField: ['text']
+        });
+    }
+
+    // 3. NEW: Initialize TomSelect for Breed (Searchable for New Owners)
+    if (breedSelect && typeof TomSelect !== "undefined") {
+        tsBreed = new TomSelect('#walkinBreedSelect', {
+            create: true,
+            placeholder: "Search or type breed...",
+            allowEmptyOption: true,
+            dropdownParent: 'body',
+            onInitialize: function() {
+                // This is the logic from your search owner that allows multiple searches
+                this.control.addEventListener('click', () => {
+                    if (this.items.length > 0) {
+                        this.clear();
+                        this.focus();
+                    }
+                });
             }
         });
     }
 
-    // --- Toggle Logic for New vs Existing ---
+    // Modal Accessibility & Cleanup
+    const walkInModalEl = document.getElementById('walkInModal');
+    if (walkInModalEl) {
+        walkInModalEl.addEventListener('show.bs.modal', function () {
+            this.removeAttribute('aria-hidden');
+        });
+
+        walkInModalEl.addEventListener('hidden.bs.modal', function () {
+            if (tsOwner) tsOwner.clear(true);
+            if (tsPet) { tsPet.clear(true); tsPet.clearOptions(); }
+            if (tsBreed) { tsBreed.clear(true); tsBreed.clearOptions(); }
+            document.body.focus();
+        });
+    }
 
     function toggleSections() {
         if (statusExisting.checked) {
             existingSection.style.setProperty('display', 'block', 'important');
             newSection.style.setProperty('display', 'none', 'important');
-
-            // Show Select, Hide Input
             petNameSelectContainer.style.display = 'block';
             petNameInputContainer.style.display = 'none';
             petNameSelect.name = 'pet_name';
             petNameSelect.required = true;
             petNameInput.removeAttribute('name');
             petNameInput.required = false;
-
-            // Reset details for fresh start
-            togglePetFields(true); // Default to locked for existing
-
+            togglePetFields(true);
             newSection.querySelectorAll('input, select').forEach(i => i.required = false);
         } else {
             existingSection.style.setProperty('display', 'none', 'important');
             newSection.style.setProperty('display', 'block', 'important');
-
-            // Hide Select, Show Input
             petNameSelectContainer.style.display = 'none';
             petNameInputContainer.style.display = 'block';
             petNameInput.name = 'pet_name';
@@ -304,17 +314,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (tsOwner) tsOwner.clear();
             if (tsPet) tsPet.clearOptions();
+            if (tsBreed) { tsBreed.clear(); tsBreed.clearOptions(); }
 
-            // Reset Pet Details for New Owner
             petNameInput.value = '';
             speciesSelect.value = '';
             genderSelect.value = '';
             birthdayInput.value = "{{ date('Y-m-d') }}";
-            togglePetFields(false); // Editable for new
+            togglePetFields(false);
 
-            if (typeof breedSelect !== 'undefined' && breedSelect) {
-                breedSelect.innerHTML = '<option value="" selected disabled>Select breed...</option>';
-            }
             ['first_name', 'last_name', 'phone'].forEach(name => {
                 const el = newSection.querySelector(`[name="${name}"]`);
                 if (el) el.required = true;
@@ -329,54 +336,24 @@ document.addEventListener('DOMContentLoaded', function () {
             { select: breedSelect, display: breedDisplay }
         ];
 
-        const speciesCol = document.getElementById('walkinSpeciesCol');
-        const genderCol = document.getElementById('walkinGenderCol');
-        const breedCol = document.getElementById('walkinBreedCol');
-
-        if (isReadonly) {
-            // Ensure breed column is visible for display
-            if (breedCol) breedCol.style.setProperty('display', 'block', 'important');
-            // Restore col-4 size for all three
-            if (speciesCol) { speciesCol.classList.remove('col-6'); speciesCol.classList.add('col-4'); }
-            if (genderCol) { genderCol.classList.remove('col-6'); genderCol.classList.add('col-4'); }
-        } else {
-            // SHOW breed column for new pets
-            if (breedCol) breedCol.style.setProperty('display', 'block', 'important');
-            // RESTORE col-4 size
-            if (speciesCol) { speciesCol.classList.remove('col-6'); speciesCol.classList.add('col-4'); }
-            if (genderCol) { genderCol.classList.remove('col-6'); genderCol.classList.add('col-4'); }
-        }
-
         fieldPairs.forEach(pair => {
+            const parent = pair.select ? pair.select.parentElement : null;
             if (isReadonly) {
                 if (pair.select) {
                     pair.select.style.setProperty('display', 'none', 'important');
-                    pair.select.classList.add('d-none');
-                    // ROBUST HIDE: Find TomSelect/Select2 wrapper anywhere in the parent
-                    const parent = pair.select.parentElement;
-                    if (parent) {
-                        parent.querySelectorAll('.ts-wrapper, .select2-container').forEach(w => w.style.setProperty('display', 'none', 'important'));
-                    }
+                    if (parent) parent.querySelectorAll('.ts-wrapper').forEach(w => w.style.setProperty('display', 'none', 'important'));
                 }
                 if (pair.display) {
                     pair.display.style.setProperty('display', 'block', 'important');
                     pair.display.classList.remove('d-none');
-                    // Show the text name of the selected option or raw value
-                    if (pair.select && pair.select.selectedIndex >= 0 && pair.select.options[pair.select.selectedIndex].text !== 'Select') {
-                        pair.display.value = pair.select.options[pair.select.selectedIndex].text;
-                    } else if (pair.select) {
-                        pair.display.value = pair.select.value || '';
+                    if (pair.select) {
+                        pair.display.value = pair.select.options[pair.select.selectedIndex]?.text || pair.select.value || '';
                     }
                 }
             } else {
                 if (pair.select) {
                     pair.select.style.setProperty('display', 'block', 'important');
-                    pair.select.classList.remove('d-none');
-                    // ROBUST SHOW: Find TomSelect/Select2 wrapper anywhere in the parent
-                    const parent = pair.select.parentElement;
-                    if (parent) {
-                        parent.querySelectorAll('.ts-wrapper, .select2-container').forEach(w => w.style.setProperty('display', 'block', 'important'));
-                    }
+                    if (parent) parent.querySelectorAll('.ts-wrapper').forEach(w => w.style.setProperty('display', 'block', 'important'));
                 }
                 if (pair.display) {
                     pair.display.style.setProperty('display', 'none', 'important');
@@ -385,24 +362,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Breed-specific container logic (Other breed)
         const otherContainer = document.getElementById('walkinOtherBreedContainer');
-        if (otherContainer && isReadonly) {
-            otherContainer.style.setProperty('display', 'none', 'important');
-            otherContainer.classList.add('d-none');
-        }
+        if (otherContainer && isReadonly) otherContainer.style.setProperty('display', 'none', 'important');
 
-        // Birthday remains as is but readonly
         if (birthdayInput) {
-            if (isReadonly) {
-                birthdayInput.classList.add('bg-light-subtle', 'text-muted');
-                birthdayInput.style.pointerEvents = 'none';
-                birthdayInput.setAttribute('tabindex', '-1');
-            } else {
-                birthdayInput.classList.remove('bg-light-subtle', 'text-muted');
-                birthdayInput.style.pointerEvents = 'auto';
-                birthdayInput.removeAttribute('tabindex');
-            }
+            birthdayInput.classList.toggle('bg-light-subtle', isReadonly);
+            birthdayInput.classList.toggle('text-muted', isReadonly);
+            birthdayInput.style.pointerEvents = isReadonly ? 'none' : 'auto';
+            isReadonly ? birthdayInput.setAttribute('tabindex', '-1') : birthdayInput.removeAttribute('tabindex');
         }
     }
 
@@ -412,130 +379,98 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleSections();
     }
 
-    // (Moved to top)
-
     if (tsOwner) {
         tsOwner.on('change', async function(userId) {
-            if (tsPet) {
-                tsPet.clear();
-                tsPet.clearOptions();
-            }
+            if (tsPet) { tsPet.clear(); tsPet.clearOptions(); }
             if (!userId) return;
-
             try {
-                // Correct Route: /staff/owner/{id}/pets
                 const response = await fetch(`/staff/owner/${userId}/pets`);
                 const pets = await response.json();
-
                 if (pets.length > 0 && tsPet) {
                     const options = pets.map(pet => ({
-                        value: pet.id, // Use ID as value for unique tracking
+                        value: pet.id,
                         text: pet.name,
                         info: JSON.stringify(pet)
                     }));
                     tsPet.addOptions(options);
                     tsPet.open();
                 }
-            } catch (error) {
-                console.error("Error fetching pets:", error);
+            } catch (error) { console.error("Error fetching pets:", error); }
+        });
+    }
+
+    if (tsPet) {
+        tsPet.on('change', function(value) {
+            const petData = tsPet.options[value];
+            if (petData && petData.info) {
+                try {
+                    const pet = JSON.parse(petData.info);
+                    speciesSelect.value = pet.species;
+                    genderSelect.value = pet.gender;
+                    if (pet.birthday) birthdayInput.value = pet.birthday.split(' ')[0];
+
+                    speciesSelect.dispatchEvent(new Event('change'));
+
+                    setTimeout(() => {
+                        const targetBreed = pet.breed ? pet.breed.trim() : '';
+                        const otherContainer = document.getElementById('walkinOtherBreedContainer');
+                        const otherInput = document.getElementById('walkinOtherBreedInput');
+
+                        if (tsBreed) {
+                            // Add the breed as an option if it's custom, then set it
+                            tsBreed.addOption({value: targetBreed, text: targetBreed});
+                            tsBreed.setValue(targetBreed);
+                        } else {
+                            breedSelect.value = targetBreed;
+                        }
+
+                        // MANUALLY handle visibility here to prevent the external logic from breaking it
+                        const isOther = targetBreed.toLowerCase() === 'other';
+                        if (otherContainer) {
+                            if (isOther) {
+                                otherContainer.style.setProperty('display', 'block', 'important');
+                                otherContainer.classList.remove('d-none');
+                                // If the pet has a specific 'other_breed' value saved, put it in the input
+                                if (otherInput) otherInput.value = pet.other_breed || '';
+                            } else {
+                                otherContainer.style.setProperty('display', 'none', 'important');
+                                otherContainer.classList.add('d-none');
+                            }
+                        }
+
+                        setTimeout(() => togglePetFields(true), 50);
+                    }, 600);
+                } catch (e) { console.error("Auto-fill failed", e); }
+            } else if (!value && statusNew.checked) {
+                togglePetFields(false);
             }
         });
     }
 
-   if (tsPet) {
-    tsPet.on('change', function(value) {
-        // Find the option data directly from TomSelect's internal storage
-        const petData = tsPet.options[value];
-
-        if (petData && petData.info) {
-            try {
-                const pet = JSON.parse(petData.info);
-
-                // 1. Set basic fields
-                speciesSelect.value = pet.species;
-                genderSelect.value = pet.gender;
-
-                if (pet.birthday) {
-                    birthdayInput.value = pet.birthday.split(' ')[0];
-                }
-
-                // 2. Trigger species change and wait for breed list
-                speciesSelect.dispatchEvent(new Event('change'));
-
-                setTimeout(() => {
-                    const targetBreed = pet.breed ? pet.breed.trim() : '';
-                    let foundMatch = false;
-                    for (let i = 0; i < breedSelect.options.length; i++) {
-                        if (breedSelect.options[i].value === targetBreed ||
-                            breedSelect.options[i].text.includes(targetBreed)) {
-                            breedSelect.value = breedSelect.options[i].value;
-                            foundMatch = true;
-                            break;
-                        }
-                    }
-
-                    const otherContainer = document.getElementById('walkinOtherBreedContainer');
-                    const otherInput = document.getElementById('walkinOtherBreedInput');
-
-                    otherContainer.classList.add('d-none');
-                    otherInput.value = targetBreed;
-
-                    // 4. Lock fields AFTER all data is populated
-                    setTimeout(() => {
-                        togglePetFields(true);
-                    }, 50);
-                }, 600);
-
-            } catch (e) {
-                console.error("Auto-fill parsing failed", e);
-            }
-        } else if (!value) {
-            // If cleared, make editable if it's a new pet context
-            if (statusNew.checked) togglePetFields(false);
-        }
-    });
-}
-    // --- Form Submit Validation ---
+    // Form Submit Validation
     const walkinForm = document.getElementById('walkinForm');
     if (walkinForm) {
         walkinForm.addEventListener('submit', function (e) {
-            // Validate Owner
-            if (statusExisting.checked && tsOwner && !tsOwner.getValue()) {
-                e.preventDefault();
-                tsOwner.wrapper.classList.add('border', 'border-danger');
-                tsOwner.focus();
-                return false;
+            if (statusExisting.checked) {
+                if (tsOwner && !tsOwner.getValue()) { e.preventDefault(); tsOwner.focus(); return; }
+                if (tsPet && !tsPet.getValue()) { e.preventDefault(); tsPet.focus(); return; }
             }
-            // Validate Pet (Existing)
-            if (statusExisting.checked && tsPet && !tsPet.getValue()) {
-                e.preventDefault();
-                tsPet.wrapper.classList.add('border', 'border-danger');
-                tsPet.focus();
-                return false;
-            }
-            // Validate Pet (New)
             if (statusNew.checked && !petNameInput.value.trim()) {
-                e.preventDefault();
-                petNameInput.classList.add('border-danger');
-                petNameInput.focus();
-                return false;
+                e.preventDefault(); petNameInput.focus(); return;
             }
         });
     }
 
-    // --- Time Slot Logic ---
+    // Time Slot Logic
     const walkinDate = document.getElementById('walkinDate');
     const walkinService = document.getElementById('walkinService');
     const walkinTimeSlot = document.getElementById('walkinTimeSlot');
-    const morningSlots = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30"];
-    const afternoonSlots = ["13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
-    const allSlots = [...morningSlots, ...afternoonSlots];
+    const allSlots = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"];
 
     async function updateAvailableSlots() {
         const date = walkinDate.value;
         const service = walkinService.value;
         if (!date) return;
-
         try {
             const response = await fetch(`/staff/appointments/booked-slots?date=${date}`);
             const bookedSlots = await response.json();
@@ -544,22 +479,17 @@ document.addEventListener('DOMContentLoaded', function () {
             allSlots.forEach((slot, index) => {
                 const isBooked = bookedSlots.includes(slot);
                 let isDisabled = isBooked;
-
                 if (service === 'kapon') {
-                    const nextSlot = allSlots[index + 1];
-                    const isNextBooked = nextSlot ? bookedSlots.includes(nextSlot) : true;
+                    const isNextBooked = allSlots[index + 1] ? bookedSlots.includes(allSlots[index + 1]) : true;
                     if (isNextBooked || slot === "11:30" || slot === "16:30") isDisabled = true;
                 }
-
                 const option = document.createElement('option');
                 option.value = slot;
                 option.textContent = formatTimeDisplay(slot) + (isBooked ? ' (Booked)' : '');
                 option.disabled = isDisabled;
                 walkinTimeSlot.appendChild(option);
             });
-        } catch (error) {
-            console.error("Error fetching slots:", error);
-        }
+        } catch (error) { console.error("Error fetching slots:", error); }
     }
 
     function formatTimeDisplay(time) {
@@ -577,7 +507,6 @@ document.addEventListener('DOMContentLoaded', function () {
     walkinDate.addEventListener('change', updateAvailableSlots);
     walkinService.addEventListener('change', updateAvailableSlots);
 
-    // Initial breed logic
     if (typeof initializePetBreedLogic === 'function') {
         initializePetBreedLogic({
             speciesId: 'walkinSpeciesSelect',
@@ -586,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function () {
             otherContainerId: 'walkinOtherBreedContainer',
             otherInputId: 'walkinOtherBreedInput',
             swapNameOnOther: false
-        });
+        }, tsBreed);
     }
 });
 </script>
