@@ -106,7 +106,7 @@ class StaffController extends Controller
             $isProcedure = in_array(strtolower($appointment->service_type), ['check-up', 'kapon']);
             $nextDueDate = null;
 
-            if ($this->isMedicalService($appointment->service_type)) {
+            if ($this->isVaccinationService($appointment->service_type)) {
                 $pet = Pet::find($appointment->pet_id);
 
                 if ($pet) {
