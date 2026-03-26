@@ -49,10 +49,10 @@
                 <div class="col-12 col-md-3">
                     <label class="small text-muted mb-1">Pet Status</label>
                     <select name="status" class="form-select border-0 bg-light rounded-pill py-2">
-                        <option value="">All Statuses</option>
-                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                        <option value="deceased" {{ request('status') == 'deceased' ? 'selected' : '' }}>Deceased</option>
+                        <option value="">All Archived</option>
+                        <option value="removed" {{ request('status') == 'removed' ? 'selected' : '' }}>Removed (Deleted)</option>
+                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive Status</option>
+                        <option value="deceased" {{ request('status') == 'deceased' ? 'selected' : '' }}>Deceased Status</option>
                     </select>
                 </div>
                 @endif

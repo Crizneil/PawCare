@@ -314,6 +314,7 @@ class StaffController extends Controller
     {
         $search = $request->query('search');
         $view = $request->input('view', 'active');
+        $statusFilter = $request->input('status');
 
         // 1. CLEAN THE SEARCH TERM BEFORE THE QUERY
         if ($search && str_contains($search, '/verify-pet/')) {
@@ -322,8 +323,7 @@ class StaffController extends Controller
 
         $query = Pet::with(['user', 'vaccinations']);
 
-        // Check if $search is exactly a pet ID or internal ID
-        // (Assuming if it matches 'PC-' or is numeric, it's likely a direct ID search)
+        // --- Specific ID Search ---
         $isSpecificId = $search && (
             str_starts_with(strtoupper($search), 'PC-') ||
             str_starts_with(strtoupper($search), 'WALK-') ||
@@ -332,32 +332,60 @@ class StaffController extends Controller
 
         if ($isSpecificId) {
             $query->withTrashed()->where(function ($q) use ($search) {
-                $q->where('id', $search)
-                    ->orWhere('pet_id', $search);
+                $q->where('id', $search)->orWhere('pet_id', $search);
             });
         } else {
+            // --- View Logic (Active/Archived) ---
             if ($view === 'archived') {
                 $query->withTrashed()->where(function ($q) {
-                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])
-                        ->orWhereNotNull('deleted_at');
+                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])->orWhereNotNull('deleted_at');
                 });
             } else {
                 $query->notDeceased();
             }
 
+            // --- Status Filtering Logic ---
+            if ($statusFilter) {
+                switch ($statusFilter) {
+                    case 'no_records':
+                        $query->doesntHave('vaccinations');
+                        break;
+                    case 'partially_vaccinated':
+                        // Logic: Has vaccinations but "status" is not fully vaccinated
+                        // Note: This depends on how you define 'partially' in your system
+                        $query->has('vaccinations')->where('status', '!=', 'FULLY_VACCINATED');
+                        break;
+                    case 'fully_vaccinated':
+                        $query->where('status', 'FULLY_VACCINATED');
+                        break;
+                    case 'due_soon':
+                        // Logic: Has a vaccination where next_due_date is within 14 days
+                        $query->whereHas('vaccinations', function($q) {
+                            $q->whereBetween('next_due_date', [now(), now()->addDays(14)]);
+                        });
+                        break;
+                    case 'overdue':
+                        $query->whereHas('vaccinations', function($q) {
+                            $q->where('next_due_date', '<', now());
+                        });
+                        break;
+                }
+            }
+
+            // --- Name/Owner Search ---
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('owner', 'like', "%{$search}%");
+                    ->orWhere('owner', 'like', "%{$search}%");
                 });
             }
         }
 
         $pets = $query->latest()
             ->paginate(10)
-            ->appends(['search' => $search, 'view' => $view]);
+            ->appends(['search' => $search, 'view' => $view, 'status' => $statusFilter]);
 
-        return view('staff.pet-records', compact('pets', 'search', 'view'));
+        return view('staff.pet-records', compact('pets', 'search', 'view', 'statusFilter'));
     }
     public function vaccinationStatus(Request $request)
     {
@@ -409,11 +437,15 @@ class StaffController extends Controller
             $query->whereBetween('date_administered', [$request->start_date, $request->end_date]);
         }
 
-        // --- Existing Quick Filters ---
-        if ($request->filter == 'today') {
+        // --- Quick Period Filters (Updated to match Blade) ---
+        $period = $request->get('period');
+        if ($period == 'today') {
             $query->whereDate('date_administered', today());
-        } elseif ($request->filter == 'week') {
+        } elseif ($period == 'weekly') {
             $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($period == 'monthly') {
+            $query->whereMonth('date_administered', now()->month)
+                ->whereYear('date_administered', now()->year);
         }
 
         // --- Dropdown Filters ---
@@ -429,7 +461,10 @@ class StaffController extends Controller
             $query->where('vaccine_name', $request->vaccine_name);
         }
 
-        $history = $query->latest('date_administered')->paginate(15)->appends($request->all());
+        // --- Pagination (15 records per page) ---
+        $history = $query->latest('date_administered')
+                        ->paginate(10)
+                        ->appends($request->all()); // This keeps your filters when you click next page
 
         $staffList = User::where('role', 'staff')->get();
         $vaccineList = Vaccination::select('vaccine_name as name')->distinct()->get();
@@ -452,6 +487,7 @@ class StaffController extends Controller
         ]);
 
         $actualBatchNo = 'MANUAL-' . date('Ymd');
+
         // 1. Create Vaccination Record
         $vaccination = Vaccination::create([
             'pet_id' => $id,
@@ -462,25 +498,22 @@ class StaffController extends Controller
             'batch_no' => $actualBatchNo,
         ]);
 
-        // --- NEW: Send Telegram Notification to Clinic Owner ---
         $this->sendTelegramNotification($vaccination, 'vaccination_updated');
-
-        $interval = $this->getServiceInterval($request->vaccine_name);
 
         // 2. Update Pet Medical Record
         $pet = Pet::findOrFail($id);
         $pet->update([
             'vaccine_type' => $request->vaccine_name,
             'last_date' => $request->date_administered,
-            'next_date' => $request->next_due_date, // Note: form usually provides this, but we've improved the default logic elsewhere
+            'next_date' => $request->next_due_date,
         ]);
 
-        // 3. Update the Appointment status so the badge changes
+        // 3. Update the Appointment status
         if ($request->appointment_id) {
             $appointment = Appointment::find($request->appointment_id);
             if ($appointment) {
                 $appointment->update([
-                    'status' => 'Done', // This switches the badge from "Ready" to "Completed"
+                    'status' => 'completed', // Status changes to completed here
                     'administered_by' => auth()->user()->name,
                     'batch_no' => $actualBatchNo,
                     'vaccine_name' => $request->vaccine_name,

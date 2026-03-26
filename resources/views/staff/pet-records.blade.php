@@ -14,14 +14,37 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 flex-grow-1 flex-md-grow-0">
-                <form action="{{ route('staff.pet-records') }}" method="GET" class="d-inline">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control border-0 shadow-sm rounded-pill px-3"
-                            placeholder="Search Pet..." value="{{ request('search') }}" style="min-width: 200px;">
-                        <button class="btn btn-orange rounded-pill ms-2 px-4 shadow-sm" type="submit">
+                <form action="{{ route('staff.pet-records') }}" method="GET" class="d-flex flex-wrap flex-md-nowrap align-items-center gap-2">
+                    {{-- Preserve View state --}}
+                    <input type="hidden" name="view" value="{{ $view }}">
+
+                    {{-- Status Filter Dropdown --}}
+                    <div style="min-width: 180px;">
+                        <select name="status" class="form-select border-0 shadow-sm rounded-pill px-3" onchange="this.form.submit()" style="height: 45px;">
+                            <option value="">All Statuses</option>
+                            <option value="no_records" {{ request('status') == 'no_records' ? 'selected' : '' }}>No Records</option>
+                            <option value="partially_vaccinated" {{ request('status') == 'partially_vaccinated' ? 'selected' : '' }}>Partially Vaccinated</option>
+                            <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Fully Vaccinated</option>
+                            <option value="due_soon" {{ request('status') == 'due_soon' ? 'selected' : '' }}>Due Soon</option>
+                            <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
+                        </select>
+                    </div>
+
+                    {{-- Search Input Group --}}
+                    <div class="input-group shadow-sm rounded-pill bg-white overflow-hidden" style="height: 45px; min-width: 250px;">
+                        <input type="text" name="search" class="form-control border-0 px-3"
+                            placeholder="Search Pet..." value="{{ request('search') }}">
+                        <button class="btn btn-orange px-4 border-0" type="submit">
                             <i data-lucide="search" style="width: 18px;"></i>
                         </button>
                     </div>
+
+                    {{-- Reset Button --}}
+                    @if(request()->has('status') || request()->has('search'))
+                        <a href="{{ route('staff.pet-records', ['view' => $view]) }}" class="btn btn-light rounded-pill shadow-sm border d-flex align-items-center justify-content-center" style="height: 45px; width: 45px;">
+                            <i data-lucide="refresh-cw" style="width: 18px;"></i>
+                        </a>
+                    @endif
                 </form>
             </div>
         </div>

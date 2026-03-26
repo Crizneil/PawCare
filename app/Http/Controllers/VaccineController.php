@@ -18,9 +18,18 @@ class VaccineController extends Controller
     {
         $query = Pet::notDeceased()->with(['user', 'latestVaccination']);
 
-        if ($request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%')
+        // 1. Search Logic (Fixed to use pet_id instead of unique_id)
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
                 ->orWhere('pet_id', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // 2. Filter Logic (Fixed to use the Model Scope)
+        if ($request->filled('status')) {
+            // This calls the scopeWhereVaccinationStatus function in your Pet model
+            $query->whereVaccinationStatus($request->status);
         }
 
         $pets = $query->latest()->paginate(10);
@@ -113,17 +122,26 @@ class VaccineController extends Controller
 
         return back()->with('success', "Vaccination record for {$pet->name} updated!");
     }
-    public function ownerHistory()
+    public function ownerHistory($pet_id = null)
     {
-        // Fetch vaccination records for the logged-in user's pets
-        $vaccinations = Vaccination::whereHas('pet', function ($query) {
+        // Start the query: Get vaccinations for pets belonging to the logged-in user
+        $query = Vaccination::whereHas('pet', function ($query) {
             $query->where('user_id', auth()->id());
-        })
-            ->with('pet')
+        });
+
+        // If a specific pet ID is provided in the URL, filter by it
+        if ($pet_id) {
+            $query->where('pet_id', $pet_id);
+        }
+
+        $vaccinations = $query->with('pet')
             ->latest('date_administered')
             ->paginate(10);
 
-        return view('pet-owner.vaccination-history', compact('vaccinations'));
+        // Optional: You could also fetch the pet name to show a "History for [Pet Name]" title
+        $selectedPet = $pet_id ? Pet::find($pet_id) : null;
+
+        return view('pet-owner.vaccination-history', compact('vaccinations', 'selectedPet'));
     }
 
     public function cancel($id)

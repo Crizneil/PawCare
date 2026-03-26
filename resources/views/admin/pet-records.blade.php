@@ -108,6 +108,8 @@
                                     <td data-label="Status">
                                         @if(isset($pet->status) && $pet->status == 'needs_booster')
                                             <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning px-3">Booster Due</span>
+                                        @elseif(isset($pet->status) && $pet->status == 'INACTIVE')
+                                            <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary px-3">Inactive</span>
                                         @else
                                             <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">Active</span>
                                         @endif

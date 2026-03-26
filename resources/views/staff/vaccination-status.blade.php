@@ -51,17 +51,27 @@
                         @forelse($pets as $pet)
                             @php
                                 $vax = $pet->latestVaccination;
-
-                                // 1. Prioritize the specific appointment passed from the URL
                                 $targetAptId = request('appointment_id');
+
                                 $latestApt = $pet->appointments->where('id', $targetAptId)->first()
                                             ?? $pet->appointments->sortByDesc('appointment_date')->first();
 
                                 $aptStatus = strtolower($latestApt->status ?? '');
+                                $serviceType = strtolower($latestApt->service_type ?? '');
                                 $isAppointedToday = $latestApt && \Carbon\Carbon::parse($latestApt->appointment_date)->isToday();
 
-                                // 2. Logic to allow logging
+                                // --- DEFINE VARIABLES HERE TO AVOID UNDEFINED ERROR ---
                                 $canLogShot = $isAppointedToday && in_array($aptStatus, ['checked-in', 'approved']);
+
+                                // Define which services are "Simple Procedures" (No shot needed)
+                                $isSimpleProcedure = (stripos($serviceType, 'check-up') !== false || stripos($serviceType, 'kapon') !== false);
+
+                                // Define which services are "Vaccinations" (Shot record needed)
+                                $isVaccination = (stripos($serviceType, 'anti-rabies') !== false ||
+                                                stripos($serviceType, 'deworming') !== false ||
+                                                stripos($serviceType, '5-in-1') !== false ||
+                                                stripos($serviceType, '4-in-1') !== false ||
+                                                stripos($serviceType, 'vaccination') !== false);
                             @endphp
 
                             {{-- Only show the row if the pet has an appointment today --}}
@@ -129,22 +139,19 @@
 
                                 <td class="text-end pe-4" data-label="Actions">
                                     @if($canLogShot)
-                                        @php
-                                            $isProcedure = in_array(strtolower($latestApt->service_type), ['check-up', 'kapon']);
-                                        @endphp
-
-                                        @if($isProcedure)
-                                            {{-- Procedure Button --}}
+                                        {{-- Only show "Mark as Done" for Check-up and Kapon --}}
+                                        @if($isSimpleProcedure)
                                             <form action="{{ route('staff.appointments.update', $latestApt->id) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <input type="hidden" name="status" value="completed">
                                                 <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm"
-                                                        onclick="return confirm('Start and complete this procedure now?')">
-                                                    <i data-lucide="play-circle" class="me-1" style="width:14px;"></i> Start Procedure
+                                                        onclick="return confirm('Complete this procedure?')">
+                                                    <i data-lucide="check-circle" class="me-1" style="width:14px;"></i> Mark as Done
                                                 </button>
                                             </form>
-                                        @else
-                                            {{-- Vaccination Button --}}
+
+                                        {{-- Only show "Log Shot" for Vaccines/Deworming --}}
+                                        @elseif($isVaccination)
                                             <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#updateVax{{ $pet->id }}">

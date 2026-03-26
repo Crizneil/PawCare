@@ -140,4 +140,28 @@ class Pet extends Model
     {
         return $query->whereNotIn('status', ['DECEASED', 'INACTIVE']);
     }
+    public function scopeWhereVaccinationStatus($query, $status)
+    {
+        return match($status) {
+            'unvaccinated' => $query->whereDoesntHave('vaccinations'),
+
+            'overdue' => $query->whereHas('latestVaccination', function($q) {
+                $q->where('next_due_date', '<', now());
+            }),
+
+            'due_soon' => $query->whereHas('latestVaccination', function($q) {
+                $q->whereBetween('next_due_date', [now(), now()->addDays(30)]);
+            }),
+
+            'partially_vaccinated' => $query->has('vaccinations', '>=', 1)
+                                        ->has('vaccinations', '<', 2),
+
+            'fully_vaccinated' => $query->whereHas('vaccinations', null, '>=', 2)
+                ->whereHas('latestVaccination', function($q) {
+                    $q->where('next_due_date', '>', now()->addDays(30));
+                }),
+
+            default => $query,
+        };
+    }
 }

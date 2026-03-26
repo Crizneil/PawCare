@@ -158,9 +158,9 @@
                         </div>
                         <div class="col-lg-6 col-12 order-lg-1">
                             <div class="blog-layout-content">
-                                <span class="blog-layout-kicker">How Pet Monitoring Improves Pet Health</span>
-                                <h2>Monitoring Health, One Visit at a Time</h2>
-                                <p>Consistent tracking helps detect health issues early.</p>
+                                <span class="blog-layout-kicker">How Vaccination Tracking Improves Pet Health</span>
+                                <h2>Protecting Your Pet, One Visit at a Time</h2>
+                                <p>Tracking vaccinations and appointments helps ensure your pet receives timely care and stays protected from preventable diseases.</p>
                             </div>
                         </div>
                     </div>
@@ -228,7 +228,7 @@
                         <div class="col-lg-6 col-12">
                             <div class="blog-cta-content">
                                 <h2>Because Every Vet Visit Counts</h2>
-                                <p>Learn how PawCare supports vaccination and pet monitoring.</p>
+                                <p>Learn how PawCare supports vaccination and pet health management.</p>
                                 <a href="about.html" class="theme-btn-s2">Learn More</a>
                             </div>
                         </div>

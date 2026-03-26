@@ -109,9 +109,9 @@
   array (
     'paths' => 
     array (
-      0 => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\resources\\views',
+      0 => 'C:\\laragon\\www\\PawCareLaravelV2\\resources\\views',
     ),
-    'compiled' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\framework\\views',
+    'compiled' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework\\views',
   ),
   'app' => 
   array (
@@ -273,8 +273,8 @@
       'file' => 
       array (
         'driver' => 'file',
-        'path' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\framework/cache/data',
-        'lock_path' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\framework/cache/data',
+        'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework/cache/data',
+        'lock_path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework/cache/data',
       ),
       'memcached' => 
       array (
@@ -465,7 +465,7 @@
       'local' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\app/private',
+        'root' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/private',
         'serve' => true,
         'throw' => false,
         'report' => false,
@@ -473,7 +473,7 @@
       'public' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\app/public',
+        'root' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/public',
         'url' => 'http://127.0.0.1:8000/storage',
         'visibility' => 'public',
         'throw' => false,
@@ -495,7 +495,7 @@
     ),
     'links' => 
     array (
-      'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\public\\storage' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\app/public',
+      'C:\\laragon\\www\\PawCareLaravelV2\\public\\storage' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/public',
     ),
   ),
   'logging' => 
@@ -520,14 +520,14 @@
       'single' => 
       array (
         'driver' => 'single',
-        'path' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\logs/laravel.log',
+        'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
       'daily' => 
       array (
         'driver' => 'daily',
-        'path' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\logs/laravel.log',
+        'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
         'level' => 'debug',
         'days' => 14,
         'replace_placeholders' => true,
@@ -592,7 +592,7 @@
       ),
       'emergency' => 
       array (
-        'path' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\logs/laravel.log',
+        'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
       ),
     ),
   ),
@@ -670,7 +670,7 @@
       'theme' => 'default',
       'paths' => 
       array (
-        0 => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\resources\\views/vendor/mail',
+        0 => 'C:\\laragon\\www\\PawCareLaravelV2\\resources\\views/vendor/mail',
       ),
       'extensions' => 
       array (
@@ -780,16 +780,16 @@
     ),
     'telegram-bot-api' => 
     array (
-      'token' => NULL,
+      'token' => '8595148452:AAG86Q32ngEULnaoCvcDtdUmbZf9ZxngF8g',
     ),
   ),
   'session' => 
   array (
-    'driver' => 'file',
+    'driver' => 'database',
     'lifetime' => 120,
     'expire_on_close' => false,
     'encrypt' => false,
-    'files' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\framework/sessions',
+    'files' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework/sessions',
     'connection' => NULL,
     'table' => 'sessions',
     'store' => NULL,
@@ -813,10 +813,10 @@
     'convert_entities' => true,
     'options' => 
     array (
-      'font_dir' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\fonts',
-      'font_cache' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2\\storage\\fonts',
-      'temp_dir' => 'C:\\Users\\ABC\\AppData\\Local\\Temp',
-      'chroot' => 'C:\\Users\\ABC\\OneDrive\\Desktop\\Projects\\PawCareLaravelV2',
+      'font_dir' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\fonts',
+      'font_cache' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\fonts',
+      'temp_dir' => 'C:\\Users\\user\\AppData\\Local\\Temp',
+      'chroot' => 'C:\\laragon\\www\\PawCareLaravelV2',
       'allowed_protocols' => 
       array (
         'data://' => 

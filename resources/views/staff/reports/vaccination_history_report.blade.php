@@ -106,22 +106,22 @@
         <table class="history-table">
             <thead>
                 <tr>
-                    <th>Date Administered</th>
                     <th>Pet Name</th>
                     <th>Vaccine</th>
                     <th>Batch No.</th>
-                    <th>Staff</th>
+                    <th>Veterinarian</th>
+                    <th>Date Administered</th>
                     <th>Next Due</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($data as $record)
                     <tr>
-                        <td>{{ \Carbon\Carbon::parse($record->date_administered)->format('M d, Y') }}</td>
                         <td>{{ $record->pet->name }}</td>
                         <td>{{ $record->vaccine_name }}</td>
                         <td>{{ $record->batch_no ?? 'N/A' }}</td>
                         <td>{{ $record->staff->name ?? 'System' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($record->date_administered)->format('M d, Y') }}</td>
                         <td>{{ $record->next_due_date ? \Carbon\Carbon::parse($record->next_due_date)->format('M d, Y') : '--' }}</td>
                     </tr>
                 @empty

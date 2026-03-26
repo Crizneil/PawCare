@@ -163,7 +163,7 @@
 
                             {{-- Actions for Consistency --}}
                             <div class="mt-auto">
-                                <a href="{{ route('staff.vaccination-history', ['pet_id' => $pet->id]) }}"
+                                <a href="{{ route('pet-owner.vaccination-history', ['pet_id' => $pet->id]) }}"
                                    class="btn btn-warning w-100 rounded-pill fw-bold py-2 shadow-sm"
                                    onclick="event.stopPropagation();">
                                     <i data-lucide="history" class="me-2" style="width: 16px;"></i> View Vaccination History

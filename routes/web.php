@@ -33,16 +33,16 @@ Route::get('/test-validation-new', function() {
     if (!$pet) return response()->json(['error' => 'No pet found at all']);
     $owner = \App\Models\User::find($pet->user_id);
     if (!$owner) return response()->json(['error' => 'No owner found for pet', 'pet' => $pet]);
-    
+
     $validator = new class { use \App\Traits\AppointmentValidation; };
-    
+
     $results['pet'] = ['id' => $pet->id, 'name' => $pet->name];
-    
+
     // Clean up
     \App\Models\Appointment::where('pet_id', $pet->id)->where('appointment_date', '>=', now()->toDateString())->delete();
-    
+
     $results['step1'] = $validator->checkServiceEligibility($pet->id, 'Anti-Rabies', now()->toDateString()) ?: "NULL - OK";
-    
+
     \App\Models\Appointment::create([
         'user_id' => $owner->id,
         'pet_id' => $pet->id,
@@ -53,7 +53,7 @@ Route::get('/test-validation-new', function() {
         'appointment_time' => '08:00',
         'status' => 'approved'
     ]);
-    
+
     $results['step2'] = $validator->checkServiceEligibility($pet->id, 'Anti-Rabies', now()->toDateString()) ?: "NULL - FAILED";
     $results['step3'] = $validator->checkServiceEligibility($pet->id, '5in1', now()->toDateString()) ?: "NULL - OK";
     $results['step4'] = $validator->checkServiceEligibility($pet->id, 'Combination Vaccination (5-in-1)', now()->toDateString()) ?: "NULL - FAILED";
@@ -170,8 +170,6 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::post('/owner/{id}/create-account', [StaffController::class, 'createAccount'])->name('owner.createAccount');
     Route::get('/owner/{id}/pets', [StaffController::class, 'getPetsByOwner'])->name('owner.pets');
 
-    // Inventory
-
     // Digital Card Requests
     Route::post('/request-card/{pet_id}', [StaffController::class, 'requestDigitalCard'])->name('request-card');
 
@@ -199,7 +197,7 @@ Route::prefix('owner')->name('pet-owner.')->middleware(['auth'])->group(function
     Route::get('/appointments', [PetController::class, 'appointments'])->name('appointments');
     Route::post('/appointments/book', [PetController::class, 'book'])->name('appointments.book');
     Route::patch('/appointments/{id}/cancel', [PetController::class, 'cancelAppointment'])->name('appointments.cancel');
-    Route::get('/vaccination-history', [VaccineController::class, 'ownerHistory'])->name('vaccination-history');
+    Route::get('/vaccination-history/{pet_id?}', [VaccineController::class, 'ownerHistory'])->name('vaccination-history');
 
     // Pet Records & Vaccination
     Route::get('/pet-records', [PetController::class, 'petRecords'])->name('pet-records');

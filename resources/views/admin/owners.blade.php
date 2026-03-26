@@ -16,6 +16,24 @@
             </button>
         </div>
 
+        {{-- NEW: Search Bar --}}
+        <div class="card shadow-sm border-0 rounded-4 mb-4 p-3">
+            <form action="{{ route('admin.owners') }}" method="GET" class="row g-2 align-items-center">
+                <div class="col-md-10">
+                    <div class="input-group">
+                        <span class="input-group-text border-0 bg-light rounded-start-pill ps-4">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            class="form-control border-0 bg-light py-2 rounded-end-pill" placeholder="Search owner by name or email...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-orange w-100 rounded-pill py-2 fw-bold shadow-sm">Search</button>
+                </div>
+            </form>
+        </div>
+
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -66,6 +84,11 @@
                     </tbody>
                 </table>
             </div>
+            @if($owners->hasPages())
+                <div class="card-footer bg-white border-top-0 py-3">
+                    {{ $owners->links() }}
+                </div>
+            @endif
         </div>
     </div>
 

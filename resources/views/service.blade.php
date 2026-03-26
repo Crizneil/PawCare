@@ -140,8 +140,8 @@
                             <img src="assets/images/service/2.svg" alt="Pet Monitoring">
                         </div>
                         <div class="content">
-                            <h2><a href="service-single.html">Pet Monitoring</a></h2>
-                            <p>Continuous health monitoring to ensure your pet's well-being and safety. </p>
+                            <h2><a href="service-single.html">Pet Health Records</a></h2>
+                            <p>Manage and access your pet’s vaccination and medical history anytime. </p>
                         </div>
                     </div>
                 </div>

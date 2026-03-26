@@ -168,6 +168,13 @@
                         <span class="small fw-bold text-muted d-block mb-1">Address</span>
                         <div class="fw-bold text-dark" id="eventOwnerAddress"></div>
                     </div>
+                    <div class="mb-4">
+                        <span class="small fw-bold text-muted d-block mb-1">Service Requested</span>
+                        <div class="p-2 border rounded-3 bg-light d-inline-block px-3">
+                            <i class="bi bi-tag-fill text-orange me-1"></i>
+                            <span class="fw-bold text-dark" id="eventService"></span>
+                        </div>
+                    </div>
                     <div class="row mb-4">
                         <div class="col-6">
                             <span class="small fw-bold text-muted d-block mb-1">Date</span>
@@ -311,6 +318,7 @@
             var eventModal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             var eventPetName = document.getElementById('eventPetName');
             var eventSpecies = document.getElementById('eventSpecies');
+            var eventService = document.getElementById('eventService');
             var eventOwnerName = document.getElementById('eventOwnerName');
             var eventOwnerPhone = document.getElementById('eventOwnerPhone');
             var eventDate = document.getElementById('eventDate');
@@ -339,6 +347,7 @@
                 // 1. Set Pet Info
                 eventPetName.innerText = info.event.title.split(' (')[0];
                 eventSpecies.innerText = props.species;
+                eventService.innerText = props.service || 'Not Specified';
 
                 // 2. Handle Owner Information
                 let displayName = "Guest/Walk-in";

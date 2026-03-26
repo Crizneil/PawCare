@@ -79,7 +79,7 @@
                 <th style="border: 1px solid #dee2e6;">VACCINE ADMINISTERED</th>
                 <th style="border: 1px solid #dee2e6;">DATE ADMINISTERED</th>
                 <th style="border: 1px solid #dee2e6;">NEXT DUE DATE</th>
-                <th style="border: 1px solid #dee2e6;">VET / STAFF</th>
+                <th style="border: 1px solid #dee2e6;">VETERINARIAN (License No.)</th>
                 <th style="border: 1px solid #dee2e6;">STATUS</th>
             </tr>
         </thead>

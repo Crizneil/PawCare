@@ -3,10 +3,23 @@
 @section('page_title', 'Vaccination History')
 
 @section('content')
-<div class="container-fluid p-4">
-    <div class="mb-4">
-        <h2 class="fw-bold mb-0">Vaccination History</h2>
-        <p class="text-muted small">Comprehensive record of your pets' immunizations.</p>
+    <div class="container-fluid p-4">
+        <div class="mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0">
+                {{ $selectedPet ? "Vaccination History for " . $selectedPet->name : "All Vaccination History" }}
+            </h2>
+            <p class="text-muted small">
+                {{ $selectedPet ? "Specific records for " . $selectedPet->name : "Comprehensive record of your pets' immunizations." }}
+            </p>
+        </div>
+
+        {{-- Show a 'Show All' button only if a pet is selected --}}
+        @if($selectedPet)
+            <a href="{{ route('pet-owner.vaccination-history') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i data-lucide="list" class="me-1" style="width: 14px;"></i> View All Pets
+            </a>
+        @endif
     </div>
 
     <div class="card shadow-sm border-0 rounded-4 overflow-hidden">

@@ -167,7 +167,8 @@ class AdminController extends Controller
                     'owner_phone'   => $owner ? $owner->phone : 'N/A',
                     'owner_address' => $fullAddress, // <--- This sends the address to the calendar
                     'species'       => ucfirst($appt->species),
-                    'status'        => ucfirst($appt->status)
+                    'status'        => ucfirst($appt->status),
+                    'service'       => ucfirst($appt->service_type)
                 ]
             ];
         });
@@ -352,9 +353,26 @@ class AdminController extends Controller
 
         return back()->with('success', 'Appointment marked as Done.');
     }
-    public function owners()
+    public function owners(Request $request)
     {
-        $owners = User::where('role', 'owner')->latest()->paginate(10);
+        // 1. Get the search input from the request
+        $search = $request->input('search');
+
+        $owners = User::where('role', 'owner')
+            // 2. Only apply the search filter if $search is not empty
+            ->when($search, function ($query, $search) {
+                return $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            // 3. Sort by Name (A-Z)
+            ->orderBy('name', 'asc')
+            // 4. Use paginate instead of get() to support your Blade's pagination links
+            ->paginate(10)
+            // 5. Append the search query to the pagination links so searching doesn't reset on page 2
+            ->withQueryString();
+
         return view('admin.owners', compact('owners'));
     }
 
@@ -576,12 +594,15 @@ class AdminController extends Controller
         // 3. Status Filtering (Crucial: Keep this part!)
         if (!$petId && !$search) {
             if ($view === 'archived') {
+                // Archives show Deceased and Soft-Deleted records
                 $query->withTrashed()->where(function ($q) {
-                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])
-                    ->orWhereNotNull('deleted_at');
+                    $q->where('status', 'DECEASED')
+                        ->orWhereNotNull('deleted_at');
                 });
             } else {
-                $query->notDeceased();
+                // Main Registry shows everything EXCEPT Deceased
+                // This allows 'ACTIVE', 'INACTIVE', and 'needs_booster' to stay visible
+                $query->where('status', '!=', 'DECEASED');
             }
         }
 
@@ -973,18 +994,35 @@ class AdminController extends Controller
     {
         $tab = $request->input('tab', 'pets');
         $search = $request->input('search');
+        $statusFilter = $request->input('status');
 
-        $data = [];
         if ($tab === 'pets') {
-            // Query both soft-deleted pets AND pets with inactive/deceased status
-            $query = Pet::withTrashed()->with('user')->where(function ($q) {
-                $q->onlyTrashed() // Records with deleted_at
-                ->orWhereIn('status', ['DECEASED', 'INACTIVE']); // Records with archived status
+            // Start with a query that includes soft-deleted records
+            $query = Pet::withTrashed()->with('user');
+
+            $query->where(function ($q) use ($statusFilter) {
+                if ($statusFilter === 'removed') {
+                    // Only show soft-deleted records
+                    $q->onlyTrashed();
+                } elseif ($statusFilter === 'inactive') {
+                    // Only show INACTIVE records (that are NOT soft-deleted)
+                    $q->where('status', 'INACTIVE')->whereNull('deleted_at');
+                } elseif ($statusFilter === 'deceased') {
+                    // Only show DECEASED records (that are NOT soft-deleted)
+                    $q->where('status', 'DECEASED')->whereNull('deleted_at');
+                } else {
+                    // Default Archive view: Show Soft-deleted OR Deceased OR Inactive
+                    $q->onlyTrashed()
+                    ->orWhereIn('status', ['DECEASED', 'INACTIVE']);
+                }
             });
+
             if ($search) {
                 $query->where('name', 'like', "%{$search}%");
             }
+
             $data = $query->latest()->paginate(10);
+
         } elseif ($tab === 'staff') {
             $query = User::onlyTrashed()->where('role', 'staff');
             if ($search)
