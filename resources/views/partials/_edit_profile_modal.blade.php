@@ -54,7 +54,7 @@
                         {{-- Address Fields --}}
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted text-uppercase">House Number</label>
-                            <input type="text" name="house_number" class="form-control rounded-pill border-light bg-light" value="{{ auth()->user()->house_number }}">
+                            <input type="text" name="house_no" class="form-control rounded-pill border-light bg-light" value="{{ auth()->user()->house_no }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted text-uppercase">Street</label>
@@ -71,6 +71,18 @@
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted text-uppercase">Province</label>
                             <input type="text" name="province" class="form-control rounded-pill border-light bg-light" value="{{ auth()->user()->province }}" required>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Telegram Chat ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text rounded-start-pill border-light bg-light">
+                                    <i data-lucide="send" class="text-info" style="width: 16px;"></i>
+                                </span>
+                                <input type="text" name="telegram_chat_id" class="form-control rounded-end-pill border-light bg-light" 
+                                    value="{{ auth()->user()->telegram_chat_id }}" placeholder="e.g. 12345678">
+                            </div>
+                            <small class="text-muted ms-2 italic">Retrieve your ID by messaging <b>@userinfobot</b> on Telegram.</small>
                         </div>
                     </div>
                 </div>

@@ -434,7 +434,7 @@ class AdminController extends Controller
             return back()->with('error', 'Owner registered, but email failed! Password is: ' . $rawPassword);
         }
 
-        return back()->with('success', 'New owner account successfully registered!');
+        return back()->with('success', "New owner account successfully registered! Password: {$rawPassword}");
     }
 
     public function logs(Request $request)
@@ -488,11 +488,13 @@ class AdminController extends Controller
             'phone' => 'nullable|string|max:11',
             'gender' => 'nullable|string',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image_base64' => 'nullable|string',
             'house_no' => 'nullable|string|max:255',
             'street' => 'nullable|string|max:255',
             'barangay' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
+            'telegram_chat_id' => 'nullable|string|max:255',
         ]);
 
         $data = $request->all();
@@ -620,7 +622,7 @@ class AdminController extends Controller
             'gender' => 'required',
             'species' => 'required|string|in:Dog,Cat',
             'breed' => 'nullable|string|max:255',
-            'birthdate' => 'required|date|before_or_equal:today',
+            'birthday' => 'required|date|before_or_equal:today',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
@@ -651,7 +653,7 @@ class AdminController extends Controller
             'name' => $request->name,
             'species' => $request->species,
             'breed' => $request->breed ?? 'Unknown',
-            'birthday' => $request->birthdate,
+            'birthday' => $request->birthday,
             'gender' => $request->gender, // Need to pass default gender to satisfy schema
             'owner' => User::find($request->user_id)->name ?? 'Unknown',
             'image_url' => $imagePath,

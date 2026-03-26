@@ -13,9 +13,9 @@
                     <div class="mb-4">
                         <label for="imageUpload{{ $pet->id }}" class="position-relative d-inline-block btn-camera-trigger"
                             style="cursor: pointer;">
-                            <img id="preview{{ $pet->id }}"
+                            <img id="petPreview{{ $pet->id }}"
                                 src="{{ $pet->image_url ? asset('storage/' . $pet->image_url) : 'https://ui-avatars.com/api/?name=' . urlencode($pet->name) . '&background=fdfbf7&color=d35400' }}"
-                                class="rounded-circle shadow-sm border border-3 border-white"
+                                class="rounded-circle shadow-sm border border-3 border-white pet-preview"
                                 style="width: 120px; height: 120px; object-fit: cover;"
                                 onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($pet->name) }}&background=fdfbf7&color=d35400'">
                             <div class="bg-orange rounded-circle position-absolute bottom-0 end-0 p-2 text-white shadow-sm"
@@ -24,7 +24,8 @@
                             </div>
                         </label>
                         <input type="file" name="image" id="imageUpload{{ $pet->id }}" class="d-none"
-                            accept="image/*" onchange="previewImage(this, '{{ $pet->id }}')">
+                            accept="image/*">
+                        <input type="hidden" name="image_base64" id="image_base64_{{ $pet->id }}">
                         <p class="small text-muted mt-2 mb-0">Tap photo to change</p>
                     </div>
 

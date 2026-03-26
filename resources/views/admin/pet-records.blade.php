@@ -277,6 +277,12 @@
             const firstViewBtn = document.querySelector('[data-bs-target^="#viewPetModal"]');
             if (firstViewBtn) setTimeout(() => firstViewBtn.click(), 500);
         }
+
+        // 5. Auto re-open add pet modal if errors exist
+        @if ($errors->any())
+            var addPetModal = new bootstrap.Modal(document.getElementById('addPetModal'));
+            addPetModal.show();
+        @endif
     });
     document.addEventListener('change', function(e) {
     // 1. Logic for ADD PET Modal

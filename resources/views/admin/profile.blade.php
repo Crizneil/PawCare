@@ -104,6 +104,23 @@
                                 <p class="border-bottom pb-2 text-dark fw-bold">{{ auth()->user()->city }},
                                     {{ auth()->user()->province }}</p>
                             </div>
+
+                            {{-- NEW: Telegram Integration Field --}}
+                            <div class="col-md-12 mt-4">
+                                <h6 class="fw-bold text-muted small text-uppercase mb-3">Notification Settings</h6>
+                                <div class="p-3 rounded-4 d-flex align-items-center" style="background-color: #fdfbf7; border: 1px solid #fce7d6;">
+                                    <div class="bg-info-subtle rounded-circle p-2 me-3">
+                                        <i data-lucide="send" class="text-info" style="width: 20px;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <label class="text-muted small text-uppercase fw-bold mb-1 d-block">Telegram Chat ID</label>
+                                        <p class="mb-0 text-dark fw-bold">{{ auth()->user()->telegram_chat_id ?? 'Not Connected' }}</p>
+                                    </div>
+                                    @if(!auth()->user()->telegram_chat_id)
+                                        <small class="text-muted ms-3"><i data-lucide="info" class="me-1 size-12"></i> Get your ID from <b>@userinfobot</b></small>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Security Note Banner --}}
