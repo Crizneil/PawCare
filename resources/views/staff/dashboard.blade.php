@@ -1,8 +1,6 @@
 @extends('layout.admin')
 
 @section('content')
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
 <div class="container-fluid p-4 fade-in">
     {{-- Header Section --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -219,14 +217,15 @@
                     </div>
                     @endforeach
                 </div>
-            </div>
         </div>
     </div>
+</div>
 </div>
 @endsection
 
 @push('scripts')
 {{-- QR Scanner Script --}}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
     const html5QrCode = new Html5Qrcode("reader");
     const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
