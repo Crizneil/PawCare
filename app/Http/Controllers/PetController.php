@@ -321,12 +321,13 @@ class PetController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'image_base64' => 'nullable|string',
             'species' => 'required',
             'gender' => 'required|in:Male,Female',
             'breed' => 'required',
             'other_breed' => 'required_if:breed,Other', // Matches your modal input name
-            'birthdate' => 'required|date',
-            'user_id' => 'required|exists:users,id', // Changed from birthday to match modal
+            'birthday' => 'required|date',
+            'user_id' => 'required|exists:users,id', 
         ]);
 
         // 2. Handle the "Other" Breed logic
@@ -359,7 +360,7 @@ class PetController extends Controller
             'name' => $request->name,
             'gender' => $request->gender, // This will now work correctly
             'species' => $request->species,
-            'birthday' => $request->birthdate, // Map birthdate from form to birthday in DB
+            'birthday' => $request->birthday, 
             'breed' => $finalBreed,
             'owner' => $ownerRecord->name ?? 'Unknown Owner',
             'image_url' => $imagePath,
@@ -542,13 +543,14 @@ class PetController extends Controller
             'barangay' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
+            'telegram_chat_id' => 'nullable|string|max:255',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'profile_image_base64' => 'nullable|string',
         ]);
 
         $data = $request->only([
             'name', 'email', 'phone', 'gender',
-            'house_no', 'street', 'barangay', 'city', 'province'
+            'house_no', 'street', 'barangay', 'city', 'province', 'telegram_chat_id'
         ]);
 
         if ($request->filled('profile_image_base64')) {

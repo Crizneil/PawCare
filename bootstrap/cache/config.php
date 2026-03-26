@@ -1,33 +1,33 @@
 <?php return array (
-  'broadcasting' => 
+  'broadcasting' =>
   array (
     'default' => 'log',
-    'connections' => 
+    'connections' =>
     array (
-      'reverb' => 
+      'reverb' =>
       array (
         'driver' => 'reverb',
         'key' => NULL,
         'secret' => NULL,
         'app_id' => NULL,
-        'options' => 
+        'options' =>
         array (
           'host' => NULL,
           'port' => 443,
           'scheme' => 'https',
           'useTLS' => true,
         ),
-        'client_options' => 
+        'client_options' =>
         array (
         ),
       ),
-      'pusher' => 
+      'pusher' =>
       array (
         'driver' => 'pusher',
         'key' => NULL,
         'secret' => NULL,
         'app_id' => NULL,
-        'options' => 
+        'options' =>
         array (
           'cluster' => NULL,
           'host' => 'api-mt1.pusher.com',
@@ -36,67 +36,67 @@
           'encrypted' => true,
           'useTLS' => true,
         ),
-        'client_options' => 
+        'client_options' =>
         array (
         ),
       ),
-      'ably' => 
+      'ably' =>
       array (
         'driver' => 'ably',
         'key' => NULL,
       ),
-      'log' => 
+      'log' =>
       array (
         'driver' => 'log',
       ),
-      'null' => 
+      'null' =>
       array (
         'driver' => 'null',
       ),
     ),
   ),
-  'concurrency' => 
+  'concurrency' =>
   array (
     'default' => 'process',
   ),
-  'cors' => 
+  'cors' =>
   array (
-    'paths' => 
+    'paths' =>
     array (
       0 => 'api/*',
       1 => 'sanctum/csrf-cookie',
     ),
-    'allowed_methods' => 
+    'allowed_methods' =>
     array (
       0 => '*',
     ),
-    'allowed_origins' => 
+    'allowed_origins' =>
     array (
       0 => '*',
     ),
-    'allowed_origins_patterns' => 
+    'allowed_origins_patterns' =>
     array (
     ),
-    'allowed_headers' => 
+    'allowed_headers' =>
     array (
       0 => '*',
     ),
-    'exposed_headers' => 
+    'exposed_headers' =>
     array (
     ),
     'max_age' => 0,
     'supports_credentials' => false,
   ),
-  'hashing' => 
+  'hashing' =>
   array (
     'driver' => 'bcrypt',
-    'bcrypt' => 
+    'bcrypt' =>
     array (
       'rounds' => '12',
       'verify' => true,
       'limit' => NULL,
     ),
-    'argon' => 
+    'argon' =>
     array (
       'memory' => 65536,
       'threads' => 1,
@@ -105,15 +105,15 @@
     ),
     'rehash_on_login' => true,
   ),
-  'view' => 
+  'view' =>
   array (
-    'paths' => 
+    'paths' =>
     array (
       0 => 'C:\\laragon\\www\\PawCareLaravelV2\\resources\\views',
     ),
     'compiled' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework\\views',
   ),
-  'app' => 
+  'app' =>
   array (
     'name' => 'Laravel',
     'env' => 'local',
@@ -127,15 +127,15 @@
     'faker_locale' => 'en_US',
     'cipher' => 'AES-256-CBC',
     'key' => 'base64:hZEURM0NjvkpAGwCeVhWZpNvn4i7Nc5i1Z/hJg5Q3LQ=',
-    'previous_keys' => 
+    'previous_keys' =>
     array (
     ),
-    'maintenance' => 
+    'maintenance' =>
     array (
       'driver' => 'file',
       'store' => 'database',
     ),
-    'providers' => 
+    'providers' =>
     array (
       0 => 'Illuminate\\Auth\\AuthServiceProvider',
       1 => 'Illuminate\\Broadcasting\\BroadcastServiceProvider',
@@ -162,7 +162,7 @@
       22 => 'Illuminate\\View\\ViewServiceProvider',
       23 => 'App\\Providers\\AppServiceProvider',
     ),
-    'aliases' => 
+    'aliases' =>
     array (
       'App' => 'Illuminate\\Support\\Facades\\App',
       'Arr' => 'Illuminate\\Support\\Arr',
@@ -212,32 +212,32 @@
       'Vite' => 'Illuminate\\Support\\Facades\\Vite',
     ),
   ),
-  'auth' => 
+  'auth' =>
   array (
-    'defaults' => 
+    'defaults' =>
     array (
       'guard' => 'web',
       'passwords' => 'users',
     ),
-    'guards' => 
+    'guards' =>
     array (
-      'web' => 
+      'web' =>
       array (
         'driver' => 'session',
         'provider' => 'users',
       ),
     ),
-    'providers' => 
+    'providers' =>
     array (
-      'users' => 
+      'users' =>
       array (
         'driver' => 'eloquent',
         'model' => 'App\\Models\\User',
       ),
     ),
-    'passwords' => 
+    'passwords' =>
     array (
-      'users' => 
+      'users' =>
       array (
         'provider' => 'users',
         'table' => 'password_reset_tokens',
@@ -247,22 +247,22 @@
     ),
     'password_timeout' => 10800,
   ),
-  'cache' => 
+  'cache' =>
   array (
     'default' => 'database',
-    'stores' => 
+    'stores' =>
     array (
-      'array' => 
+      'array' =>
       array (
         'driver' => 'array',
         'serialize' => false,
       ),
-      'session' => 
+      'session' =>
       array (
         'driver' => 'session',
         'key' => '_cache',
       ),
-      'database' => 
+      'database' =>
       array (
         'driver' => 'database',
         'connection' => NULL,
@@ -270,27 +270,27 @@
         'lock_connection' => NULL,
         'lock_table' => NULL,
       ),
-      'file' => 
+      'file' =>
       array (
         'driver' => 'file',
         'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework/cache/data',
         'lock_path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\framework/cache/data',
       ),
-      'memcached' => 
+      'memcached' =>
       array (
         'driver' => 'memcached',
         'persistent_id' => NULL,
-        'sasl' => 
+        'sasl' =>
         array (
           0 => NULL,
           1 => NULL,
         ),
-        'options' => 
+        'options' =>
         array (
         ),
-        'servers' => 
+        'servers' =>
         array (
-          0 => 
+          0 =>
           array (
             'host' => '127.0.0.1',
             'port' => 11211,
@@ -298,13 +298,13 @@
           ),
         ),
       ),
-      'redis' => 
+      'redis' =>
       array (
         'driver' => 'redis',
         'connection' => 'cache',
         'lock_connection' => 'default',
       ),
-      'dynamodb' => 
+      'dynamodb' =>
       array (
         'driver' => 'dynamodb',
         'key' => '',
@@ -313,14 +313,14 @@
         'table' => 'cache',
         'endpoint' => NULL,
       ),
-      'octane' => 
+      'octane' =>
       array (
         'driver' => 'octane',
       ),
-      'failover' => 
+      'failover' =>
       array (
         'driver' => 'failover',
-        'stores' => 
+        'stores' =>
         array (
           0 => 'database',
           1 => 'array',
@@ -329,12 +329,12 @@
     ),
     'prefix' => 'laravel-cache-',
   ),
-  'database' => 
+  'database' =>
   array (
     'default' => 'mysql',
-    'connections' => 
+    'connections' =>
     array (
-      'sqlite' => 
+      'sqlite' =>
       array (
         'driver' => 'sqlite',
         'url' => NULL,
@@ -346,7 +346,7 @@
         'synchronous' => NULL,
         'transaction_mode' => 'DEFERRED',
       ),
-      'mysql' => 
+      'mysql' =>
       array (
         'driver' => 'mysql',
         'url' => NULL,
@@ -362,11 +362,11 @@
         'prefix_indexes' => true,
         'strict' => true,
         'engine' => NULL,
-        'options' => 
+        'options' =>
         array (
         ),
       ),
-      'mariadb' => 
+      'mariadb' =>
       array (
         'driver' => 'mariadb',
         'url' => NULL,
@@ -382,11 +382,11 @@
         'prefix_indexes' => true,
         'strict' => true,
         'engine' => NULL,
-        'options' => 
+        'options' =>
         array (
         ),
       ),
-      'pgsql' => 
+      'pgsql' =>
       array (
         'driver' => 'pgsql',
         'url' => NULL,
@@ -401,7 +401,7 @@
         'search_path' => 'public',
         'sslmode' => 'prefer',
       ),
-      'sqlsrv' => 
+      'sqlsrv' =>
       array (
         'driver' => 'sqlsrv',
         'url' => NULL,
@@ -415,21 +415,21 @@
         'prefix_indexes' => true,
       ),
     ),
-    'migrations' => 
+    'migrations' =>
     array (
       'table' => 'migrations',
       'update_date_on_publish' => true,
     ),
-    'redis' => 
+    'redis' =>
     array (
       'client' => 'phpredis',
-      'options' => 
+      'options' =>
       array (
         'cluster' => 'redis',
         'prefix' => 'laravel-database-',
         'persistent' => false,
       ),
-      'default' => 
+      'default' =>
       array (
         'url' => NULL,
         'host' => '127.0.0.1',
@@ -442,7 +442,7 @@
         'backoff_base' => 100,
         'backoff_cap' => 1000,
       ),
-      'cache' => 
+      'cache' =>
       array (
         'url' => NULL,
         'host' => '127.0.0.1',
@@ -457,12 +457,12 @@
       ),
     ),
   ),
-  'filesystems' => 
+  'filesystems' =>
   array (
     'default' => 'local',
-    'disks' => 
+    'disks' =>
     array (
-      'local' => 
+      'local' =>
       array (
         'driver' => 'local',
         'root' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/private',
@@ -470,7 +470,7 @@
         'throw' => false,
         'report' => false,
       ),
-      'public' => 
+      'public' =>
       array (
         'driver' => 'local',
         'root' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/public',
@@ -479,7 +479,7 @@
         'throw' => false,
         'report' => false,
       ),
-      's3' => 
+      's3' =>
       array (
         'driver' => 's3',
         'key' => '',
@@ -493,38 +493,38 @@
         'report' => false,
       ),
     ),
-    'links' => 
+    'links' =>
     array (
       'C:\\laragon\\www\\PawCareLaravelV2\\public\\storage' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\app/public',
     ),
   ),
-  'logging' => 
+  'logging' =>
   array (
     'default' => 'stack',
-    'deprecations' => 
+    'deprecations' =>
     array (
       'channel' => NULL,
       'trace' => false,
     ),
-    'channels' => 
+    'channels' =>
     array (
-      'stack' => 
+      'stack' =>
       array (
         'driver' => 'stack',
-        'channels' => 
+        'channels' =>
         array (
           0 => 'single',
         ),
         'ignore_exceptions' => false,
       ),
-      'single' => 
+      'single' =>
       array (
         'driver' => 'single',
         'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
-      'daily' => 
+      'daily' =>
       array (
         'driver' => 'daily',
         'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
@@ -532,7 +532,7 @@
         'days' => 14,
         'replace_placeholders' => true,
       ),
-      'slack' => 
+      'slack' =>
       array (
         'driver' => 'slack',
         'url' => NULL,
@@ -541,67 +541,67 @@
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
-      'papertrail' => 
+      'papertrail' =>
       array (
         'driver' => 'monolog',
         'level' => 'debug',
         'handler' => 'Monolog\\Handler\\SyslogUdpHandler',
-        'handler_with' => 
+        'handler_with' =>
         array (
           'host' => NULL,
           'port' => NULL,
           'connectionString' => 'tls://:',
         ),
-        'processors' => 
+        'processors' =>
         array (
           0 => 'Monolog\\Processor\\PsrLogMessageProcessor',
         ),
       ),
-      'stderr' => 
+      'stderr' =>
       array (
         'driver' => 'monolog',
         'level' => 'debug',
         'handler' => 'Monolog\\Handler\\StreamHandler',
-        'handler_with' => 
+        'handler_with' =>
         array (
           'stream' => 'php://stderr',
         ),
         'formatter' => NULL,
-        'processors' => 
+        'processors' =>
         array (
           0 => 'Monolog\\Processor\\PsrLogMessageProcessor',
         ),
       ),
-      'syslog' => 
+      'syslog' =>
       array (
         'driver' => 'syslog',
         'level' => 'debug',
         'facility' => 8,
         'replace_placeholders' => true,
       ),
-      'errorlog' => 
+      'errorlog' =>
       array (
         'driver' => 'errorlog',
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
-      'null' => 
+      'null' =>
       array (
         'driver' => 'monolog',
         'handler' => 'Monolog\\Handler\\NullHandler',
       ),
-      'emergency' => 
+      'emergency' =>
       array (
         'path' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\logs/laravel.log',
       ),
     ),
   ),
-  'mail' => 
+  'mail' =>
   array (
     'default' => 'smtp',
-    'mailers' => 
+    'mailers' =>
     array (
-      'smtp' => 
+      'smtp' =>
       array (
         'transport' => 'smtp',
         'scheme' => NULL,
@@ -613,46 +613,46 @@
         'timeout' => NULL,
         'local_domain' => '127.0.0.1',
       ),
-      'ses' => 
+      'ses' =>
       array (
         'transport' => 'ses',
       ),
-      'postmark' => 
+      'postmark' =>
       array (
         'transport' => 'postmark',
       ),
-      'resend' => 
+      'resend' =>
       array (
         'transport' => 'resend',
       ),
-      'sendmail' => 
+      'sendmail' =>
       array (
         'transport' => 'sendmail',
         'path' => '/usr/sbin/sendmail -bs -i',
       ),
-      'log' => 
+      'log' =>
       array (
         'transport' => 'log',
         'channel' => NULL,
       ),
-      'array' => 
+      'array' =>
       array (
         'transport' => 'array',
       ),
-      'failover' => 
+      'failover' =>
       array (
         'transport' => 'failover',
-        'mailers' => 
+        'mailers' =>
         array (
           0 => 'smtp',
           1 => 'log',
         ),
         'retry_after' => 60,
       ),
-      'roundrobin' => 
+      'roundrobin' =>
       array (
         'transport' => 'roundrobin',
-        'mailers' => 
+        'mailers' =>
         array (
           0 => 'ses',
           1 => 'postmark',
@@ -660,33 +660,33 @@
         'retry_after' => 60,
       ),
     ),
-    'from' => 
+    'from' =>
     array (
       'address' => 'pawcarev@gmail.com',
       'name' => 'PawCare Vet Office',
     ),
-    'markdown' => 
+    'markdown' =>
     array (
       'theme' => 'default',
-      'paths' => 
+      'paths' =>
       array (
         0 => 'C:\\laragon\\www\\PawCareLaravelV2\\resources\\views/vendor/mail',
       ),
-      'extensions' => 
+      'extensions' =>
       array (
       ),
     ),
   ),
-  'queue' => 
+  'queue' =>
   array (
     'default' => 'database',
-    'connections' => 
+    'connections' =>
     array (
-      'sync' => 
+      'sync' =>
       array (
         'driver' => 'sync',
       ),
-      'database' => 
+      'database' =>
       array (
         'driver' => 'database',
         'connection' => NULL,
@@ -695,7 +695,7 @@
         'retry_after' => 90,
         'after_commit' => false,
       ),
-      'beanstalkd' => 
+      'beanstalkd' =>
       array (
         'driver' => 'beanstalkd',
         'host' => 'localhost',
@@ -704,7 +704,7 @@
         'block_for' => 0,
         'after_commit' => false,
       ),
-      'sqs' => 
+      'sqs' =>
       array (
         'driver' => 'sqs',
         'key' => '',
@@ -715,7 +715,7 @@
         'region' => 'us-east-1',
         'after_commit' => false,
       ),
-      'redis' => 
+      'redis' =>
       array (
         'driver' => 'redis',
         'connection' => 'default',
@@ -724,66 +724,66 @@
         'block_for' => NULL,
         'after_commit' => false,
       ),
-      'deferred' => 
+      'deferred' =>
       array (
         'driver' => 'deferred',
       ),
-      'failover' => 
+      'failover' =>
       array (
         'driver' => 'failover',
-        'connections' => 
+        'connections' =>
         array (
           0 => 'database',
           1 => 'deferred',
         ),
       ),
-      'background' => 
+      'background' =>
       array (
         'driver' => 'background',
       ),
     ),
-    'batching' => 
+    'batching' =>
     array (
       'database' => 'mysql',
       'table' => 'job_batches',
     ),
-    'failed' => 
+    'failed' =>
     array (
       'driver' => 'database-uuids',
       'database' => 'mysql',
       'table' => 'failed_jobs',
     ),
   ),
-  'services' => 
+  'services' =>
   array (
-    'postmark' => 
+    'postmark' =>
     array (
       'key' => NULL,
     ),
-    'resend' => 
+    'resend' =>
     array (
       'key' => NULL,
     ),
-    'ses' => 
+    'ses' =>
     array (
       'key' => '',
       'secret' => '',
       'region' => 'us-east-1',
     ),
-    'slack' => 
+    'slack' =>
     array (
-      'notifications' => 
+      'notifications' =>
       array (
         'bot_user_oauth_token' => NULL,
         'channel' => NULL,
       ),
     ),
-    'telegram-bot-api' => 
+    'telegram-bot-api' =>
     array (
       'token' => '8595148452:AAG86Q32ngEULnaoCvcDtdUmbZf9ZxngF8g',
     ),
   ),
-  'session' => 
+  'session' =>
   array (
     'driver' => 'database',
     'lifetime' => 120,
@@ -793,7 +793,7 @@
     'connection' => NULL,
     'table' => 'sessions',
     'store' => NULL,
-    'lottery' => 
+    'lottery' =>
     array (
       0 => 2,
       1 => 100,
@@ -806,40 +806,40 @@
     'same_site' => 'lax',
     'partitioned' => false,
   ),
-  'dompdf' => 
+  'dompdf' =>
   array (
     'show_warnings' => false,
     'public_path' => NULL,
     'convert_entities' => true,
-    'options' => 
+    'options' =>
     array (
       'font_dir' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\fonts',
       'font_cache' => 'C:\\laragon\\www\\PawCareLaravelV2\\storage\\fonts',
       'temp_dir' => 'C:\\Users\\user\\AppData\\Local\\Temp',
       'chroot' => 'C:\\laragon\\www\\PawCareLaravelV2',
-      'allowed_protocols' => 
+      'allowed_protocols' =>
       array (
-        'data://' => 
+        'data://' =>
         array (
-          'rules' => 
+          'rules' =>
           array (
           ),
         ),
-        'file://' => 
+        'file://' =>
         array (
-          'rules' => 
+          'rules' =>
           array (
           ),
         ),
-        'http://' => 
+        'http://' =>
         array (
-          'rules' => 
+          'rules' =>
           array (
           ),
         ),
-        'https://' => 
+        'https://' =>
         array (
-          'rules' => 
+          'rules' =>
           array (
           ),
         ),
@@ -861,15 +861,15 @@
       'enable_html5_parser' => true,
     ),
   ),
-  'tinker' => 
+  'tinker' =>
   array (
-    'commands' => 
+    'commands' =>
     array (
     ),
-    'alias' => 
+    'alias' =>
     array (
     ),
-    'dont_alias' => 
+    'dont_alias' =>
     array (
       0 => 'App\\Nova',
     ),

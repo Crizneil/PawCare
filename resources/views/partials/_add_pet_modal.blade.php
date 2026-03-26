@@ -70,8 +70,8 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-bold">Birthdate</label>
-                            <input type="date" class="form-control bg-light" name="birthdate" required value="{{ old('birthdate') }}" max="{{ date('Y-m-d') }}">
+                            <label class="form-label fw-bold">Birthday</label>
+                            <input type="date" class="form-control bg-light" name="birthday" required value="{{ old('birthday') }}" max="{{ date('Y-m-d') }}">
                         </div>
                     </div>
                 </div>

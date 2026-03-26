@@ -219,7 +219,7 @@
             </div>
 
             <div class="mt-auto pt-3 px-2">
-                <form action="{{ route('logout') }}" method="POST">
+                <form action="{{ route('logout') }}" method="POST" id="logout-form" class="no-intercept">
                     @csrf
                     <button type="submit" class="btn btn-logout w-100 d-flex align-items-center justify-content-center">
                         <i data-lucide="log-out" class="me-2"></i> Logout
@@ -298,6 +298,11 @@
             // Global Form Submission Handler
             $(document).on('submit', 'form', function (e) {
                 const $form = $(this);
+
+                // Skip specifically for logout or other no-intercept forms
+                if ($form.hasClass('no-intercept')) {
+                    return true;
+                }
 
                 // Prevent duplicate prompt if already confirmed
                 if ($form.data('confirmed')) {

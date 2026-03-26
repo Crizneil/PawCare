@@ -422,4 +422,12 @@
             calendar.render();
         });
     </script>
+    @if($errors->any())
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var myModal = new bootstrap.Modal(document.getElementById('addAppointmentModal'));
+                myModal.show();
+            });
+        </script>
+    @endif
 @endpush

@@ -165,6 +165,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::post('/vaccination/store/{id}', [StaffController::class, 'updateVaccination'])->name('vaccination.store');
 
     // Owner Profile
+    Route::post('/owners/store', [StaffController::class, 'storeOwner'])->name('owners.store');
     Route::get('/owner/{id}', [StaffController::class, 'ownerProfile'])->name('owner.profile');
     Route::get('/owner-profile/{id}', [StaffController::class, 'ownerProfile'])->name('pet-owners');
     Route::post('/owner/{id}/create-account', [StaffController::class, 'createAccount'])->name('owner.createAccount');

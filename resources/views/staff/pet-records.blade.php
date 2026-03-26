@@ -34,9 +34,9 @@
                     <div class="input-group shadow-sm rounded-pill bg-white overflow-hidden" style="height: 45px; min-width: 250px;">
                         <input type="text" name="search" class="form-control border-0 px-3"
                             placeholder="Search Pet..." value="{{ request('search') }}">
-                        <button class="btn btn-orange px-4 border-0" type="submit">
+                        < class="btn btn-orange px-4 border-0" type="submit">
                             <i data-lucide="search" style="width: 18px;"></i>
-                        </button>
+                        </>
                     </div>
 
                     {{-- Reset Button --}}
@@ -223,6 +223,8 @@
     @foreach ($pets as $pet)
         @include('partials._view_pet_modal')
     @endforeach
+
+    @include('partials._add_owner_modal', ['submitRoute' => route('staff.owners.store')])
 
     {{-- Scripts --}}
     @if(request()->has('search'))

@@ -311,5 +311,14 @@
 
     @push('scripts')
         <script src="{{ asset('assets/js/pet-registration.js') }}?v={{ time() }}"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Auto re-open walk-in modal if validation errors exist
+                @if ($errors->any())
+                    var walkInModal = new bootstrap.Modal(document.getElementById('walkInModal'));
+                    walkInModal.show();
+                @endif
+            });
+        </script>
     @endpush
 @endsection
