@@ -224,7 +224,8 @@ class PetController extends Controller
     public function book(Request $request)
     {
         $request->validate([
-            'pet_id' => 'required|exists:pets,id',
+            'pet_ids' => 'required|array|min:1',
+            'pet_ids.*' => 'exists:pets,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|string',
             'service_type' => 'required|string',
@@ -239,66 +240,80 @@ class PetController extends Controller
                 ->withInput();
         }
 
-        $pet = Pet::where('id', $request->pet_id)
+        $pets = Pet::whereIn('id', $request->pet_ids)
             ->where('user_id', auth()->id())
-            ->firstOrFail();
+            ->get();
 
-        // 2. Business rule: only VERIFIED / ACTIVE pets can be booked
-        if (!in_array($pet->status, ['ACTIVE', 'Verified'], true)) {
-            return back()
-                ->withErrors(['pet_id' => 'Only verified pets with active status can be booked for appointments.'])
-                ->withInput();
+        if ($pets->count() !== count($request->pet_ids)) {
+             return back()->withErrors(['pet_ids' => 'One or more selected pets are invalid.'])->withInput();
         }
 
-        // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
-        $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->appointment_date);
-        if ($error) {
-            return back()->withErrors(['service_type' => $error])->withInput();
-        }
-        // --- End of Validation ---
-
-        // 4. Double Booking Prevention & Transaction
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $pet) {
-            $formattedTime = date('H:i:s', strtotime($request->appointment_time));
-
-            $duplicate = Appointment::where('pet_id', $pet->id)
-                ->where('status', 'pending')
-                ->exists();
-
-            if ($duplicate) {
-                return back()->withErrors(['pet_id' => 'This pet already has a pending appointment.']);
+        foreach ($pets as $pet) {
+            // 2. Business rule: only VERIFIED / ACTIVE pets can be booked
+            if (!in_array($pet->status, ['ACTIVE', 'Verified'], true)) {
+                return back()
+                    ->withErrors(['pet_ids' => "Pet {$pet->name} is not active or verified."])
+                    ->withInput();
             }
 
+            // --- NEW: Centralized Service & Vaccination Eligibility Validation ---
+            $error = $this->checkServiceEligibility($pet->id, $request->service_type, $request->appointment_date);
+            if ($error) {
+                return back()->withErrors(['service_type' => "{$pet->name}: " . $error])->withInput();
+            }
+            // --- End of Validation ---
+        }
+
+        // 4. Double Booking Prevention & Transaction
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $pets) {
+            $formattedTime = date('H:i:s', strtotime($request->appointment_time));
+            $batchNo = count($pets) > 1 ? 'MULTI-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4)) : null;
+
+            foreach ($pets as $pet) {
+                $duplicate = Appointment::where('pet_id', $pet->id)
+                    ->where('status', 'pending')
+                    ->exists();
+
+                if ($duplicate) {
+                    return back()->withErrors(['pet_ids' => "{$pet->name} already has a pending appointment."]);
+                }
+            }
+
+            // For slot capacity checking, if a time slot has a strict limit, we could check here.
+            // Currently relies on the 2-per-owner calendar frontend logic and single block.
             $existing = Appointment::where('appointment_date', $request->appointment_date)
                 ->where('appointment_time', $formattedTime)
                 ->whereNotIn('status', ['cancelled', 'rejected'])
                 ->lockForUpdate()
-                ->exists();
+                ->count();
 
-            if ($existing) {
-                return back()->withErrors(['appointment_time' => 'Sorry, this time slot has just been booked by someone else.'])->withInput();
+            if ($existing >= 20) {
+                return back()->withErrors(['appointment_time' => 'Sorry, this time slot or day is fully booked by someone else.'])->withInput();
             }
 
-            $appointment = Appointment::create([
-                'user_id' => auth()->id(),
-                'pet_id' => $pet->id,
-                'pet_name' => $pet->name,
-                'species' => $pet->species,
-                'appointment_date' => $request->appointment_date,
-                'appointment_time' => $formattedTime,
-                'service_type' => $request->service_type,
-                'status' => 'pending',
-                'address' => $request->address
-            ]);
+            foreach ($pets as $pet) {
+                $appointment = Appointment::create([
+                    'user_id' => auth()->id(),
+                    'pet_id' => $pet->id,
+                    'pet_name' => $pet->name,
+                    'species' => $pet->species,
+                    'appointment_date' => $request->appointment_date,
+                    'appointment_time' => $formattedTime,
+                    'service_type' => $request->service_type,
+                    'status' => 'pending',
+                    'address' => $request->address,
+                    'batch_no' => $batchNo
+                ]);
 
-            try {
-                Mail::to(auth()->user()->email)->send(new AppointmentConfirmedEmail($appointment));
-                $this->sendTelegramNotification($appointment, 'appointment_new');
-            } catch (\Throwable $e) {
-                \Log::error('Failed to send notifications: ' . $e->getMessage());
+                try {
+                    Mail::to(auth()->user()->email)->send(new AppointmentConfirmedEmail($appointment));
+                    $this->sendTelegramNotification($appointment, 'appointment_new');
+                } catch (\Throwable $e) {
+                    \Log::error('Failed to send notifications: ' . $e->getMessage());
+                }
             }
 
-            return redirect()->route('pet-owner.appointments')->with('success', 'Appointment requested!');
+            return redirect()->route('pet-owner.appointments')->with('success', 'Appointment(s) requested successfully!');
         });
     }
     public function petOwners()
@@ -328,13 +343,21 @@ class PetController extends Controller
             'breed' => 'required',
             'other_breed' => 'required_if:breed,Other', // Matches your modal input name
             'birthday' => 'required|date',
-            'user_id' => 'required|exists:users,id', 
+            'user_id' => 'required|exists:users,id',
         ]);
 
         // 2. Handle the "Other" Breed logic
         $finalBreed = ($request->breed === 'Other')
             ? $request->other_breed
             : $request->breed;
+
+        // Auto-save new breeds to global list
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
 
         // 3. Handle File/Base64 Upload (Save RELATIVE path for consistency)
         $imagePath = null;
@@ -361,7 +384,7 @@ class PetController extends Controller
             'name' => $request->name,
             'gender' => $request->gender, // This will now work correctly
             'species' => $request->species,
-            'birthday' => $request->birthday, 
+            'birthday' => $request->birthday,
             'breed' => $finalBreed,
             'owner' => $ownerRecord->name ?? 'Unknown Owner',
             'image_url' => $imagePath,

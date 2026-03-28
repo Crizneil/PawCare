@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\User;
 use App\Models\UserRequest;
 use App\Models\Vaccination;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -47,10 +48,14 @@ class StaffController extends Controller
 
         foreach ($overdueAppointments as $apt) {
             $scheduledTime = \Carbon\Carbon::parse($apt->appointment_date . ' ' . $apt->appointment_time);
+            $diffMinutes = now()->diffInMinutes($scheduledTime, false);
 
-            // If current time is 15 mins past schedule (diff < -15)
-            if (now()->diffInMinutes($scheduledTime, false) < -15) {
+            if ($diffMinutes <= -15) {
+                // If current time is 15 mins past schedule (diff <= -15), mark as missed
                 DB::table('appointments')->where('id', $apt->id)->update(['status' => 'missed']);
+            } elseif ($diffMinutes <= -5 && $apt->status !== 'late') {
+                // If current time is 5 mins past schedule (diff <= -5), mark as late
+                DB::table('appointments')->where('id', $apt->id)->update(['status' => 'late', 'late_at' => now()]);
             }
         }
         $query = Appointment::with(['user', 'pet']);
@@ -224,6 +229,13 @@ class StaffController extends Controller
         // 3. Handle Breed Logic
         $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
 
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
+
         // 4. Handle Pet Logic (Find Existing or Create New)
         $pet = null;
         if ($userId) {
@@ -314,6 +326,7 @@ class StaffController extends Controller
     {
         $search = $request->query('search');
         $view = $request->input('view', 'active');
+        $statusFilter = $request->input('status');
 
         // 1. CLEAN THE SEARCH TERM BEFORE THE QUERY
         if ($search && str_contains($search, '/verify-pet/')) {
@@ -322,8 +335,7 @@ class StaffController extends Controller
 
         $query = Pet::with(['user', 'vaccinations']);
 
-        // Check if $search is exactly a pet ID or internal ID
-        // (Assuming if it matches 'PC-' or is numeric, it's likely a direct ID search)
+        // --- Specific ID Search ---
         $isSpecificId = $search && (
             str_starts_with(strtoupper($search), 'PC-') ||
             str_starts_with(strtoupper($search), 'WALK-') ||
@@ -332,49 +344,74 @@ class StaffController extends Controller
 
         if ($isSpecificId) {
             $query->withTrashed()->where(function ($q) use ($search) {
-                $q->where('id', $search)
-                    ->orWhere('pet_id', $search);
+                $q->where('id', $search)->orWhere('pet_id', $search);
             });
         } else {
+            // --- View Logic (Active/Archived) ---
             if ($view === 'archived') {
                 $query->withTrashed()->where(function ($q) {
-                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])
-                        ->orWhereNotNull('deleted_at');
+                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])->orWhereNotNull('deleted_at');
                 });
             } else {
                 $query->notDeceased();
             }
 
+            // --- Status Filtering Logic ---
+            if ($statusFilter) {
+                switch ($statusFilter) {
+                    case 'no_records':
+                        $query->doesntHave('vaccinations');
+                        break;
+                    case 'partially_vaccinated':
+                        // Logic: Has vaccinations but "status" is not fully vaccinated
+                        // Note: This depends on how you define 'partially' in your system
+                        $query->has('vaccinations')->where('status', '!=', 'FULLY_VACCINATED');
+                        break;
+                    case 'fully_vaccinated':
+                        $query->where('status', 'FULLY_VACCINATED');
+                        break;
+                    case 'due_soon':
+                        // Logic: Has a vaccination where next_due_date is within 14 days
+                        $query->whereHas('vaccinations', function($q) {
+                            $q->whereBetween('next_due_date', [now(), now()->addDays(14)]);
+                        });
+                        break;
+                    case 'overdue':
+                        $query->whereHas('vaccinations', function($q) {
+                            $q->where('next_due_date', '<', now());
+                        });
+                        break;
+                }
+            }
+
+            // --- Name/Owner Search ---
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('owner', 'like', "%{$search}%");
+                    ->orWhere('owner', 'like', "%{$search}%");
                 });
             }
         }
 
         $pets = $query->latest()
             ->paginate(10)
-            ->appends(['search' => $search, 'view' => $view]);
+            ->appends(['search' => $search, 'view' => $view, 'status' => $statusFilter]);
 
-        return view('staff.pet-records', compact('pets', 'search', 'view'));
+        return view('staff.pet-records', compact('pets', 'search', 'view', 'statusFilter'));
     }
     public function vaccinationStatus(Request $request)
     {
         // 1. Start query with relationships
-        $query = Pet::notDeceased()->with(['user', 'latestVaccination', 'appointments']);
+        $query = Pet::notDeceased()->with(['user', 'latestVaccination', 'vaccinations', 'appointments']);
 
         // 2. Filter logic: Show pets with RECENT activity or pending approved appointments
         $query->whereHas('appointments', function ($q) {
-            $q->whereIn('status', ['approved', 'checked-in', 'Done', 'completed', 'rescheduled', 'late'])
+            $q->whereDate('appointment_date', today())
+            // Added 'completed' and 'done' to the list so they stay on the tracker for the day
+            ->whereIn('status', ['approved', 'checked-in', 'completed', 'done'])
             ->whereIn('service_type', [
-                'Anti-Rabies',
-                '5-in-1', '5in1',
-                '4-in-1 (Cat)', '4in1',
-                'Deworming',
-                'Check-up',
-                'Kapon',
-                'Vaccination'
+                    'Anti-Rabies', '5-in-1', '5in1', '4-in-1 (Cat)',
+                    '4in1', 'Deworming', 'Check-up', 'Kapon', 'Vaccination'
             ]);
         });
 
@@ -409,11 +446,15 @@ class StaffController extends Controller
             $query->whereBetween('date_administered', [$request->start_date, $request->end_date]);
         }
 
-        // --- Existing Quick Filters ---
-        if ($request->filter == 'today') {
+        // --- Quick Period Filters (Updated to match Blade) ---
+        $period = $request->get('period');
+        if ($period == 'today') {
             $query->whereDate('date_administered', today());
-        } elseif ($request->filter == 'week') {
+        } elseif ($period == 'weekly') {
             $query->whereBetween('date_administered', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($period == 'monthly') {
+            $query->whereMonth('date_administered', now()->month)
+                ->whereYear('date_administered', now()->year);
         }
 
         // --- Dropdown Filters ---
@@ -429,7 +470,10 @@ class StaffController extends Controller
             $query->where('vaccine_name', $request->vaccine_name);
         }
 
-        $history = $query->latest('date_administered')->paginate(15)->appends($request->all());
+        // --- Pagination (15 records per page) ---
+        $history = $query->latest('date_administered')
+                        ->paginate(10)
+                        ->appends($request->all()); // This keeps your filters when you click next page
 
         $staffList = User::where('role', 'staff')->get();
         $vaccineList = Vaccination::select('vaccine_name as name')->distinct()->get();
@@ -452,6 +496,7 @@ class StaffController extends Controller
         ]);
 
         $actualBatchNo = 'MANUAL-' . date('Ymd');
+
         // 1. Create Vaccination Record
         $vaccination = Vaccination::create([
             'pet_id' => $id,
@@ -462,25 +507,22 @@ class StaffController extends Controller
             'batch_no' => $actualBatchNo,
         ]);
 
-        // --- NEW: Send Telegram Notification to Clinic Owner ---
         $this->sendTelegramNotification($vaccination, 'vaccination_updated');
-
-        $interval = $this->getServiceInterval($request->vaccine_name);
 
         // 2. Update Pet Medical Record
         $pet = Pet::findOrFail($id);
         $pet->update([
             'vaccine_type' => $request->vaccine_name,
             'last_date' => $request->date_administered,
-            'next_date' => $request->next_due_date, // Note: form usually provides this, but we've improved the default logic elsewhere
+            'next_date' => $request->next_due_date,
         ]);
 
-        // 3. Update the Appointment status so the badge changes
+        // 3. Update the Appointment status
         if ($request->appointment_id) {
             $appointment = Appointment::find($request->appointment_id);
             if ($appointment) {
                 $appointment->update([
-                    'status' => 'Done', // This switches the badge from "Ready" to "Completed"
+                    'status' => 'completed', // Status changes to completed here
                     'administered_by' => auth()->user()->name,
                     'batch_no' => $actualBatchNo,
                     'vaccine_name' => $request->vaccine_name,
@@ -825,12 +867,95 @@ class StaffController extends Controller
         return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
     }
     public function getPetsByOwner($userId)
-{
-   $pets = Pet::where('user_id', $userId)
-                ->notDeceased()
-                ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
-                ->get();
+    {
+        $pets = Pet::where('user_id', $userId)
+                    ->notDeceased()
+                    ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
+                    ->get();
 
-    return response()->json($pets);
-}
+        return response()->json($pets);
+    }
+
+    public function owners(Request $request)
+    {
+        $search = $request->input('search');
+
+        $owners = User::where('role', 'owner')
+            ->when($search, function ($query, $search) {
+                return $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name', 'asc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('staff.pet-owners-list', compact('owners'));
+    }
+
+    public function storePet(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'name' => 'required|string|max:255',
+            'gender' => 'required',
+            'species' => 'required|string|in:Dog,Cat',
+            'breed' => 'required|string|max:255',
+            'other_breed' => 'required_if:breed,Other',
+            'birthday' => 'required|date|before_or_equal:today',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
+
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
+
+        $imagePath = null;
+        if ($request->filled('image_base64')) {
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageData = base64_decode($imageData);
+            $fileName = 'pets/' . uniqid() . '.png';
+            Storage::disk('public')->put($fileName, $imageData);
+            $imagePath = $fileName;
+        } else if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('pets', 'public');
+        }
+
+        $year = date('Y');
+        $count = Pet::withTrashed()->count() + 1;
+        $unique_id = 'PC-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        $pet = Pet::create([
+            'user_id' => $request->user_id,
+            'pet_id' => $unique_id,
+            'name' => $request->name,
+            'species' => $request->species,
+            'breed' => $finalBreed,
+            'birthday' => $request->birthday,
+            'gender' => $request->gender,
+            'owner' => User::find($request->user_id)->name ?? 'Unknown',
+            'image_url' => $imagePath,
+            'status' => 'Verified',
+        ]);
+
+        \App\Models\ActivityLog::record(
+            'CREATE_PET',
+            "Staff successfully registered a new pet ({$pet->name}) for owner ID: {$pet->user_id}"
+        );
+
+        try {
+            $this->sendTelegramNotification($pet, 'pet_registered');
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send Telegram pet registration alert (Staff): ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Pet successfully registered! Pet ID: ' . $unique_id);
+    }
 }

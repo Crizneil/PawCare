@@ -8,7 +8,10 @@
             <h2 class="fw-bold mb-0">Staff Dashboard</h2>
             <p class="text-muted">Welcome back! Here's what's happening today.</p>
         </div>
-        <div class="text-end">
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-orange rounded-pill px-4 fw-semibold shadow-sm text-white" style="height: 38px;" data-bs-toggle="modal" data-bs-target="#addPetModal">
+                <i data-lucide="plus-circle" class="me-2" style="width: 16px;"></i> Enroll Pet
+            </button>
             <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">
                 <i data-lucide="calendar" class="me-1" style="width: 14px;"></i> {{ now()->format('M d, Y') }}
             </span>
@@ -221,6 +224,10 @@
     </div>
 </div>
 </div>
+
+{{-- Modals --}}
+@include('partials._add_pet_modal')
+
 @endsection
 
 @push('scripts')

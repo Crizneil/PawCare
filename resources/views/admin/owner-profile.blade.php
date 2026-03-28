@@ -91,7 +91,9 @@
     <div class="card border-0 shadow-sm rounded-4 mt-4" style="background-color: #fdfbf7;">
         <div class="card-body">
             <h5 class="fw-bold mb-3">Registered Pets</h5>
-            @if($owner->pets->count() > 0)
+
+            {{-- Add this check to prevent the 'count() on null' error --}}
+            @if(isset($owner->pets) && $owner->pets->count() > 0)
                 <div class="list-group list-group-flush">
                     @foreach($owner->pets as $pet)
                         <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 mb-2">
@@ -101,7 +103,6 @@
                                     <span class="text-muted small">({{ $pet->species }})</span>
                                 </div>
 
-                                {{-- VACCINATION STATUS BADGE --}}
                                 @if(isset($pet->vax_status))
                                     <span class="badge rounded-pill {{ $pet->vax_status->class }} py-2 px-3 ms-2" style="font-size:0.75rem;">
                                         {!! $pet->vax_status->icon !!}
@@ -114,6 +115,19 @@
                             </span>
                         </div>
                     @endforeach
+                </div>
+            @elseif(isset($is_walkin) && $is_walkin)
+                {{-- If it's a walk-in, show the current pet being viewed --}}
+                <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <span class="fw-bold d-block">{{ $owner->name }}</span>
+                            <span class="text-muted small">({{ $owner->species }})</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-light text-dark border rounded-pill">
+                        {{ $owner->pet_id }}
+                    </span>
                 </div>
             @else
                 <p class="text-muted">No pets registered to this owner.</p>

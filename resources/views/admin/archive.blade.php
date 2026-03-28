@@ -19,12 +19,14 @@
                     <i data-lucide="dog" class="me-2 size-18"></i> Pets
                 </a>
             </li>
+            @if(Auth::user()->role === 'admin')
             <li class="nav-item">
                 <a class="nav-link rounded-pill px-4 {{ $tab === 'staff' ? 'active bg-orange' : 'bg-light text-dark' }}"
                     href="{{ route('admin.archive', ['tab' => 'staff']) }}">
                     <i data-lucide="users" class="me-2 size-18"></i> Staff
                 </a>
             </li>
+            @endif
         </ul>
 
         <div class="card shadow-sm border-0 rounded-4 mb-4 p-3">
@@ -49,10 +51,10 @@
                 <div class="col-12 col-md-3">
                     <label class="small text-muted mb-1">Pet Status</label>
                     <select name="status" class="form-select border-0 bg-light rounded-pill py-2">
-                        <option value="">All Statuses</option>
-                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                        <option value="deceased" {{ request('status') == 'deceased' ? 'selected' : '' }}>Deceased</option>
+                        <option value="">All Archived</option>
+                        <option value="removed" {{ request('status') == 'removed' ? 'selected' : '' }}>Removed (Deleted)</option>
+                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive Status</option>
+                        <option value="deceased" {{ request('status') == 'deceased' ? 'selected' : '' }}>Deceased Status</option>
                     </select>
                 </div>
                 @endif
@@ -118,18 +120,8 @@
                                         @endif
                                     </td>
                                     <td class="text-end pe-4">
-                                        <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-                                            @php
-                                                $restoreRoute = route("admin.{$tab}.restore", $item->id);
-                                            @endphp
-                                            <form action="{{ $restoreRoute }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button class="btn btn-sm btn-success px-4 rounded-pill">
-                                                    <i data-lucide="rotate-ccw" class="size-14 me-1"></i>
-                                                    {{ $item->trashed() ? 'Restore' : 'Reactivate' }}
-                                                </button>
-                                            </form>
-                                        </div>
+                                        {{-- Deactivation of restore/reactivate as per new hard-delete policy --}}
+                                        <span class="badge bg-light text-muted rounded-pill px-3">Archived Record</span>
                                     </td>
                                 </tr>
                             @empty

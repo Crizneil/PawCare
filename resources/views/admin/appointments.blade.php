@@ -168,6 +168,13 @@
                         <span class="small fw-bold text-muted d-block mb-1">Address</span>
                         <div class="fw-bold text-dark" id="eventOwnerAddress"></div>
                     </div>
+                    <div class="mb-4">
+                        <span class="small fw-bold text-muted d-block mb-1">Service Requested</span>
+                        <div class="p-2 border rounded-3 bg-light d-inline-block px-3">
+                            <i class="bi bi-tag-fill text-orange me-1"></i>
+                            <span class="fw-bold text-dark" id="eventService"></span>
+                        </div>
+                    </div>
                     <div class="row mb-4">
                         <div class="col-6">
                             <span class="small fw-bold text-muted d-block mb-1">Date</span>
@@ -191,6 +198,7 @@
         </div>
     </div>
 
+@include('partials._admin_confirm_done_modal')
 @endsection
 
 @push('scripts')
@@ -304,6 +312,23 @@
         }
     }
 
+    function openDoneModalWithConfirm(appointmentId) {
+        // 1. Hide the detail modal
+        const detailModalEl = document.getElementById('eventDetailsModal');
+        const detailModal = bootstrap.Modal.getInstance(detailModalEl);
+        if (detailModal) detailModal.hide();
+
+        // 2. Setup the confirmation modal
+        const doneModalEl = document.getElementById('adminConfirmDoneModal');
+        const doneForm = document.getElementById('adminDoneForm');
+        
+        if (doneModalEl && doneForm) {
+            doneForm.action = `/admin/appointments/${appointmentId}/done`;
+            const doneModal = new bootstrap.Modal(doneModalEl);
+            doneModal.show();
+        }
+    }
+
         document.addEventListener('DOMContentLoaded', function () {
             var calendarEl = document.getElementById('masterCalendar');
 
@@ -311,6 +336,7 @@
             var eventModal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
             var eventPetName = document.getElementById('eventPetName');
             var eventSpecies = document.getElementById('eventSpecies');
+            var eventService = document.getElementById('eventService');
             var eventOwnerName = document.getElementById('eventOwnerName');
             var eventOwnerPhone = document.getElementById('eventOwnerPhone');
             var eventDate = document.getElementById('eventDate');
@@ -329,6 +355,19 @@
                 events: '{{ route("admin.api.appointments") }}',
                 editable: false, // disable drag & drop to avoid “moving” events
                 droppable: false,
+                
+                eventContent: function(arg) {
+                    let isLate = arg.event.extendedProps.is_late;
+                    let title = arg.event.title;
+                    
+                    let html = `<div class="fc-event-main-frame">
+                                    <div class="fc-event-title-container">
+                                        <div class="fc-event-title fc-sticky">${title}</div>
+                                        ${isLate ? '<span class="badge bg-danger ms-1" style="font-size: 0.6rem;">LATE</span>' : ''}
+                                    </div>
+                                </div>`;
+                    return { html: html };
+                },
 
                 // Handle Event Click Detail View
                 eventClick: function (info) {
@@ -339,6 +378,7 @@
                 // 1. Set Pet Info
                 eventPetName.innerText = info.event.title.split(' (')[0];
                 eventSpecies.innerText = props.species;
+                eventService.innerText = props.service || 'Not Specified';
 
                 // 2. Handle Owner Information
                 let displayName = "Guest/Walk-in";
@@ -375,6 +415,14 @@
                 eventStatusBadge.className = "badge rounded-pill px-3 py-2 fs-6 text-white";
                 eventStatusBadge.style.backgroundColor = info.event.backgroundColor;
 
+                // 4.1 Late Status Alert
+                const oldLateBadge = eventStatusBadge.parentNode.querySelector('.late-badge');
+                if (oldLateBadge) oldLateBadge.remove();
+
+                if (props.is_late) {
+                    eventStatusBadge.insertAdjacentHTML('afterend', '<span class="badge bg-danger rounded-pill px-3 py-2 fs-6 text-white ms-2 late-badge">LATE</span>');
+                }
+
                 // 5. Build dynamic action buttons (Keeping your existing logic)
                 let actionsHtml = '';
                 if (statusStr === 'pending') {
@@ -391,13 +439,10 @@
                         </button>`;
                 } else if (statusStr === 'approved' || statusStr === 'rescheduled') {
                     actionsHtml += `
-                        <form action="/admin/appointments/${info.event.id}/done" method="POST" class="d-grid"
-                            onsubmit="return confirm('Mark this appointment as Done?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
-                                <i class="bi bi-check2-square me-1"></i> Mark as Done
-                            </button>
-                        </form>`;
+                        <button type="button" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm"
+                            onclick="openDoneModalWithConfirm(${info.event.id})">
+                            <i class="bi bi-check2-square me-1"></i> Mark as Done
+                        </button>`;
                 } else {
                     actionsHtml += `
                         <div class="alert alert-secondary text-center small border-0 w-100 rounded-4 mb-0">

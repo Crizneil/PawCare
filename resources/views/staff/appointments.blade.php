@@ -201,21 +201,50 @@
 
                                                 {{-- STAGE 3: Checked-In -> Actionable Services --}}
                                                 @if($currentStatus == 'checked-in')
-                                                    @if(stripos($apt->service_type, 'vaccination') !== false ||
-                                                        stripos($apt->service_type, 'deworming') !== false ||
-                                                        stripos($apt->service_type, 'kapon') !== false)
+                                                    @php
+                                                        $serviceName = strtolower($apt->service_type);
+
+                                                        // Services that require "Log Shot" (Vaccination Tracker flow)
+                                                        $vaxServices = ['vaccination', 'deworming', 'anti-rabies', '5-in-1', '4-in-1', '5in1', '4in1'];
+
+                                                        // Services that only need "Mark as Done" (Simple completion)
+                                                        $simpleServices = ['kapon', 'check-up'];
+
+                                                        $isVaxProcedure = false;
+                                                        foreach($vaxServices as $vax) {
+                                                            if(stripos($serviceName, $vax) !== false) {
+                                                                $isVaxProcedure = true;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        $isSimpleProcedure = false;
+                                                        foreach($simpleServices as $simple) {
+                                                            if(stripos($serviceName, $simple) !== false) {
+                                                                $isSimpleProcedure = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                    @endphp
+
+                                                    {{-- Show "Start Procedure" (Redirect to Vax Tracker) ONLY for Vaccines/Deworming --}}
+                                                    @if($isVaxProcedure)
                                                         <li>
                                                             <a class="dropdown-item py-2 text-primary fw-bold"
-                                                                href="{{ route('staff.vaccination-status', ['search' => $apt->pet_name, 'appointment_id' => $apt->id]) }}">
-                                                                <i data-lucide="syringe" class="me-2" style="width: 16px;"></i> Start Procedure
+                                                            href="{{ route('staff.vaccination-status', ['search' => $apt->pet_name, 'appointment_id' => $apt->id]) }}">
+                                                                <i data-lucide="syringe" class="me-2" style="width: 16px;"></i> Start Vaccination
                                                             </a>
                                                         </li>
                                                     @endif
-                                                    <li>
-                                                        <button type="button" class="dropdown-item py-2 text-success" data-bs-toggle="modal" data-bs-target="#confirmDoneModal{{ $apt->id }}">
-                                                            <i data-lucide="check-circle" class="me-2" style="width: 16px;"></i> Mark as Done
-                                                        </button>
-                                                    </li>
+
+                                                    {{-- Show "Mark as Done" ONLY for Kapon and Check-up --}}
+                                                    @if($isSimpleProcedure)
+                                                        <li>
+                                                            <button type="button" class="dropdown-item py-2 text-success" data-bs-toggle="modal" data-bs-target="#confirmDoneModal{{ $apt->id }}">
+                                                                <i data-lucide="check-circle" class="me-2" style="width: 16px;"></i> Mark as Done
+                                                            </button>
+                                                        </li>
+                                                    @endif
                                                 @endif
 
                                                 {{-- Missed & Completed Views remain the same --}}

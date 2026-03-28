@@ -4,7 +4,7 @@
     <div class="container-fluid p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center">
-                <a href="{{ route('admin.pet-records') }}" class="btn btn-outline-secondary me-3 shadow-sm">
+                <a href="{{ route('staff.pet-records') }}" class="btn btn-outline-secondary me-3 shadow-sm">
                     <i class="fi flaticon-back-arrow me-1"></i> Back to Pets
                 </a>
                 <h2 class="fw-bold mb-0">Pet Owners</h2>
@@ -16,9 +16,9 @@
             </button>
         </div>
 
-        {{-- NEW: Search Bar --}}
+        {{-- Search Bar --}}
         <div class="card shadow-sm border-0 rounded-4 mb-4 p-3">
-            <form action="{{ route('admin.owners') }}" method="GET" class="row g-2 align-items-center">
+            <form action="{{ route('staff.owners') }}" method="GET" class="row g-2 align-items-center">
                 <div class="col-md-10">
                     <div class="input-group">
                         <span class="input-group-text border-0 bg-light rounded-start-pill ps-4">
@@ -41,24 +41,6 @@
             </div>
         @endif
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <ul class="mb-0">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
@@ -67,6 +49,7 @@
                             <th class="ps-4">Name</th>
                             <th>Email</th>
                             <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -75,10 +58,15 @@
                                 <td class="ps-4"><b>{{ $owner->name }}</b></td>
                                 <td>{{ $owner->email }}</td>
                                 <td><span class="badge bg-success rounded-pill">Active</span></td>
+                                <td class="text-end pe-4">
+                                    <a href="{{ route('staff.owner.profile', $owner->id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        View Profile
+                                    </a>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="text-center py-4">No owners found.</td>
+                                <td colspan="4" class="text-center py-4">No owners found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -92,6 +80,6 @@
         </div>
     </div>
 
-    @include('partials._add_owner_modal', ['submitRoute' => route('admin.owners.store')])
+    @include('partials._add_owner_modal', ['submitRoute' => route('staff.owners.store')])
 
 @endsection

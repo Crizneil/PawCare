@@ -55,4 +55,34 @@ class Appointment extends Model
     {
         return $this->belongsTo(Pet::class, 'pet_id');
     }
+
+    /**
+     * Check if the appointment is considered "Late"
+     */
+    public function isLate()
+    {
+        // Only Pending or Approved appointments can be late
+        if (!in_array(strtolower($this->status), ['pending', 'approved'])) {
+            return false;
+        }
+
+        $now = \Carbon\Carbon::now('Asia/Manila');
+        $appointmentDateTime = \Carbon\Carbon::parse($this->appointment_date . ' ' . $this->appointment_time, 'Asia/Manila');
+
+        // Late if planned time + 30 minutes grace period is in the past
+        return $now->gt($appointmentDateTime->addMinutes(30));
+    }
+
+    public function scopeWhereLate($query)
+    {
+        $now = \Carbon\Carbon::now('Asia/Manila')->subMinutes(30);
+        return $query->whereIn('status', ['pending', 'approved', 'Approved'])
+            ->where(function($q) use ($now) {
+                $q->where('appointment_date', '<', $now->toDateString())
+                  ->orWhere(function($q2) use ($now) {
+                      $q2->where('appointment_date', $now->toDateString())
+                         ->where('appointment_time', '<', $now->toTimeString());
+                  });
+            });
+    }
 }

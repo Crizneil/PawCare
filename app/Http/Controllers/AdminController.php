@@ -58,6 +58,9 @@ class AdminController extends Controller
 
         // Upcoming Vaccinations (Next 14 days)
         $upcomingVaccinations = Vaccination::whereBetween('next_due_date', [now(), now()->addDays(14)])
+            ->whereHas('pet', function($query) {
+                $query->notDeceased();
+            })
             ->with(['pet', 'pet.user'])
             ->latest()
             ->get();
@@ -86,6 +89,22 @@ class AdminController extends Controller
 
     public function appointments(Request $request)
     {
+        // 0. Auto-flag overdue appointments
+        $overdueAppointments = Appointment::whereDate('appointment_date', today())
+            ->whereIn('status', ['approved', 'pending', 'late'])
+            ->get();
+
+        foreach ($overdueAppointments as $apt) {
+            $scheduledTime = Carbon::parse($apt->appointment_date . ' ' . $apt->appointment_time);
+            $diffMinutes = now()->diffInMinutes($scheduledTime, false);
+
+            if ($diffMinutes <= -15) {
+                \Illuminate\Support\Facades\DB::table('appointments')->where('id', $apt->id)->update(['status' => 'missed']);
+            } elseif ($diffMinutes <= -5 && $apt->status !== 'late') {
+                \Illuminate\Support\Facades\DB::table('appointments')->where('id', $apt->id)->update(['status' => 'late', 'late_at' => now()]);
+            }
+        }
+
         // 1. Calculate counts for Summary Cards
         $counts = [
             'today' => Appointment::whereDate('appointment_date', today())->count(),
@@ -167,7 +186,9 @@ class AdminController extends Controller
                     'owner_phone'   => $owner ? $owner->phone : 'N/A',
                     'owner_address' => $fullAddress, // <--- This sends the address to the calendar
                     'species'       => ucfirst($appt->species),
-                    'status'        => ucfirst($appt->status)
+                    'status'        => ucfirst($appt->status),
+                    'service'       => ucfirst($appt->service_type),
+                    'is_late'       => (method_exists($appt, 'isLate')) ? $appt->isLate() : false
                 ]
             ];
         });
@@ -352,9 +373,26 @@ class AdminController extends Controller
 
         return back()->with('success', 'Appointment marked as Done.');
     }
-    public function owners()
+    public function owners(Request $request)
     {
-        $owners = User::where('role', 'owner')->latest()->paginate(10);
+        // 1. Get the search input from the request
+        $search = $request->input('search');
+
+        $owners = User::where('role', 'owner')
+            // 2. Only apply the search filter if $search is not empty
+            ->when($search, function ($query, $search) {
+                return $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            // 3. Sort by Name (A-Z)
+            ->orderBy('name', 'asc')
+            // 4. Use paginate instead of get() to support your Blade's pagination links
+            ->paginate(10)
+            // 5. Append the search query to the pagination links so searching doesn't reset on page 2
+            ->withQueryString();
+
         return view('admin.owners', compact('owners'));
     }
 
@@ -578,12 +616,15 @@ class AdminController extends Controller
         // 3. Status Filtering (Crucial: Keep this part!)
         if (!$petId && !$search) {
             if ($view === 'archived') {
+                // Archives show Deceased and Soft-Deleted records
                 $query->withTrashed()->where(function ($q) {
-                    $q->whereIn('status', ['DECEASED', 'INACTIVE'])
-                    ->orWhereNotNull('deleted_at');
+                    $q->where('status', 'DECEASED')
+                        ->orWhereNotNull('deleted_at');
                 });
             } else {
-                $query->notDeceased();
+                // Main Registry shows everything EXCEPT Deceased
+                // This allows 'ACTIVE', 'INACTIVE', and 'needs_booster' to stay visible
+                $query->where('status', '!=', 'DECEASED');
             }
         }
 
@@ -621,10 +662,20 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'gender' => 'required',
             'species' => 'required|string|in:Dog,Cat',
-            'breed' => 'nullable|string|max:255',
+            'breed' => 'required|string|max:255',
+            'other_breed' => 'required_if:breed,Other',
             'birthday' => 'required|date|before_or_equal:today',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
+
+        $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
+
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
 
         $imagePath = null;
         // 1. Check for Base64 first (Camera Capture)
@@ -652,7 +703,7 @@ class AdminController extends Controller
             'pet_id' => $unique_id,
             'name' => $request->name,
             'species' => $request->species,
-            'breed' => $request->breed ?? 'Unknown',
+            'breed' => $finalBreed,
             'birthday' => $request->birthday,
             'gender' => $request->gender, // Need to pass default gender to satisfy schema
             'owner' => User::find($request->user_id)->name ?? 'Unknown',
@@ -711,14 +762,16 @@ class AdminController extends Controller
             $updateData['image_url'] = $request->file('image')->store('profiles', 'public');
         }
 
-        $pet->update($updateData);
-
-        if ($oldStatus !== 'DECEASED' && $newStatus === 'DECEASED') {
-            session()->flash('status_changed', [
-                'type' => 'DECEASED',
-                'pet_name' => $pet->name
-            ]);
+        if ($newStatus === 'DECEASED') {
+            ActivityLog::record(
+                'DELETE',
+                "Permanently deleted pet record for {$pet->name} via status update to DECEASED."
+            );
+            $pet->forceDelete();
+            return back()->with('success', "Pet record for {$pet->name} has been permanently removed.");
         }
+
+        $pet->update($updateData);
 
         ActivityLog::record(
             'UPDATE',
@@ -736,12 +789,17 @@ class AdminController extends Controller
 
         ActivityLog::record(
             'DELETE',
-            'Deleted pet record for: ' . $petName
+            'Permanently deleted pet record for: ' . $petName
         );
 
-        $pet->delete();
+        $pet->forceDelete();
 
-        return back()->with('success', "Record for {$petName} has been removed.");
+        return back()->with('success', "Record for {$petName} has been permanently removed.");
+    }
+
+    public function forceDeletePet($id)
+    {
+        return $this->destroyPet($id);
     }
 
     public function enroll(Request $request)
@@ -974,19 +1032,39 @@ class AdminController extends Controller
     public function archive(Request $request)
     {
         $tab = $request->input('tab', 'pets');
+        if (Auth::user()->role === 'staff' && $tab === 'staff') {
+            $tab = 'pets';
+        }
         $search = $request->input('search');
+        $statusFilter = $request->input('status');
 
-        $data = [];
         if ($tab === 'pets') {
-            // Query both soft-deleted pets AND pets with inactive/deceased status
-            $query = Pet::withTrashed()->with('user')->where(function ($q) {
-                $q->onlyTrashed() // Records with deleted_at
-                ->orWhereIn('status', ['DECEASED', 'INACTIVE']); // Records with archived status
+            // Start with a query that includes soft-deleted records
+            $query = Pet::withTrashed()->with('user');
+
+            $query->where(function ($q) use ($statusFilter) {
+                if ($statusFilter === 'removed') {
+                    // Only show soft-deleted records
+                    $q->onlyTrashed();
+                } elseif ($statusFilter === 'inactive') {
+                    // Only show INACTIVE records (that are NOT soft-deleted)
+                    $q->where('status', 'INACTIVE')->whereNull('deleted_at');
+                } elseif ($statusFilter === 'deceased') {
+                    // Only show DECEASED records (that are NOT soft-deleted)
+                    $q->where('status', 'DECEASED')->whereNull('deleted_at');
+                } else {
+                    // Default Archive view: Show Soft-deleted OR Deceased OR Inactive
+                    $q->onlyTrashed()
+                    ->orWhereIn('status', ['DECEASED', 'INACTIVE']);
+                }
             });
+
             if ($search) {
                 $query->where('name', 'like', "%{$search}%");
             }
+
             $data = $query->latest()->paginate(10);
+
         } elseif ($tab === 'staff') {
             $query = User::onlyTrashed()->where('role', 'staff');
             if ($search)
@@ -1066,6 +1144,47 @@ class AdminController extends Controller
             'is_walkin' => false
         ]);
     }
+    public function createAccount(Request $request, $id)
+    {
+        // 1. Determine the data source based on the hidden input in your blade
+        if ($request->input('is_walkin') === '1') {
+            $source = Pet::findOrFail($id);
+            $email = $source->email;
+            $name = $source->owner;
+        } else {
+            $source = User::findOrFail($id);
+            $email = $source->email;
+            $name = $source->name;
+        }
+
+        // 2. Basic Validation
+        if (empty($email) || $email === 'No Online Account') {
+            return redirect()->back()->with('error', 'Cannot create account: No valid email address provided.');
+        }
+
+        if (User::where('email', $email)->whereNotNull('password')->exists()) {
+            return redirect()->back()->with('error', 'This email already has an active online account.');
+        }
+
+        // 3. Create or Update the User record
+        // If it's a walk-in, we create a new User. If existing, we just set the password.
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'password' => \Hash::make('password123'), // Default password
+                'role' => 'owner',
+                'phone' => $source->phone ?? $source->owner_phone,
+                // Add address fields as per your schema
+                'house_no' => $source->house_no,
+                'street' => $source->street,
+                'barangay' => $source->barangay,
+                'city' => $source->city,
+            ]
+        );
+
+        return redirect()->back()->with('success', 'Online account created! Default password is: password123');
+    }
 
     public function getPetsByOwner($userId)
     {
@@ -1075,5 +1194,11 @@ class AdminController extends Controller
             ->get();
 
         return response()->json($pets);
+    }
+
+    public function searchPet(Request $request)
+    {
+        $search = $request->input('search');
+        return redirect()->route('admin.pet-records', ['search' => $search]);
     }
 }

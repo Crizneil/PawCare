@@ -51,17 +51,56 @@
                             </div>
 
                             <div id="newOwnerSection" style="display: none;">
-                                <div class="row g-2 mb-2">
-                                    <div class="col-6"><input type="text" name="first_name" class="form-control rounded-pill bg-light border-0" placeholder="First Name"></div>
-                                    <div class="col-6"><input type="text" name="last_name" class="form-control rounded-pill bg-light border-0" placeholder="Last Name"></div>
+                                {{-- Name Row --}}
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-5">
+                                        <label class="small fw-bold text-muted mb-1">Last Name</label>
+                                        <input type="text" name="last_name" class="form-control rounded-pill bg-white border-1" placeholder="e.g. Dela Cruz">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small fw-bold text-muted mb-1">First Name</label>
+                                        <input type="text" name="first_name" class="form-control rounded-pill bg-white border-1" placeholder="e.g. Juan">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="small fw-bold text-muted mb-1">M.I. <span class="text-lowercase fw-normal">(optional)</span></label>
+                                        <input type="text" name="middle_initial" class="form-control rounded-pill bg-white border-1" placeholder="A." maxlength="2">
+                                    </div>
                                 </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-6"><input type="text" name="phone" class="form-control rounded-pill bg-white border-1" placeholder="Mobile #"></div>
-                                    <div class="col-6"><input type="email" name="email" class="form-control rounded-pill bg-white border-1" placeholder="Email Address"></div>
+
+                                {{-- Contact Row --}}
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="small fw-bold text-muted mb-1">Mobile No.</label>
+                                        <input type="text" name="phone" class="form-control rounded-pill bg-white border-1" placeholder="09xxxxxxxxx">
+                                    </div>
+                                    {{-- Email Container: Controlled by JS Toggle --}}
+                                    <div class="col-md-6" id="emailContainer">
+                                        <label class="small fw-bold text-muted mb-1">Email Address</label>
+                                        <input type="email" name="email" id="newOwnerEmail" class="form-control rounded-pill bg-white border-1" placeholder="email@example.com">
+                                    </div>
                                 </div>
+
+                                {{-- Home Address Section --}}
                                 <label class="small fw-bold text-muted mb-2 ps-2">Home Address</label>
-                                <input type="text" name="street" class="form-control rounded-pill bg-white border-1 mb-2" placeholder="Street, Barangay">
-                                <input type="text" name="city" class="form-control rounded-pill bg-light border-1 mb-4" value="Meycauayan City, Bulacan" readonly>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <input type="text" name="house_no" class="form-control rounded-pill bg-white border-1" placeholder="House No.">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <input type="text" name="street" class="form-control rounded-pill bg-white border-1" placeholder="Street Name">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-4">
+                                    <div class="col-md-4">
+                                        <input type="text" name="barangay" class="form-control rounded-pill bg-white border-1" placeholder="Barangay">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="city" class="form-control rounded-pill bg-white border-1" placeholder="City" value="Meycauayan City">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="province" class="form-control rounded-pill bg-white border-1" placeholder="Province" value="Bulacan">
+                                    </div>
+                                </div>
 
                                 <div id="accountOptionSection" class="form-check form-switch p-3 bg-white border rounded-4 mb-3">
                                     <input class="form-check-input ms-1 shadow-none" type="checkbox" id="createAccountToggle" name="create_online_account" value="1" checked>
@@ -198,6 +237,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const genderSelect = document.getElementById('walkinGenderSelect');
     const birthdayInput = document.getElementById('walkinBirthdayInput');
 
+    const createAccountToggle = document.getElementById('createAccountToggle');
+    const emailContainer = document.getElementById('emailContainer');
+    const emailInput = document.getElementById('newOwnerEmail');
+
     const statusExisting = document.getElementById('statusExisting');
     const statusNew = document.getElementById('statusNew');
     const existingSection = document.getElementById('existingOwnerSection');
@@ -302,6 +345,10 @@ document.addEventListener('DOMContentLoaded', function () {
             petNameInput.required = false;
             togglePetFields(true);
             newSection.querySelectorAll('input, select').forEach(i => i.required = false);
+
+            if (emailContainer) emailContainer.style.setProperty('display', 'none', 'important');
+            if (emailInput) emailInput.required = false;
+
         } else {
             existingSection.style.setProperty('display', 'none', 'important');
             newSection.style.setProperty('display', 'block', 'important');
@@ -321,12 +368,32 @@ document.addEventListener('DOMContentLoaded', function () {
             genderSelect.value = '';
             birthdayInput.value = "{{ date('Y-m-d') }}";
             togglePetFields(false);
+            handleEmailVisibility();
 
             ['first_name', 'last_name', 'phone'].forEach(name => {
                 const el = newSection.querySelector(`[name="${name}"]`);
                 if (el) el.required = true;
             });
         }
+    }
+
+    function handleEmailVisibility() {
+        if (!createAccountToggle || !emailContainer || !emailInput) return;
+
+        // Only show if New Owner is selected AND toggle is checked
+        if (statusNew.checked && createAccountToggle.checked) {
+            emailContainer.style.setProperty('display', 'block', 'important');
+            emailInput.required = true;
+        } else {
+            emailContainer.style.setProperty('display', 'none', 'important');
+            emailInput.required = false;
+            // emailInput.value = ''; // Optional: Clear if you want to wipe it when hidden
+        }
+    }
+
+    // 5. ADD THE EVENT LISTENER
+    if (createAccountToggle) {
+        createAccountToggle.addEventListener('change', handleEmailVisibility);
     }
 
     function togglePetFields(isReadonly) {

@@ -130,8 +130,8 @@
 
             <div class="sidebar-nav-scroll flex-grow-1 px-2">
                 <nav class="nav flex-column">
-                    {{-- ADMIN LINKS --}}
-                    @if($user && strtolower($user->role) === 'admin')
+                    {{-- SHARED ADMIN & STAFF LINKS --}}
+                    @if($user && (strtolower($user->role) === 'admin' || strtolower($user->role) === 'staff'))
                         <a href="{{ route('admin.dashboard') }}"
                             class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                             <i data-lucide="layout-grid"></i> Overview
@@ -144,13 +144,22 @@
                             class="nav-link {{ request()->routeIs('admin.pet-records') ? 'active' : '' }}">
                             <i data-lucide="dog"></i> Pet Database
                         </a>
+                        <a href="{{ route('admin.owners') }}"
+                            class="nav-link {{ request()->routeIs('admin.owners') ? 'active' : '' }}">
+                            <i data-lucide="users"></i> Pet Owners
+                        </a>
+                        
+                        {{-- ADMIN ONLY: Staff Management --}}
+                        @if(strtolower($user->role) === 'admin')
                         <a href="{{ route('admin.employees') }}"
                             class="nav-link {{ request()->routeIs('admin.employees') ? 'active' : '' }}">
-                            <i data-lucide="users"></i> Staff
+                            <i data-lucide="users-2"></i> Staff Management
                         </a>
+                        @endif
+
                         <a href="{{ route('admin.logs') }}"
                             class="nav-link {{ request()->routeIs('admin.logs') ? 'active' : '' }}">
-                            <i data-lucide="history"></i> Logs
+                            <i data-lucide="history"></i> Activity Logs
                         </a>
                         <a href="{{ route('admin.archive') }}"
                             class="nav-link {{ request()->routeIs('admin.archive') ? 'active' : '' }}">
@@ -162,33 +171,6 @@
                         </a>
                         <a href="{{ route('admin.profile') }}"
                             class="nav-link {{ request()->routeIs('admin.profile') ? 'active' : '' }}">
-                            <i data-lucide="user-cog"></i> Profile
-                        </a>
-
-                        {{-- STAFF LINKS --}}
-                    @elseif($user && strtolower($user->role) === 'staff')
-                        <a href="{{ route('staff.dashboard') }}"
-                            class="nav-link {{ request()->routeIs('staff.dashboard') ? 'active' : '' }}">
-                            <i data-lucide="layout-dashboard"></i> Overview
-                        </a>
-                        <a href="{{ route('staff.appointments') }}"
-                            class="nav-link {{ request()->routeIs('staff.appointments') ? 'active' : '' }}">
-                            <i data-lucide="calendar"></i> Appointments
-                        </a>
-                        <a href="{{ route('staff.pet-records') }}"
-                            class="nav-link {{ request()->routeIs('staff.pet-records') ? 'active' : '' }}">
-                            <i data-lucide="file-spreadsheet"></i> Pet Records
-                        </a>
-                        <a href="{{ route('staff.vaccination-status') }}"
-                            class="nav-link {{ request()->routeIs('staff.vaccination-status') ? 'active' : '' }}">
-                            <i data-lucide="syringe"></i> Vaccination Status
-                        </a>
-                        <a href="{{ route('staff.vaccination-history') }}"
-                            class="nav-link {{ request()->routeIs('staff.vaccination-history') ? 'active' : '' }}">
-                            <i data-lucide="history"></i> Vaccination History
-                        </a>
-                        <a href="{{ route('staff.profile') }}"
-                            class="nav-link {{ request()->routeIs('staff.profile') ? 'active' : '' }}">
                             <i data-lucide="user-cog"></i> Profile
                         </a>
 
@@ -278,23 +260,6 @@
                 });
             @endif
 
-            @if(session('status_changed') && session('status_changed')['type'] === 'DECEASED')
-                Swal.fire({
-                    title: 'In Loving Memory',
-                    text: 'Pet record for {{ session('status_changed')['pet_name'] }} has been updated to DECEASED status. This record is now archived.',
-                    icon: 'info',
-                    iconColor: '#2c3e50',
-                    confirmButtonText: 'Understood',
-                    confirmButtonColor: '#2c3e50',
-                    background: '#f8f9fa',
-                    customClass: {
-                        popup: 'rounded-4 border-0 shadow-lg',
-                        title: 'fw-bold text-dark',
-                        confirmButton: 'rounded-pill px-5'
-                    }
-                });
-            @endif
-
             // Global Form Submission Handler
             $(document).on('submit', 'form', function (e) {
                 const $form = $(this);
@@ -349,13 +314,64 @@
                     return;
                 }
 
-                // Automatically close Bootstrap modals on successful submission
                 const $modal = $form.closest('.modal');
                 if ($modal.length && typeof bootstrap !== 'undefined') {
                     const modalInstance = bootstrap.Modal.getInstance($modal[0]);
                     if (modalInstance) {
                         modalInstance.hide();
                     }
+                }
+            });
+
+            // --- GitHub-Style Delete Confirmation ---
+            $(document).on('input', '.confirm-delete-input', function() {
+                const $input = $(this);
+                const expectedName = $input.data('expected-name').toString().trim().toLowerCase();
+                const actualValue = $input.val().toString().trim().toLowerCase();
+                const targetBtnId = $input.data('target-btn');
+                const $btn = $('#' + targetBtnId);
+
+                if (actualValue === expectedName) {
+                    $btn.prop('disabled', false);
+                    $input.addClass('is-valid').removeClass('is-invalid');
+                } else {
+                    $btn.prop('disabled', true);
+                    $input.removeClass('is-valid');
+                }
+            });
+
+            // --- Deceased Status Confirmation for Update Modal ---
+            $(document).on('change', '.status-select', function() {
+                const $select = $(this);
+                const status = $select.val();
+                const petId = $select.data('pet-id');
+                const $section = $('#deceasedConfirmSection' + petId);
+                const $btn = $('#submitEditBtn' + petId);
+
+                if (status === 'DECEASED') {
+                    $section.removeClass('d-none');
+                    $btn.prop('disabled', true);
+                    // Clear any previous input
+                    $section.find('.confirm-status-input').val('').removeClass('is-valid is-invalid');
+                } else {
+                    $section.addClass('d-none');
+                    $btn.prop('disabled', false);
+                }
+            });
+
+            $(document).on('input', '.confirm-status-input', function() {
+                const $input = $(this);
+                const expectedName = $input.data('expected-name').toString().trim().toLowerCase();
+                const actualValue = $input.val().toString().trim().toLowerCase();
+                const targetBtnId = $input.data('target-btn');
+                const $btn = $('#' + targetBtnId);
+
+                if (actualValue === expectedName) {
+                    $btn.prop('disabled', false);
+                    $input.addClass('is-valid').removeClass('is-invalid');
+                } else {
+                    $btn.prop('disabled', true);
+                    $input.removeClass('is-valid');
                 }
             });
         });

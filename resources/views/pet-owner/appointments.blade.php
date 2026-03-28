@@ -128,7 +128,7 @@
                                     </td>
                                     {{-- Action label matches your CSS trigger --}}
                                     <td class="text-end pe-4" data-label="Actions">
-                                        @if(in_array(strtolower($appointment->status), ['pending', 'rescheduled']))
+                                        @if(in_array(strtolower($appointment->status), ['pending', 'rescheduled', 'approved']))
                                             <form action="{{ route('pet-owner.appointments.cancel', $appointment->id) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
@@ -205,13 +205,24 @@
                             <div class="col-md-6">
                                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Pet Information</h6>
                                 <div class="mb-3">
-                                    <label class="small fw-bold text-muted mb-1">Pet Name <span class="text-danger">*</span></label>
-                                    <select name="pet_id" class="form-select bg-light" required>
-                                        <option value="">Please Select Pet here.</option>
-                                        @foreach(\App\Models\Pet::where('user_id', auth()->id())->whereIn('status', ['ACTIVE', 'Verified'])->get() as $pet)
-                                            <option value="{{ $pet->id }}">{{ $pet->name }} ({{ ucfirst($pet->species) }})</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="small fw-bold text-muted mb-1">Pet(s) <span class="text-danger">*</span></label>
+                                    <div class="border rounded p-2 bg-light" id="petCheckboxContainer" style="max-height: 150px; overflow-y: auto;">
+                                        @php
+                                            $ownerPets = \App\Models\Pet::where('user_id', auth()->id())->whereIn('status', ['ACTIVE', 'Verified'])->get();
+                                        @endphp
+                                        @if($ownerPets->isEmpty())
+                                            <p class="text-muted small mb-0">No active pets found.</p>
+                                        @else
+                                            @foreach($ownerPets as $pet)
+                                                <div class="form-check mb-1 pet-check-wrapper">
+                                                    <input class="form-check-input pet-checkbox" type="checkbox" name="pet_ids[]" value="{{ $pet->id }}" id="pet_{{ $pet->id }}">
+                                                    <label class="form-check-label pet-checkbox-label" for="pet_{{ $pet->id }}" data-original-text="{{ $pet->name }} ({{ ucfirst($pet->species) }})">
+                                                        {{ $pet->name }} ({{ ucfirst($pet->species) }})
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="small fw-bold text-muted mb-1">Service(s) <span class="text-danger">*</span></label>
@@ -430,7 +441,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const dateInput = document.getElementById('appointment_date_input');
     const timeSelect = document.getElementById('appointment_time_select');
     const serviceSelect = document.getElementById('service_type_select');
-    const petSelect = document.querySelector('select[name="pet_id"]');
 
     let availabilityData = {};
     let ownerBookedDates = {};
@@ -483,17 +493,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const busyPetIds = bookedForThisDate.map(appt => String(appt.pet_id));
 
-        Array.from(petSelect.options).forEach(option => {
-            if (option.value === "") return;
-            const originalText = option.getAttribute('data-original-text') || option.text;
-            if (!option.hasAttribute('data-original-text')) option.setAttribute('data-original-text', originalText);
+        const petCheckboxes = document.querySelectorAll('.pet-checkbox');
+        petCheckboxes.forEach(checkbox => {
+            const label = document.querySelector(`label[for="${checkbox.id}"]`);
+            if (!label) return;
+            const originalText = label.getAttribute('data-original-text');
 
-            if (busyPetIds.includes(option.value)) {
-                option.disabled = true;
-                option.text = originalText + " (Already Scheduled)";
+            if (busyPetIds.includes(checkbox.value)) {
+                checkbox.disabled = true;
+                checkbox.checked = false;
+                label.innerText = originalText + " (Already Scheduled)";
+                label.classList.add('text-muted');
             } else {
-                option.disabled = false;
-                option.text = originalText;
+                checkbox.disabled = false;
+                label.innerText = originalText;
+                label.classList.remove('text-muted');
             }
         });
     }
@@ -579,13 +593,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (isUnavailable) {
-                opt.disabled = true;
-                opt.innerText = `${timeObj.label} (Unavailable)`;
+                // Feature matching: Hide unavailable time options instead of just disabling
+                // opt.disabled = true;
+                // opt.innerText = `${timeObj.label} (Unavailable)`;
             } else {
                 opt.value = timeObj.value;
                 opt.innerText = timeObj.label;
+                timeSelect.appendChild(opt);
             }
-            timeSelect.appendChild(opt);
         });
     }
 
