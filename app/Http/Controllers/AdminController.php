@@ -58,6 +58,9 @@ class AdminController extends Controller
 
         // Upcoming Vaccinations (Next 14 days)
         $upcomingVaccinations = Vaccination::whereBetween('next_due_date', [now(), now()->addDays(14)])
+            ->whereHas('pet', function($query) {
+                $query->notDeceased();
+            })
             ->with(['pet', 'pet.user'])
             ->latest()
             ->get();
@@ -86,6 +89,22 @@ class AdminController extends Controller
 
     public function appointments(Request $request)
     {
+        // 0. Auto-flag overdue appointments
+        $overdueAppointments = Appointment::whereDate('appointment_date', today())
+            ->whereIn('status', ['approved', 'pending', 'late'])
+            ->get();
+
+        foreach ($overdueAppointments as $apt) {
+            $scheduledTime = Carbon::parse($apt->appointment_date . ' ' . $apt->appointment_time);
+            $diffMinutes = now()->diffInMinutes($scheduledTime, false);
+
+            if ($diffMinutes <= -15) {
+                \Illuminate\Support\Facades\DB::table('appointments')->where('id', $apt->id)->update(['status' => 'missed']);
+            } elseif ($diffMinutes <= -5 && $apt->status !== 'late') {
+                \Illuminate\Support\Facades\DB::table('appointments')->where('id', $apt->id)->update(['status' => 'late', 'late_at' => now()]);
+            }
+        }
+
         // 1. Calculate counts for Summary Cards
         $counts = [
             'today' => Appointment::whereDate('appointment_date', today())->count(),
@@ -168,7 +187,8 @@ class AdminController extends Controller
                     'owner_address' => $fullAddress, // <--- This sends the address to the calendar
                     'species'       => ucfirst($appt->species),
                     'status'        => ucfirst($appt->status),
-                    'service'       => ucfirst($appt->service_type)
+                    'service'       => ucfirst($appt->service_type),
+                    'is_late'       => (method_exists($appt, 'isLate')) ? $appt->isLate() : false
                 ]
             ];
         });
@@ -642,10 +662,20 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'gender' => 'required',
             'species' => 'required|string|in:Dog,Cat',
-            'breed' => 'nullable|string|max:255',
+            'breed' => 'required|string|max:255',
+            'other_breed' => 'required_if:breed,Other',
             'birthday' => 'required|date|before_or_equal:today',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
+
+        $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
+
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
 
         $imagePath = null;
         // 1. Check for Base64 first (Camera Capture)
@@ -673,7 +703,7 @@ class AdminController extends Controller
             'pet_id' => $unique_id,
             'name' => $request->name,
             'species' => $request->species,
-            'breed' => $request->breed ?? 'Unknown',
+            'breed' => $finalBreed,
             'birthday' => $request->birthday,
             'gender' => $request->gender, // Need to pass default gender to satisfy schema
             'owner' => User::find($request->user_id)->name ?? 'Unknown',
@@ -732,14 +762,16 @@ class AdminController extends Controller
             $updateData['image_url'] = $request->file('image')->store('profiles', 'public');
         }
 
-        $pet->update($updateData);
-
-        if ($oldStatus !== 'DECEASED' && $newStatus === 'DECEASED') {
-            session()->flash('status_changed', [
-                'type' => 'DECEASED',
-                'pet_name' => $pet->name
-            ]);
+        if ($newStatus === 'DECEASED') {
+            ActivityLog::record(
+                'DELETE',
+                "Permanently deleted pet record for {$pet->name} via status update to DECEASED."
+            );
+            $pet->forceDelete();
+            return back()->with('success', "Pet record for {$pet->name} has been permanently removed.");
         }
+
+        $pet->update($updateData);
 
         ActivityLog::record(
             'UPDATE',
@@ -757,12 +789,17 @@ class AdminController extends Controller
 
         ActivityLog::record(
             'DELETE',
-            'Deleted pet record for: ' . $petName
+            'Permanently deleted pet record for: ' . $petName
         );
 
-        $pet->delete();
+        $pet->forceDelete();
 
-        return back()->with('success', "Record for {$petName} has been removed.");
+        return back()->with('success', "Record for {$petName} has been permanently removed.");
+    }
+
+    public function forceDeletePet($id)
+    {
+        return $this->destroyPet($id);
     }
 
     public function enroll(Request $request)
@@ -995,6 +1032,9 @@ class AdminController extends Controller
     public function archive(Request $request)
     {
         $tab = $request->input('tab', 'pets');
+        if (Auth::user()->role === 'staff' && $tab === 'staff') {
+            $tab = 'pets';
+        }
         $search = $request->input('search');
         $statusFilter = $request->input('status');
 
@@ -1154,5 +1194,11 @@ class AdminController extends Controller
             ->get();
 
         return response()->json($pets);
+    }
+
+    public function searchPet(Request $request)
+    {
+        $search = $request->input('search');
+        return redirect()->route('admin.pet-records', ['search' => $search]);
     }
 }

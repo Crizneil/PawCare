@@ -14,6 +14,7 @@ use App\Notifications\TelegramAlertNotification;
 class VaccineController extends Controller
 {
     use \App\Traits\NotificationHelper;
+    use \App\Traits\AppointmentValidation;
     public function status(Request $request)
     {
         $query = Pet::notDeceased()->with(['user', 'latestVaccination']);
@@ -41,15 +42,20 @@ class VaccineController extends Controller
         $request->validate([
             'vaccine_name' => 'required|string|max:255',
             'date_administered' => 'required|date',
-            'next_due_date' => 'nullable|date|after:date_administered',
+            'next_due_date' => 'nullable|date',
             'status' => 'required|string',
         ]);
+
+        $nextDueDate = $request->next_due_date;
+        if (!$nextDueDate) {
+            $nextDueDate = $this->calculateNextDueDate($id, $request->vaccine_name, $request->date_administered);
+        }
 
         $vaccination = Vaccination::create([
             'pet_id' => $id,
             'vaccine_name' => $request->vaccine_name,
             'date_administered' => $request->date_administered,
-            'next_due_date' => $request->next_due_date,
+            'next_due_date' => $nextDueDate,
             'status' => $request->status, // Save the status!
             'batch_no' => $request->batch_no ?? null,
             'remarks' => $request->remarks ?? null,
@@ -75,11 +81,16 @@ class VaccineController extends Controller
         ]);
 
         $pet = Pet::findOrFail($id);
+        
+        $nextDueDate = $request->next_due_date;
+        if (!$nextDueDate) {
+            $nextDueDate = $this->calculateNextDueDate($id, $request->vaccine_name, $request->date_administered);
+        }
 
         // --- AUTOMATION LOGIC ---
         $status = 'fully_vaccinated';
-        if ($request->next_due_date) {
-            $dueDate = Carbon::parse($request->next_due_date);
+        if ($nextDueDate) {
+            $dueDate = Carbon::parse($nextDueDate);
             $now = Carbon::now();
 
             if ($now->gt($dueDate)) {
@@ -96,7 +107,7 @@ class VaccineController extends Controller
             'appointment_id' => $request->appointment_id,
             'vaccine_name' => $request->vaccine_name,
             'date_administered' => $request->date_administered,
-            'next_due_date' => $request->next_due_date,
+            'next_due_date' => $nextDueDate,
             'status' => $status,
             'batch_no' => $finalBatchNo,
             'remarks' => $request->remarks,
@@ -115,7 +126,7 @@ class VaccineController extends Controller
                     'vaccine_name' => $request->vaccine_name, // This fills the "Vaccine/Treatment" field
                     'batch_no' => $finalBatchNo,
                     'administered_by' => auth()->user()->name,
-                    'next_due_date' => $request->next_due_date
+                    'next_due_date' => $nextDueDate
                 ]);
             }
         }

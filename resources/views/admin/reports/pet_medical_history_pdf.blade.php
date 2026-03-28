@@ -76,25 +76,31 @@
     <table style="border: 1px solid #dee2e6;">
         <thead>
             <tr style="background-color: #f8f9fa;">
-                <th style="border: 1px solid #dee2e6;">VACCINE ADMINISTERED</th>
-                <th style="border: 1px solid #dee2e6;">DATE ADMINISTERED</th>
-                <th style="border: 1px solid #dee2e6;">NEXT DUE DATE</th>
-                <th style="border: 1px solid #dee2e6;">VETERINARIAN (License No.)</th>
-                <th style="border: 1px solid #dee2e6;">STATUS</th>
+                <th style="border: 1px solid #dee2e6;">VACCINE / BATCH</th>
+                <th style="border: 1px solid #dee2e6;">DATE GIVEN</th>
+                <th style="border: 1px solid #dee2e6;">NEXT DUE</th>
+                <th style="border: 1px solid #dee2e6;">VETERINARIAN</th>
+                <th style="border: 1px solid #dee2e6;">REMARKS / STATUS</th>
             </tr>
         </thead>
         <tbody>
             @foreach($pet->vaccinations as $vax)
                 <tr>
-                    <td style="border: 1px solid #dee2e6;"><strong>{{ $vax->vaccine_name }}</strong></td>
-                    <td style="border: 1px solid #dee2e6;">{{ \Carbon\Carbon::parse($vax->date_administered)->format('M d, Y') }}</td>
-                    <td style="border: 1px solid #dee2e6;">{{ $vax->next_due_date ? \Carbon\Carbon::parse($vax->next_due_date)->format('M d, Y') : 'N/A' }}</td>
-                    <td style="border: 1px solid #dee2e6;">{{ $vax->staff->name ?? 'System' }}</td>
-                    <td style="border: 1px solid #dee2e6; text-align: center;">
+                    <td style="border: 1px solid #dee2e6;">
+                        <strong>{{ $vax->vaccine_name }}</strong><br>
+                        <small style="color: #666;">BN: {{ $vax->batch_no ?? '-------' }}</small>
+                    </td>
+                    <td style="border: 1px solid #dee2e6; text-align: center;">{{ \Carbon\Carbon::parse($vax->date_administered)->format('m/d/Y') }}</td>
+                    <td style="border: 1px solid #dee2e6; text-align: center;">{{ $vax->next_due_date ? \Carbon\Carbon::parse($vax->next_due_date)->format('m/d/Y') : '-------' }}</td>
+                    <td style="border: 1px solid #dee2e6;">{{ $vax->staff->name ?? 'System Admin' }}</td>
+                    <td style="border: 1px solid #dee2e6;">
                         @if($vax->next_due_date && \Carbon\Carbon::parse($vax->next_due_date)->isPast())
                             <span style="color: #dc3545; font-weight: bold;">[!] OVERDUE</span>
                         @else
-                            <span style="color: #198754; font-weight: bold;">PASSED</span>
+                            <span style="color: #198754; font-weight: bold;">ADMINISTERED</span>
+                        @endif
+                        @if($vax->remarks)
+                            <div style="font-size: 0.8em; color: #555; font-style: italic; margin-top: 4px;">"{{ $vax->remarks }}"</div>
                         @endif
                     </td>
                 </tr>

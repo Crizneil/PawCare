@@ -198,6 +198,7 @@
         </div>
     </div>
 
+@include('partials._admin_confirm_done_modal')
 @endsection
 
 @push('scripts')
@@ -311,6 +312,23 @@
         }
     }
 
+    function openDoneModalWithConfirm(appointmentId) {
+        // 1. Hide the detail modal
+        const detailModalEl = document.getElementById('eventDetailsModal');
+        const detailModal = bootstrap.Modal.getInstance(detailModalEl);
+        if (detailModal) detailModal.hide();
+
+        // 2. Setup the confirmation modal
+        const doneModalEl = document.getElementById('adminConfirmDoneModal');
+        const doneForm = document.getElementById('adminDoneForm');
+        
+        if (doneModalEl && doneForm) {
+            doneForm.action = `/admin/appointments/${appointmentId}/done`;
+            const doneModal = new bootstrap.Modal(doneModalEl);
+            doneModal.show();
+        }
+    }
+
         document.addEventListener('DOMContentLoaded', function () {
             var calendarEl = document.getElementById('masterCalendar');
 
@@ -337,6 +355,19 @@
                 events: '{{ route("admin.api.appointments") }}',
                 editable: false, // disable drag & drop to avoid “moving” events
                 droppable: false,
+                
+                eventContent: function(arg) {
+                    let isLate = arg.event.extendedProps.is_late;
+                    let title = arg.event.title;
+                    
+                    let html = `<div class="fc-event-main-frame">
+                                    <div class="fc-event-title-container">
+                                        <div class="fc-event-title fc-sticky">${title}</div>
+                                        ${isLate ? '<span class="badge bg-danger ms-1" style="font-size: 0.6rem;">LATE</span>' : ''}
+                                    </div>
+                                </div>`;
+                    return { html: html };
+                },
 
                 // Handle Event Click Detail View
                 eventClick: function (info) {
@@ -384,6 +415,14 @@
                 eventStatusBadge.className = "badge rounded-pill px-3 py-2 fs-6 text-white";
                 eventStatusBadge.style.backgroundColor = info.event.backgroundColor;
 
+                // 4.1 Late Status Alert
+                const oldLateBadge = eventStatusBadge.parentNode.querySelector('.late-badge');
+                if (oldLateBadge) oldLateBadge.remove();
+
+                if (props.is_late) {
+                    eventStatusBadge.insertAdjacentHTML('afterend', '<span class="badge bg-danger rounded-pill px-3 py-2 fs-6 text-white ms-2 late-badge">LATE</span>');
+                }
+
                 // 5. Build dynamic action buttons (Keeping your existing logic)
                 let actionsHtml = '';
                 if (statusStr === 'pending') {
@@ -400,13 +439,10 @@
                         </button>`;
                 } else if (statusStr === 'approved' || statusStr === 'rescheduled') {
                     actionsHtml += `
-                        <form action="/admin/appointments/${info.event.id}/done" method="POST" class="d-grid"
-                            onsubmit="return confirm('Mark this appointment as Done?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm">
-                                <i class="bi bi-check2-square me-1"></i> Mark as Done
-                            </button>
-                        </form>`;
+                        <button type="button" class="btn btn-success rounded-pill fw-bold text-uppercase py-3 shadow-sm"
+                            onclick="openDoneModalWithConfirm(${info.event.id})">
+                            <i class="bi bi-check2-square me-1"></i> Mark as Done
+                        </button>`;
                 } else {
                     actionsHtml += `
                         <div class="alert alert-secondary text-center small border-0 w-100 rounded-4 mb-0">

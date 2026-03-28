@@ -95,7 +95,9 @@
                                             @if($aptStatus == 'checked-in')
                                                 <span class="badge bg-soft-warning text-warning" style="font-size: 0.65rem;">READY FOR SHOT</span>
                                             @elseif(in_array($aptStatus, ['done', 'completed']))
-                                                <span class="badge bg-soft-success text-success" style="font-size: 0.65rem;">TREATMENT COMPLETED</span>
+                                                <span class="badge bg-soft-success text-success" style="font-size: 0.65rem;">
+                                                    {{ $latestApt->vaccine_name ?? 'TREATMENT' }} COMPLETED
+                                                </span>
                                             @endif
                                         </div>
                                     </div>

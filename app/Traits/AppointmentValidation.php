@@ -58,7 +58,32 @@ trait AppointmentValidation
 
         if ($lastShot) {
             $lastDate = Carbon::parse($lastShot->date_administered);
-            $nextEligibleDate = $lastDate->copy()->addDays($intervalDays);
+            
+            // Check 14-day cycle logic
+            $doseCount = \App\Models\Vaccination::where('pet_id', $petId)
+                ->where(function($q) use ($matchedService) {
+                    $q->where('vaccine_name', 'like', "%{$matchedService}%")
+                      ->orWhere('remarks', 'like', "%{$matchedService}%");
+                })->count();
+
+            $currentInterval = $intervalDays;
+            $requiresGracePeriod = false;
+
+            if (in_array($matchedService, ['5in1', '5-in-1', '4in1', '4-in-1', 'Deworming'])) {
+                if ($doseCount < 3) {
+                    $currentInterval = 14;
+                    // Check if previous shot was > 21 days ago (14 + 7 grace period)
+                    // If so, the cycle resets! But we don't reset it in DB, we just warn here.
+                    if (now()->diffInDays($lastDate) > 21) {
+                         // Grace period missed, they CAN book now to restart! So no error.
+                         // Maybe we could return a specific warning string if needed, but returning null lets them book.
+                    }
+                } else {
+                    $currentInterval = 365;
+                }
+            }
+
+            $nextEligibleDate = $lastDate->copy()->addDays($currentInterval);
 
             if ($proposedDate->lt($nextEligibleDate)) {
                 return "This pet is not yet due for another {$matchedService} shot. " . 
@@ -99,6 +124,66 @@ trait AppointmentValidation
             }
         }
         return 365; // Default to 1 year
+    }
+
+    /**
+     * Calculate Next Due Date with 14-day auto-adjustment and 7-day grace period reset
+     */
+    public function calculateNextDueDate($petId, $serviceType, $dateAdministered)
+    {
+        $baseInterval = $this->getServiceInterval($serviceType);
+        $date = Carbon::parse($dateAdministered);
+
+        // Map to standard series names if applicable
+        $matchedService = null;
+        foreach (self::$serviceIntervals as $key => $days) {
+            if (str_contains(strtolower($serviceType), strtolower($key))) {
+                $matchedService = $key;
+                break;
+            }
+        }
+
+        if (!$matchedService || !in_array($matchedService, ['5in1', '5-in-1', '4in1', '4-in-1', 'Deworming'])) {
+            return $date->copy()->addDays($baseInterval)->format('Y-m-d');
+        }
+
+        // It's a multi-dose vaccine. Find previous doses.
+        $pastDoses = \App\Models\Vaccination::where('pet_id', $petId)
+            ->where('vaccine_name', 'like', "%{$matchedService}%")
+            ->orderBy('date_administered', 'asc')
+            ->get();
+
+        $validDoseCount = 0;
+        $lastValidDate = null;
+
+        foreach ($pastDoses as $dose) {
+            $doseDate = Carbon::parse($dose->date_administered);
+            
+            if ($lastValidDate) {
+                // If the gap between doses is > 21 days (14 interval + 7 grace), cycle RESETS
+                if ($doseDate->diffInDays($lastValidDate) > 21) {
+                    $validDoseCount = 1; // Restart cycle counting from this dose
+                } else {
+                    $validDoseCount++;
+                }
+            } else {
+                $validDoseCount = 1;
+            }
+            $lastValidDate = $doseDate;
+        }
+
+        // Add the current dose we are calculating for
+        if ($lastValidDate && $date->diffInDays($lastValidDate) > 21) {
+            // The current dose being administered is > 21 days from last valid dose -> RESET
+            $validDoseCount = 1; 
+        } else {
+            $validDoseCount++;
+        }
+
+        // If under 3 valid doses, interval is 14 days. Otherwise 365.
+        $intervalToApply = ($validDoseCount < 3) ? 14 : 365;
+
+        return $date->copy()->addDays($intervalToApply)->format('Y-m-d');
     }
 
     /**

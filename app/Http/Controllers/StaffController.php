@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\User;
 use App\Models\UserRequest;
 use App\Models\Vaccination;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -47,10 +48,14 @@ class StaffController extends Controller
 
         foreach ($overdueAppointments as $apt) {
             $scheduledTime = \Carbon\Carbon::parse($apt->appointment_date . ' ' . $apt->appointment_time);
+            $diffMinutes = now()->diffInMinutes($scheduledTime, false);
 
-            // If current time is 15 mins past schedule (diff < -15)
-            if (now()->diffInMinutes($scheduledTime, false) < -15) {
+            if ($diffMinutes <= -15) {
+                // If current time is 15 mins past schedule (diff <= -15), mark as missed
                 DB::table('appointments')->where('id', $apt->id)->update(['status' => 'missed']);
+            } elseif ($diffMinutes <= -5 && $apt->status !== 'late') {
+                // If current time is 5 mins past schedule (diff <= -5), mark as late
+                DB::table('appointments')->where('id', $apt->id)->update(['status' => 'late', 'late_at' => now()]);
             }
         }
         $query = Appointment::with(['user', 'pet']);
@@ -223,6 +228,13 @@ class StaffController extends Controller
 
         // 3. Handle Breed Logic
         $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
+
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
 
         // 4. Handle Pet Logic (Find Existing or Create New)
         $pet = null;
@@ -855,12 +867,95 @@ class StaffController extends Controller
         return view($viewPath, compact('data', 'reportTitle', 'type', 'filter', 'summaryData'));
     }
     public function getPetsByOwner($userId)
-{
-   $pets = Pet::where('user_id', $userId)
-                ->notDeceased()
-                ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
-                ->get();
+    {
+        $pets = Pet::where('user_id', $userId)
+                    ->notDeceased()
+                    ->select('id', 'name', 'species', 'gender', 'breed', 'birthday')
+                    ->get();
 
-    return response()->json($pets);
-}
+        return response()->json($pets);
+    }
+
+    public function owners(Request $request)
+    {
+        $search = $request->input('search');
+
+        $owners = User::where('role', 'owner')
+            ->when($search, function ($query, $search) {
+                return $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name', 'asc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('staff.pet-owners-list', compact('owners'));
+    }
+
+    public function storePet(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'name' => 'required|string|max:255',
+            'gender' => 'required',
+            'species' => 'required|string|in:Dog,Cat',
+            'breed' => 'required|string|max:255',
+            'other_breed' => 'required_if:breed,Other',
+            'birthday' => 'required|date|before_or_equal:today',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $finalBreed = ($request->breed === 'Other') ? $request->other_breed : $request->breed;
+
+        if ($request->breed === 'Other' && !empty($request->other_breed)) {
+            \App\Models\Breed::firstOrCreate([
+                'name' => trim($request->other_breed),
+                'species' => $request->species
+            ]);
+        }
+
+        $imagePath = null;
+        if ($request->filled('image_base64')) {
+            $imageData = $request->input('image_base64');
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageData = base64_decode($imageData);
+            $fileName = 'pets/' . uniqid() . '.png';
+            Storage::disk('public')->put($fileName, $imageData);
+            $imagePath = $fileName;
+        } else if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('pets', 'public');
+        }
+
+        $year = date('Y');
+        $count = Pet::withTrashed()->count() + 1;
+        $unique_id = 'PC-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        $pet = Pet::create([
+            'user_id' => $request->user_id,
+            'pet_id' => $unique_id,
+            'name' => $request->name,
+            'species' => $request->species,
+            'breed' => $finalBreed,
+            'birthday' => $request->birthday,
+            'gender' => $request->gender,
+            'owner' => User::find($request->user_id)->name ?? 'Unknown',
+            'image_url' => $imagePath,
+            'status' => 'Verified',
+        ]);
+
+        \App\Models\ActivityLog::record(
+            'CREATE_PET',
+            "Staff successfully registered a new pet ({$pet->name}) for owner ID: {$pet->user_id}"
+        );
+
+        try {
+            $this->sendTelegramNotification($pet, 'pet_registered');
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send Telegram pet registration alert (Staff): ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Pet successfully registered! Pet ID: ' . $unique_id);
+    }
 }

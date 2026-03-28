@@ -1,6 +1,6 @@
 <head>
     <meta charset="UTF-8">
-    <title>OFFICIAL APPOINTMENT REPORT - {{ ucfirst($range) }}</title>
+    <title>OFFICIAL ACTIVE PETS REPORT</title>
     <style>
         @page { margin: 15mm; }
 
@@ -39,7 +39,6 @@
             margin-top: 50px;
         }
 
-        /* Increased height to prevent table data from hitting signatures */
         .table-footer-space {
             height: 180px;
             border: none !important;
@@ -82,50 +81,35 @@
         <span class="office">Office of the City Veterinarian (PawCare)</span>
     </div>
 
-    <div class="report-title">{{ strtoupper($range) }} APPOINTMENT SCHEDULE REPORT</div>
+    <div class="report-title">ACTIVE PETS REPORT {{ $species ? '- ' . strtoupper($species) . 'S' : '' }}</div>
     <div class="generation-meta">
-        Range: {{ ucfirst($range) }} | Date Generated: {{ now()->format('F d, Y h:i A') }}
+        Total Active: {{ $summary['total'] }} (Dogs: {{ $summary['dogs'] }}, Cats: {{ $summary['cats'] }}) | Date Generated: {{ now()->format('F d, Y h:i A') }}
     </div>
 
     <table class="appointment-table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Pet Owner</th>
+                <th>Pet ID</th>
                 <th>Pet Name</th>
-                <th>Service Type</th>
-                <th>Status</th>
+                <th>Species</th>
+                <th>Breed</th>
+                <th>Gender</th>
+                <th>Owner Name</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($data as $appointment)
+            @forelse($pets as $pet)
             <tr>
-                <td>{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
-                <td>{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') }}</td>
-                <td>
-                    @if($appointment->user)
-                        {{ $appointment->user->name }}
-                    @elseif($appointment->guest_name)
-                        {{ $appointment->guest_name }} (Guest)
-                    @else
-                        Guest/Walk-in
-                    @endif
-                </td>
-                <td>{{ $appointment->pet->name ?? 'N/A' }}</td>
-                <td>
-                    {{ $appointment->service_type }}
-                    @if(strtolower($appointment->service_type) == 'vaccination' && $appointment->vaccine_name)
-                        <div style="font-size: 0.85em; color: #555;">({{ $appointment->vaccine_name }})</div>
-                    @endif
-                </td>
-                <td style="font-weight: bold; color: {{ strtolower($appointment->status) == 'done' ? '#198754' : '#000' }};">
-                    {{ strtoupper($appointment->status) }}
-                </td>
+                <td>{{ $pet->pet_id }}</td>
+                <td>{{ $pet->name }}</td>
+                <td>{{ $pet->species }}</td>
+                <td>{{ $pet->breed }}</td>
+                <td>{{ $pet->gender }}</td>
+                <td>{{ $pet->user->name ?? $pet->owner ?? 'N/A' }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="6" style="text-align: center;">No appointments found for this period.</td>
+                <td colspan="6" style="text-align: center;">No active pets found.</td>
             </tr>
             @endforelse
         </tbody>

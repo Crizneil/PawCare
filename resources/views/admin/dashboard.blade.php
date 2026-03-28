@@ -22,8 +22,7 @@
                         </h5>
                         <span class="badge bg-warning text-dark">HARDWARE COMPATIBLE</span>
                     </div>
-                    <form action="{{ route('admin.search-pet') }}" method="POST">
-                        @csrf
+                    <form action="{{ route('admin.pet-records') }}" method="GET">
                         <div class="input-group">
                             <input type="text" name="search" id="scanInput"
                                 class="form-control form-control-lg border-0 bg-light" placeholder="Scan QR or Enter ID..."

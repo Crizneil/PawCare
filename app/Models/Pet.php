@@ -66,14 +66,14 @@ class Pet extends Model
 
         // 3. Overdue Check (If next due date has passed)
         if ($latest && $latest->next_due_date) {
-            $dueDate = \Carbon\Carbon::parse($latest->next_due_date);
+            $dueDate = Carbon::parse($latest->next_due_date);
 
             if ($dueDate->isPast()) {
                 return 'overdue';
             }
 
             // 4. Due Soon (Within 14 days - keeping your original 14-day window)
-            if (\Carbon\Carbon::now()->diffInDays($dueDate, false) <= 14) {
+            if (Carbon::now()->diffInDays($dueDate, false) <= 14) {
                 return 'due_soon';
             }
         }
@@ -107,14 +107,35 @@ class Pet extends Model
             return (object) $status;
         }
 
-        if ($hasRabies && $vaxCount > 1) {
-            $status['label'] = 'Fully Vaccinated';
-            $status['class'] = 'bg-success-subtle text-success border-success';
-            $status['icon'] = '<i data-lucide="check-circle" style="width:16px;"></i>';
-        } else {
-            $status['label'] = 'Partially Vaccinated';
-            $status['class'] = 'bg-info-subtle text-info border-info';
-            $status['icon'] = '<i data-lucide="shield" style="width:16px;"></i>';
+        $slug = $this->calculated_status;
+        $vaccineName = $latestVax ? " ({$latestVax->vaccine_name})" : "";
+
+        switch ($slug) {
+            case 'fully_vaccinated':
+                $status['label'] = 'Fully Vaccinated' . $vaccineName;
+                $status['class'] = 'bg-success-subtle text-success border-success';
+                $status['icon'] = '<i data-lucide="check-circle" style="width:16px;"></i>';
+                break;
+            case 'partially_vaccinated':
+                $status['label'] = 'Partially Vaccinated' . $vaccineName;
+                $status['class'] = 'bg-info-subtle text-info border-info';
+                $status['icon'] = '<i data-lucide="shield" style="width:16px;"></i>';
+                break;
+            case 'due_soon':
+                $status['label'] = 'Booster Due Soon' . $vaccineName;
+                $status['class'] = 'bg-warning-subtle text-warning border-warning';
+                $status['icon'] = '<i data-lucide="clock" style="width:16px;"></i>';
+                break;
+            case 'overdue':
+                $status['label'] = 'Vaccination Overdue' . $vaccineName;
+                $status['class'] = 'bg-danger-subtle text-danger border-danger';
+                $status['icon'] = '<i data-lucide="alert-triangle" style="width:16px;"></i>';
+                break;
+            case 'unvaccinated':
+                $status['label'] = 'Unvaccinated';
+                $status['class'] = 'bg-secondary-subtle text-secondary border-secondary';
+                $status['icon'] = '<i data-lucide="alert-circle" style="width:16px;"></i>';
+                break;
         }
 
         return (object) $status;

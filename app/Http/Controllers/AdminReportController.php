@@ -76,4 +76,47 @@ class AdminReportController extends Controller
 
         return $pdf->stream("Medical_History_{$pet->unique_id}.pdf");
     }
+
+    public function activePetsReport(Request $request)
+    {
+        // 1. Filter Logic
+        $species = $request->query('species');
+        
+        $query = \App\Models\Pet::notDeceased()->where('status', '!=', 'ARCHIVED')->with('user');
+
+        if ($species && in_array($species, ['Dog', 'Cat'])) {
+            $query->where('species', $species);
+        }
+
+        // 2. Status Summary Logic
+        $summary = [
+            'total' => (clone $query)->count(),
+            'dogs' => (clone $query)->where('species', 'Dog')->count(),
+            'cats' => (clone $query)->where('species', 'Cat')->count(),
+        ];
+
+        // 3. Get the List
+        $pets = $query->orderBy('name', 'asc')->get();
+
+        // 4. Handle PDF Download
+        if ($request->has('pdf')) {
+            $pdf = Pdf::loadView('admin.reports.active_pets_pdf', [
+                'pets' => $pets,
+                'summary' => $summary,
+                'species' => $species,
+                'isPdf' => true
+            ]);
+
+            $pdf->setPaper('a4', 'portrait');
+            return $pdf->stream("Active_Pets_Report.pdf");
+        }
+
+        // 5. Default Web View
+        return view('admin.reports.active_pets_pdf', [
+            'pets' => $pets,
+            'summary' => $summary,
+            'species' => $species,
+            'isPdf' => false
+        ]);
+    }
 }

@@ -12,12 +12,9 @@
 
         <div class="d-flex flex-wrap gap-2">
             @if($view === 'archived')
-                <form action="{{ route('admin.logs.restore-all') }}" method="POST" class="d-inline" onsubmit="return confirm('Restore all archived logs?')">
-                    @csrf
-                    <button class="btn btn-success rounded-pill px-3">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore All
-                    </button>
-                </form>
+                <button type="button" class="btn btn-success rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#restoreAllLogsModal">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Restore All
+                </button>
                 <a href="{{ route('admin.logs') }}" class="btn btn-light rounded-pill px-3 border">
                     <i class="bi bi-arrow-left me-1"></i> Back to Active
                 </a>
@@ -25,12 +22,9 @@
                 <a href="{{ route('admin.logs', ['view' => 'archived']) }}" class="btn btn-outline-secondary rounded-pill px-3">
                     <i class="bi bi-archive me-1"></i> View Archived
                 </a>
-                <form action="{{ route('admin.logs.archive') }}" method="POST" onsubmit="return confirm('Archive all logs?')">
-                    @csrf
-                    <button class="btn btn-outline-danger rounded-pill px-3">
-                        <i class="bi bi-trash2 me-1"></i> Archive Logs
-                    </button>
-                </form>
+                <button type="button" class="btn btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#archiveLogsModal">
+                    <i class="bi bi-trash2 me-1"></i> Archive Logs
+                </button>
             @endif
         </div>
     </div>
@@ -120,4 +114,46 @@
         {{ $logs->appends(request()->query())->links() }}
     </div>
 </div>
+
+{{-- Confirmation Modals --}}
+@if($view === 'archived')
+<div class="modal fade" id="restoreAllLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-arrow-counterclockwise text-success fs-1 mb-3 d-block"></i>
+                <h5 class="fw-bold">Restore All?</h5>
+                <p class="text-muted small">Move all archived activity logs back to the active list.</p>
+                <form action="{{ route('admin.logs.restore-all') }}" method="POST">
+                    @csrf
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success rounded-pill fw-bold">Yes, Restore All</button>
+                        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@else
+<div class="modal fade" id="archiveLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-archive text-danger fs-1 mb-3 d-block"></i>
+                <h5 class="fw-bold">Archive All?</h5>
+                <p class="text-muted small">Move all current activity logs to the archive center.</p>
+                <form action="{{ route('admin.logs.archive') }}" method="POST">
+                    @csrf
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger rounded-pill fw-bold">Yes, Archive All</button>
+                        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection

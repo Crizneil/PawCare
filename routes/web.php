@@ -9,6 +9,17 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\VaccineController;
 use App\Http\Controllers\AdminReportController;
+use App\Models\Breed;
+
+// Dynamic Breed Fetcher
+Route::get('/api/breeds', function () {
+    $breeds = Breed::all()->groupBy('species');
+    $formatted = [];
+    foreach ($breeds as $species => $group) {
+        $formatted[$species] = $group->pluck('name')->toArray();
+    }
+    return response()->json($formatted);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -92,18 +103,22 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name(
 Route::view('/join', 'join')->name('join');
 
 
-// Protected Admin Routes
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
+// Protected Admin & Shared Staff Routes
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,staff'])->group(function () {
     // Dashboard (Handled by AdminController to get the stats)
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
-    // Actions
-    Route::post('/staff/store', [AdminController::class, 'storeStaff'])->name('staff.store');
-    //Route::post('/search-pet', [AdminController::class, 'searchPet'])->name('search-pet');
-    Route::post('/search-pet-action', [PetController::class, 'adminSearch'])->name('search-pet');
-    Route::get('/employees', [AdminController::class, 'employees'])->name('employees');
-    Route::put('/staff/update/{id}', [AdminController::class, 'updateStaff'])->name('staff.update');
-    Route::delete('/staff/delete/{id}', [AdminController::class, 'destroyStaff'])->name('staff.destroy');
+    // Staff Management (Admin Only)
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/employees', [AdminController::class, 'employees'])->name('employees');
+        Route::post('/staff/store', [AdminController::class, 'storeStaff'])->name('staff.store');
+        Route::put('/staff/update/{id}', [AdminController::class, 'updateStaff'])->name('staff.update');
+        Route::delete('/staff/delete/{id}', [AdminController::class, 'destroyStaff'])->name('staff.destroy');
+        Route::post('/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('staff.restore');
+    });
+
+    // Actions Shared by Admin & Staff
+    Route::post('/search-pet', [AdminController::class, 'searchPet'])->name('search-pet');
     Route::get('/appointments', [AdminController::class, 'appointments'])->name('appointments');
     Route::post('/appointments/store', [AdminController::class, 'storeAppointment'])->name('appointments.store');
     Route::get('/appointments/create', [AdminController::class, 'createAppointment'])->name('appointments.create');
@@ -134,12 +149,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/archive', [AdminController::class, 'archive'])->name('archive');
     Route::post('/pets/{id}/restore-deceased', [AdminController::class, 'restoreDeceasedPet'])->name('pets.restore-deceased');
     Route::post('/pets/{id}/restore', [AdminController::class, 'restorePet'])->name('pets.restore');
-    Route::post('/staff/{id}/restore', [AdminController::class, 'restoreStaff'])->name('staff.restore');
     Route::get('/owner/{id}/pets', [AdminController::class, 'getPetsByOwner'])->name('owner.pets');
 
     // Reports & Analytics Routes
     Route::get('/reports/appointments', [AdminReportController::class, 'appointmentReport'])->name('reports.appointments');
     Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
+    Route::get('/reports/active-pets', [AdminReportController::class, 'activePetsReport'])->name('reports.active-pets');
 
     // Calendar API Endpoints
     Route::get('/api/appointments', [AdminController::class, 'getAppointmentsApi'])->name('api.appointments');
@@ -164,8 +179,10 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
     Route::get('/vaccination-status', [StaffController::class, 'vaccinationStatus'])->name('vaccination-status');
     Route::get('/vaccination-history', [StaffController::class, 'vaccinationHistory'])->name('vaccination-history');
     Route::post('/vaccination/store/{id}', [StaffController::class, 'updateVaccination'])->name('vaccination.store');
+    Route::post('/pets/store', [StaffController::class, 'storePet'])->name('pets.store');
 
     // Owner Profile
+    Route::get('/owners', [StaffController::class, 'owners'])->name('owners');
     Route::post('/owners/store', [StaffController::class, 'storeOwner'])->name('owners.store');
     Route::get('/owner/{id}', [StaffController::class, 'ownerProfile'])->name('owner.profile');
     Route::get('/owner-profile/{id}', [StaffController::class, 'ownerProfile'])->name('pet-owners');

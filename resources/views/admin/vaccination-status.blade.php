@@ -29,7 +29,7 @@
                         <option value="">All Statuses</option>
                         <option value="unvaccinated" {{ request('status') == 'unvaccinated' ? 'selected' : '' }}>Unvaccinated</option>
                         <option value="partially_vaccinated" {{ request('status') == 'partially_vaccinated' ? 'selected' : '' }}>Partially Vaccinated</option>
-                        <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Fully Vaccinated</option>
+                        <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Vaccinated</option>
                         <option value="due_soon" {{ request('status') == 'due_soon' ? 'selected' : '' }}>Due Soon</option>
                         <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
                     </select>
@@ -88,20 +88,8 @@
                             </td>
 
                             <td data-label="Status">
-                                @php
-                                    $status = $pet->calculated_status;
-                                    $badgeClass = match($status) {
-                                        'fully_vaccinated'     => 'bg-success',
-                                        'partially_vaccinated' => 'bg-info text-primary',
-                                        'due_soon'             => 'bg-warning text-dark',
-                                        'overdue'              => 'bg-dark',
-                                        'unvaccinated'         => 'bg-danger',
-                                        default                => 'bg-secondary',
-                                    };
-                                    $statusLabel = ucwords(str_replace('_', ' ', $status));
-                                @endphp
-                                <span class="badge {{ $badgeClass }} rounded-pill px-3">
-                                    {{ $statusLabel }}
+                                <span class="badge {{ $pet->vax_status->class }} rounded-pill px-3 shadow-sm" style="font-size: 0.75rem; line-height: 1.2; padding-top: 6px; padding-bottom: 6px;">
+                                    <div>{!! $pet->vax_status->label !!}</div>
                                 </span>
                             </td>
 

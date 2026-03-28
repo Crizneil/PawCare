@@ -15,6 +15,20 @@
                 <a href="{{ route('admin.archive') }}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
                     <i class="bi bi-archive me-2"></i> Archive Center
                 </a>
+                
+                {{-- Reports Dropdown --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary rounded-pill px-4 shadow-sm dropdown-toggle" type="button" id="reportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> Reports
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="reportsDropdown">
+                        <li><h6 class="dropdown-header">Active Pets Directory</h6></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1]) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> All Pets Report</a></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1, 'species' => 'Dog']) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> Dogs Only Report</a></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1, 'species' => 'Cat']) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> Cats Only Report</a></li>
+                    </ul>
+                </div>
+
                 <button type="button" class="btn btn-orange rounded-pill px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal"
                     data-bs-target="#addPetModal">
                     <i class="fi flaticon-plus me-2"></i> Add New Pet
@@ -112,6 +126,14 @@
                                             <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary px-3">Inactive</span>
                                         @else
                                             <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">Active</span>
+                                        @endif
+                                        
+                                        @if($pet->latestVaccination)
+                                            <div class="mt-1">
+                                                <small class="text-muted" style="font-size: 0.7rem;">
+                                                    <i class="bi bi-shield-check text-success"></i> {{ $pet->latestVaccination->vaccine_name }}
+                                                </small>
+                                            </div>
                                         @endif
                                     </td>
 

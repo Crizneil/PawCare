@@ -6,11 +6,25 @@ function initializePetBreedLogic(config, libraryInstance = null) {
 
     if (!speciesSelect || !breedSelect) return;
 
-    const breeds = {
+    let breeds = {
         'Dog': ['Aspin', 'Beagle', 'Bulldog', 'Chihuahua', 'Chow Chow', 'Cocker Spaniel', 'Dachshund', 'Dalmatian', 'Doberman Pinscher', 'German Shepherd', 'Golden Retriever', 'Great Dane', 'Jack Russell Terrier', 'Labrador Retriever', 'Maltese', 'Pomeranian', 'Poodle', 'Pug', 'Rottweiler', 'Shih Tzu', 'Siberian Husky', 'Other'],
         'Cat': ['Abyssinian', 'American Shorthair', 'Bengal', 'Birman', 'British Shorthair', 'Exotic Shorthair', 'Maine Coon', 'Persian', 'Puspin', 'Ragdoll', 'Russian Blue', 'Siamese', 'Sphynx', 'Other'],
         'Other': ['Other']
     };
+
+    fetch('/api/breeds')
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.Dog) {
+                if (!data.Dog.includes('Other')) data.Dog.push('Other');
+                if (data.Cat && !data.Cat.includes('Other')) data.Cat.push('Other');
+                breeds = { ...breeds, ...data, 'Other': ['Other'] };
+                if (speciesSelect.value) {
+                    updateBreeds(speciesSelect.value, config.initialBreed || breedSelect.value);
+                }
+            }
+        })
+        .catch(err => console.error("Error fetching breeds:", err));
 
     const updateBreeds = (selected, selectedBreed = null) => {
         if (!selected) return;
@@ -51,23 +65,36 @@ function initializePetBreedLogic(config, libraryInstance = null) {
     };
 
     const handleOtherVisibility = (value) => {
-        const isOther = value === 'Other';
+        // Handle cases where 'value' might be an Event object (Choices.js) or a string (TomSelect)
+        let actualValue = value;
+        if (value && typeof value === 'object' && value.detail && value.detail.value) {
+            actualValue = value.detail.value;
+        } else if (value && typeof value === 'object' && value.target) {
+            actualValue = value.target.value;
+        }
+
+        const isOther = actualValue && actualValue.toString().toLowerCase() === 'other';
+
         if (otherContainer) {
             otherContainer.classList.toggle('d-none', !isOther);
             otherContainer.style.display = isOther ? 'block' : 'none';
-            if (otherInput) otherInput.required = isOther;
+            if (otherInput) {
+                otherInput.required = isOther;
+                if (!isOther) otherInput.value = ''; // Clear if hidden
+            }
         }
     };
 
     // Listeners
     speciesSelect.addEventListener('change', (e) => updateBreeds(e.target.value));
 
-    // Support TomSelect change event
+    // Support Library-specific change events (TomSelect, Choices.js)
     if (libraryInstance && typeof libraryInstance.on === 'function') {
         libraryInstance.on('change', (val) => handleOtherVisibility(val));
-    } else {
-        breedSelect.addEventListener('change', (e) => handleOtherVisibility(e.target.value));
     }
+    
+    // Always add a standard listener as a fallback
+    breedSelect.addEventListener('change', (e) => handleOtherVisibility(e.target.value));
 
     if (config.initialSpecies) {
         updateBreeds(config.initialSpecies, config.initialBreed);

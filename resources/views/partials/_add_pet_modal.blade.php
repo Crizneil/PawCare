@@ -5,7 +5,7 @@
                 <h5 class="modal-title fw-bold" id="addPetModalLabel">Register New Pet</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.pets.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ auth()->user()->role === 'admin' ? route('admin.pets.store') : route('staff.pets.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="image_base64" id="pet_add_image_base64">
                 <div class="modal-body p-4">
@@ -19,7 +19,7 @@
                                     <option value="{{ $owner->id }}">{{ $owner->name }} ({{ $owner->email }})</option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Need a new owner? <a href="{{ route('admin.owners') }}" class="text-primary text-decoration-none">Register them here</a>.</small>
+                            <small class="text-muted">Need a new owner? <a href="{{ auth()->user()->role === 'admin' ? route('admin.owners') : route('staff.owners') }}" class="text-primary text-decoration-none">Register them here</a>.</small>
                         </div>
                         <div class="text-center mb-4">
                             <div class="position-relative d-inline-block">
@@ -66,7 +66,9 @@
                             <select name="breed" id="breedSelect" class="form-select bg-light" required disabled>
                                 <option value="" selected disabled>Select Breed</option>
                             </select>
-                            <input type="text" class="form-control bg-light mt-2 d-none" name="other_breed" id="otherBreedInput" placeholder="Specify breed">
+                            <div id="otherBreedContainer" class="d-none mt-2">
+                                <input type="text" class="form-control bg-light" name="other_breed" id="otherBreedInput" placeholder="Specify breed">
+                            </div>
                         </div>
 
                         <div class="col-md-4">

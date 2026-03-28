@@ -24,7 +24,7 @@
                             <option value="">All Statuses</option>
                             <option value="no_records" {{ request('status') == 'no_records' ? 'selected' : '' }}>No Records</option>
                             <option value="partially_vaccinated" {{ request('status') == 'partially_vaccinated' ? 'selected' : '' }}>Partially Vaccinated</option>
-                            <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Fully Vaccinated</option>
+                            <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Vaccinated</option>
                             <option value="due_soon" {{ request('status') == 'due_soon' ? 'selected' : '' }}>Due Soon</option>
                             <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
                         </select>
@@ -121,6 +121,13 @@
                                                 style="font-size: 0.75rem; min-width: 110px; display: inline-block; text-align: center;">
                                                 {{ $status->label }}
                                             </span>
+                                            @if($pet->latestVaccination)
+                                                <div class="mt-1">
+                                                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                        {{ $pet->latestVaccination->vaccine_name }}
+                                                    </small>
+                                                </div>
+                                            @endif
                                         @endif
                                     </td>
 
