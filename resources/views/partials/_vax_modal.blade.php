@@ -29,6 +29,8 @@
                             name="vaccine_name"
                             list="vaccineOptions{{ $pet->id }}"
                             class="form-control rounded-3 vax-name-input"
+                            {{-- Pre-fill with the service type from the appointment --}}
+                            value="{{ $latestApt->service_type ?? '' }}"
                             placeholder="Select or type vaccine..."
                             required>
 

@@ -127,14 +127,24 @@
 </div>
 
 <script>
-    function previewImage(input, petId) {
-        if (input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('preview' + petId).src = e.target.result;
+document.addEventListener('change', function(e) {
+    // Look for the file input specifically
+    if (e.target && e.target.classList.contains('pet-image-input')) {
+        const file = e.target.files[0];
+        if (file) {
+            // Extract pet ID from the input ID (e.g., imageUpload5 -> 5)
+            const petId = e.target.id.replace('imageUpload', '');
+            const previewImg = document.getElementById('petPreview' + petId);
+
+            if (previewImg) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    previewImg.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
             }
-            reader.readAsDataURL(input.files[0]);
         }
     }
+});
 </script>
 @endsection

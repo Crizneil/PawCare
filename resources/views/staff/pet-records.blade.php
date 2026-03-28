@@ -34,9 +34,9 @@
                     <div class="input-group shadow-sm rounded-pill bg-white overflow-hidden" style="height: 45px; min-width: 250px;">
                         <input type="text" name="search" class="form-control border-0 px-3"
                             placeholder="Search Pet..." value="{{ request('search') }}">
-                        < class="btn btn-orange px-4 border-0" type="submit">
+                        <button class="btn btn-orange px-4 border-0" type="submit">
                             <i data-lucide="search" style="width: 18px;"></i>
-                        </>
+                        </button>
                     </div>
 
                     {{-- Reset Button --}}

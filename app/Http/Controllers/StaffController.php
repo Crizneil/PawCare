@@ -390,19 +390,16 @@ class StaffController extends Controller
     public function vaccinationStatus(Request $request)
     {
         // 1. Start query with relationships
-        $query = Pet::notDeceased()->with(['user', 'latestVaccination', 'appointments']);
+        $query = Pet::notDeceased()->with(['user', 'latestVaccination', 'vaccinations', 'appointments']);
 
         // 2. Filter logic: Show pets with RECENT activity or pending approved appointments
         $query->whereHas('appointments', function ($q) {
-            $q->whereIn('status', ['approved', 'checked-in', 'Done', 'completed', 'rescheduled', 'late'])
+            $q->whereDate('appointment_date', today())
+            // Added 'completed' and 'done' to the list so they stay on the tracker for the day
+            ->whereIn('status', ['approved', 'checked-in', 'completed', 'done'])
             ->whereIn('service_type', [
-                'Anti-Rabies',
-                '5-in-1', '5in1',
-                '4-in-1 (Cat)', '4in1',
-                'Deworming',
-                'Check-up',
-                'Kapon',
-                'Vaccination'
+                    'Anti-Rabies', '5-in-1', '5in1', '4-in-1 (Cat)',
+                    '4in1', 'Deworming', 'Check-up', 'Kapon', 'Vaccination'
             ]);
         });
 

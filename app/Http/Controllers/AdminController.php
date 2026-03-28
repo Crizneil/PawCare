@@ -1104,6 +1104,47 @@ class AdminController extends Controller
             'is_walkin' => false
         ]);
     }
+    public function createAccount(Request $request, $id)
+    {
+        // 1. Determine the data source based on the hidden input in your blade
+        if ($request->input('is_walkin') === '1') {
+            $source = Pet::findOrFail($id);
+            $email = $source->email;
+            $name = $source->owner;
+        } else {
+            $source = User::findOrFail($id);
+            $email = $source->email;
+            $name = $source->name;
+        }
+
+        // 2. Basic Validation
+        if (empty($email) || $email === 'No Online Account') {
+            return redirect()->back()->with('error', 'Cannot create account: No valid email address provided.');
+        }
+
+        if (User::where('email', $email)->whereNotNull('password')->exists()) {
+            return redirect()->back()->with('error', 'This email already has an active online account.');
+        }
+
+        // 3. Create or Update the User record
+        // If it's a walk-in, we create a new User. If existing, we just set the password.
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'password' => \Hash::make('password123'), // Default password
+                'role' => 'owner',
+                'phone' => $source->phone ?? $source->owner_phone,
+                // Add address fields as per your schema
+                'house_no' => $source->house_no,
+                'street' => $source->street,
+                'barangay' => $source->barangay,
+                'city' => $source->city,
+            ]
+        );
+
+        return redirect()->back()->with('success', 'Online account created! Default password is: password123');
+    }
 
     public function getPetsByOwner($userId)
     {

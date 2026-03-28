@@ -327,7 +327,7 @@ class PetController extends Controller
             'breed' => 'required',
             'other_breed' => 'required_if:breed,Other', // Matches your modal input name
             'birthday' => 'required|date',
-            'user_id' => 'required|exists:users,id', 
+            'user_id' => 'required|exists:users,id',
         ]);
 
         // 2. Handle the "Other" Breed logic
@@ -360,7 +360,7 @@ class PetController extends Controller
             'name' => $request->name,
             'gender' => $request->gender, // This will now work correctly
             'species' => $request->species,
-            'birthday' => $request->birthday, 
+            'birthday' => $request->birthday,
             'breed' => $finalBreed,
             'owner' => $ownerRecord->name ?? 'Unknown Owner',
             'image_url' => $imagePath,

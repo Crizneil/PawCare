@@ -128,6 +128,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile/update', [AdminController::class, 'updateProfile'])->name('profile.update');
     Route::get('/owner-profile/{id}', [AdminController::class, 'showOwner'])->name('owner.profile');
+    Route::post('/owner/{id}/create-account', [AdminController::class, 'createAccount'])->name('owner.createAccount');
 
     // Archive & Restore Routes
     Route::get('/archive', [AdminController::class, 'archive'])->name('archive');

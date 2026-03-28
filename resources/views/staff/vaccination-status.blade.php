@@ -50,28 +50,36 @@
                     <tbody>
                         @forelse($pets as $pet)
                             @php
-                                $vax = $pet->latestVaccination;
                                 $targetAptId = request('appointment_id');
+                                $vax = $pet->latestVaccination;
 
-                                $latestApt = $pet->appointments->where('id', $targetAptId)->first()
-                                            ?? $pet->appointments->sortByDesc('appointment_date')->first();
+                                $latestApt = $pet->appointments
+                                    ->where('appointment_date', date('Y-m-d'))
+                                    ->whereIn('status', ['approved', 'checked-in', 'completed', 'done'])
+                                    ->first();
 
                                 $aptStatus = strtolower($latestApt->status ?? '');
-                                $serviceType = strtolower($latestApt->service_type ?? '');
-                                $isAppointedToday = $latestApt && \Carbon\Carbon::parse($latestApt->appointment_date)->isToday();
+                                $serviceType = $latestApt->service_type ?? '';
+                                $isAppointedToday = (bool)$latestApt;
 
-                                // --- DEFINE VARIABLES HERE TO AVOID UNDEFINED ERROR ---
-                                $canLogShot = $isAppointedToday && in_array($aptStatus, ['checked-in', 'approved']);
+                                $simpleProcedures = ['kapon', 'check-up', 'consultation'];
+                                $isSimpleProcedure = in_array(strtolower($serviceType), $simpleProcedures);
 
-                                // Define which services are "Simple Procedures" (No shot needed)
-                                $isSimpleProcedure = (stripos($serviceType, 'check-up') !== false || stripos($serviceType, 'kapon') !== false);
+                                // Use TRIM and LOWER to ensure the database match is accurate
+                                $alreadyLoggedThisSpecificService = $pet->vaccinations()
+                                    ->whereRaw('LOWER(vaccine_name) = ?', [strtolower(trim($serviceType))])
+                                    ->whereDate('date_administered', today())
+                                    ->exists();
 
-                                // Define which services are "Vaccinations" (Shot record needed)
                                 $isVaccination = (stripos($serviceType, 'anti-rabies') !== false ||
                                                 stripos($serviceType, 'deworming') !== false ||
                                                 stripos($serviceType, '5-in-1') !== false ||
                                                 stripos($serviceType, '4-in-1') !== false ||
                                                 stripos($serviceType, 'vaccination') !== false);
+
+                                // If you want to be able to log multiple times or override,
+                                // you can remove '!$alreadyLoggedThisSpecificService' from this line:
+                                $canLogShot = $isAppointedToday;
                             @endphp
 
                             {{-- Only show the row if the pet has an appointment today --}}
@@ -139,8 +147,8 @@
 
                                 <td class="text-end pe-4" data-label="Actions">
                                     @if($canLogShot)
-                                        {{-- Only show "Mark as Done" for Check-up and Kapon --}}
-                                        @if($isSimpleProcedure)
+                                        @if($isSimpleProcedure && !in_array($aptStatus, ['completed', 'done']))
+                                            {{-- Mark as Done only shows if not already completed --}}
                                             <form action="{{ route('staff.appointments.update', $latestApt->id) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <input type="hidden" name="status" value="completed">
@@ -149,17 +157,21 @@
                                                     <i data-lucide="check-circle" class="me-1" style="width:14px;"></i> Mark as Done
                                                 </button>
                                             </form>
-
-                                        {{-- Only show "Log Shot" for Vaccines/Deworming --}}
                                         @elseif($isVaccination)
+                                            {{-- Log Shot shows if $alreadyLoggedThisSpecificService is false --}}
                                             <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#updateVax{{ $pet->id }}">
                                                 <i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Log Shot
                                             </button>
+                                        @else
+                                            <span class="badge bg-light text-muted border">Completed</span>
                                         @endif
                                     @else
-                                        <span class="badge bg-light text-muted border">Completed</span>
+                                        {{-- This shows when the specific service is already found in vaccination history for today --}}
+                                        <span class="badge bg-soft-success text-success border border-success">
+                                            <i data-lucide="check" class="me-1" style="width:12px;"></i> Logged
+                                        </span>
                                     @endif
                                 </td>
                             </tr>
