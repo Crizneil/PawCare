@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AppointmentConfirmedEmail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 use App\Notifications\TelegramAlertNotification;
 
 class PetController extends Controller
@@ -543,14 +544,13 @@ class PetController extends Controller
             'barangay' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
-            'telegram_chat_id' => 'nullable|string|max:255',
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'profile_image_base64' => 'nullable|string',
         ]);
 
         $data = $request->only([
             'name', 'email', 'phone', 'gender',
-            'house_no', 'street', 'barangay', 'city', 'province', 'telegram_chat_id'
+            'house_no', 'street', 'barangay', 'city', 'province'
         ]);
 
         if ($request->filled('profile_image_base64')) {

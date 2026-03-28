@@ -73,6 +73,7 @@
                             <input type="text" name="province" class="form-control rounded-pill border-light bg-light" value="{{ auth()->user()->province }}" required>
                         </div>
 
+                        @if(auth()->user()->role !== 'owner')
                         <div class="col-md-12">
                             <label class="form-label small fw-bold text-muted text-uppercase">Telegram Chat ID</label>
                             <div class="input-group">
@@ -84,6 +85,7 @@
                             </div>
                             <small class="text-muted ms-2 italic">Retrieve your ID by messaging <b>@userinfobot</b> on Telegram.</small>
                         </div>
+                        @endif
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">

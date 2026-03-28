@@ -54,31 +54,6 @@
     </div>
 
 
-    {{-- Telegram Join Notification --}}
-    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background-color: #fdfbf7; border: 1px solid #fce7d6 !important;">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center">
-                <div class="bg-info-subtle p-3 rounded-circle me-3">
-                    <i data-lucide="send" class="text-info"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h5 class="fw-bold text-dark mb-1">Get Real-time Notifications!</h5>
-                    <p class="text-muted small mb-0">
-                        Join our Telegram for instant appointment updates and vaccination reminders.
-                    </p>
-                    <small class="text-muted" style="font-size: 0.75rem;">
-                        <i data-lucide="info" class="me-1 d-inline-block" style="width: 12px; height: 12px; vertical-align: middle;"></i>
-                        No Telegram? No problem! You'll still receive all updates directly here in your dashboard.
-                    </small>
-                </div>
-                <div class="ms-3">
-                    <a href="https://t.me/PawCareAlerts_bot" target="_blank" class="btn btn-orange rounded-pill px-4 shadow-sm">
-                        <i data-lucide="external-link" class="me-1" style="width: 14px; height: 14px;"></i> Connect Now
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 
     {{-- Reminders & Announcements --}}
     @if(isset($vaccineReminder))
