@@ -144,6 +144,10 @@
                             class="nav-link {{ request()->routeIs('admin.pet-records') ? 'active' : '' }}">
                             <i data-lucide="dog"></i> Pet Database
                         </a>
+                        <a href="{{ route('admin.owners') }}"
+                            class="nav-link {{ request()->routeIs('admin.owners') ? 'active' : '' }}">
+                            <i data-lucide="users"></i> Pet Owners
+                        </a>
                         <a href="{{ route('admin.employees') }}"
                             class="nav-link {{ request()->routeIs('admin.employees') ? 'active' : '' }}">
                             <i data-lucide="users"></i> Staff
@@ -269,6 +273,16 @@
                 });
             @endif
 
+            @if(session('warning'))
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Warning!',
+                    text: {!! json_encode(session('warning')) !!},
+                    showConfirmButton: true,
+                    confirmButtonColor: '#f39c12'
+                });
+            @endif
+
             @if ($errors->any())
                 Swal.fire({
                     icon: 'warning',
@@ -348,15 +362,6 @@
 
                     return;
                 }
-
-                // Automatically close Bootstrap modals on successful submission
-                const $modal = $form.closest('.modal');
-                if ($modal.length && typeof bootstrap !== 'undefined') {
-                    const modalInstance = bootstrap.Modal.getInstance($modal[0]);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
-                }
             });
         });
 
@@ -372,8 +377,8 @@
             let date = new Date(dateAdministered);
             let updated = false;
 
-            if (vaxName.includes('rabies') || vaxName.includes('rabisin') || 
-                vaxName.includes('5-in-1') || vaxName.includes('dhpp') || 
+            if (vaxName.includes('rabies') || vaxName.includes('rabisin') ||
+                vaxName.includes('5-in-1') || vaxName.includes('dhpp') ||
                 vaxName.includes('feline 4-way') || vaxName.includes('bordetella')) {
                 date.setFullYear(date.getFullYear() + 1);
                 updated = true;

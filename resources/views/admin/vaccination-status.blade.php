@@ -28,8 +28,7 @@
                     <select name="status" class="form-select rounded-pill-end border-0 bg-light px-4" onchange="this.form.submit()">
                         <option value="">All Statuses</option>
                         <option value="unvaccinated" {{ request('status') == 'unvaccinated' ? 'selected' : '' }}>Unvaccinated</option>
-                        <option value="partially_vaccinated" {{ request('status') == 'partially_vaccinated' ? 'selected' : '' }}>Partially Vaccinated</option>
-                        <option value="fully_vaccinated" {{ request('status') == 'fully_vaccinated' ? 'selected' : '' }}>Fully Vaccinated</option>
+                        <option value="vaccinated" {{ request('status') == 'vaccinated' ? 'selected' : '' }}>Vaccinated</option>
                         <option value="due_soon" {{ request('status') == 'due_soon' ? 'selected' : '' }}>Due Soon</option>
                         <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
                     </select>
@@ -90,9 +89,12 @@
                             <td data-label="Status">
                                 @php
                                     $status = $pet->calculated_status;
+
+                                    // Handle old data labels if they exist in DB
+                                    if($status == 'fully_vaccinated' || $status == 'partially_vaccinated') $status = 'vaccinated';
+
                                     $badgeClass = match($status) {
-                                        'fully_vaccinated'     => 'bg-success',
-                                        'partially_vaccinated' => 'bg-info text-primary',
+                                        'vaccinated'           => 'bg-success',
                                         'due_soon'             => 'bg-warning text-dark',
                                         'overdue'              => 'bg-dark',
                                         'unvaccinated'         => 'bg-danger',

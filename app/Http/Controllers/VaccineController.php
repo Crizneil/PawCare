@@ -77,7 +77,7 @@ class VaccineController extends Controller
         $pet = Pet::findOrFail($id);
 
         // --- AUTOMATION LOGIC ---
-        $status = 'fully_vaccinated';
+        $status = 'vaccinated';
         if ($request->next_due_date) {
             $dueDate = Carbon::parse($request->next_due_date);
             $now = Carbon::now();

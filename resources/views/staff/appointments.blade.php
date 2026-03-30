@@ -140,7 +140,12 @@
 
                                 {{-- Actions Column --}}
                                 <td class="text-end pe-4" data-label="Actions">
-                                    @if($view === 'upcoming')
+                                    @php
+                                        // Show "No Action" only if it's upcoming AND NOT pending
+                                        $showNoAction = ($view === 'upcoming' && $currentStatus !== 'pending');
+                                    @endphp
+
+                                    @if($showNoAction)
                                         <span class="text-muted small fst-italic">No Action Available</span>
                                     @else
                                         <div class="dropdown">
@@ -149,85 +154,61 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3">
 
-                                                {{-- STAGE 0: Pending Status (Restricted Actions) --}}
+                                                {{-- STAGE 0: Pending Status (Visible in Today AND Upcoming) --}}
                                                 @if($currentStatus === 'pending')
                                                     <li>
-                                                        <span class="dropdown-item py-2 text-muted small fst-italic">
-                                                            <i data-lucide="clock" class="me-2" style="width: 16px;"></i> Awaiting Approval
-                                                        </span>
-                                                    </li>
-                                                    {{-- Optional: Add a link here to the approval page if you have one --}}
-                                                @endif
-
-                                                {{-- STAGE 1: Approved/Rescheduled -> Check-In or Late --}}
-                                                @if(in_array($currentStatus, ['approved', 'rescheduled']))
-                                                    <li>
                                                         <form action="{{ route('staff.appointments.update', $apt->id) }}" method="POST">
                                                             @csrf
-                                                            <input type="hidden" name="status" value="checked-in">
-                                                            <button class="dropdown-item py-2 text-primary">
-                                                                <i data-lucide="user-check" class="me-2" style="width: 16px;"></i> Check-In Patient
+                                                            <input type="hidden" name="status" value="approved">
+                                                            <button class="dropdown-item py-2 text-success fw-bold">
+                                                                <i data-lucide="check-circle" class="me-2" style="width: 16px;"></i> Approve Appointment
                                                             </button>
                                                         </form>
                                                     </li>
-                                                    <li>
-                                                        <form action="{{ route('staff.appointments.update', $apt->id) }}" method="POST">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="late">
-                                                            <button class="dropdown-item py-2 text-muted">
-                                                                <i data-lucide="clock-alert" class="me-2" style="width: 16px;"></i> Mark as Late
+                                                    @if($view === 'upcoming')
+                                                        <li>
+                                                            <button class="dropdown-item py-2" data-bs-toggle="modal" data-bs-target="#rescheduleModal{{ $apt->id }}">
+                                                                <i data-lucide="calendar-days" class="me-2" style="width: 16px;"></i> Reschedule Request
                                                             </button>
-                                                        </form>
-                                                    </li>
+                                                        </li>
+                                                    @endif
                                                 @endif
 
-                                                {{-- STAGE 2: Late -> Can still Check-In or Reschedule --}}
-                                                @if($currentStatus == 'late')
-                                                    <li>
-                                                        <form action="{{ route('staff.appointments.update', $apt->id) }}" method="POST">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="checked-in">
-                                                            <button class="dropdown-item py-2 text-primary">
-                                                                <i data-lucide="user-check" class="me-2" style="width: 16px;"></i> Late Arrival (Check-In)
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item py-2" data-bs-toggle="modal" data-bs-target="#rescheduleModal{{ $apt->id }}">
-                                                            <i data-lucide="calendar-days" class="me-2" style="width: 16px;"></i> Reschedule
-                                                        </button>
-                                                    </li>
+                                                {{-- STAGE 1 & 2: Today's Operations (Check-in/Late) --}}
+                                                @if($view === 'today')
+                                                    {{-- Combined logic: if they are approved, rescheduled, OR late, they just need to Check-In --}}
+                                                    @if(in_array($currentStatus, ['approved', 'rescheduled', 'late']))
+                                                        <li>
+                                                            <form action="{{ route('staff.appointments.update', $apt->id) }}" method="POST">
+                                                                @csrf
+                                                                <input type="hidden" name="status" value="checked-in">
+                                                                <button class="dropdown-item py-2 text-primary">
+                                                                    <i data-lucide="user-check" class="me-2" style="width: 16px;"></i>
+                                                                    {{ $currentStatus == 'late' ? 'Late Arrival (Check-In)' : 'Check-In Patient' }}
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    @endif
                                                 @endif
 
-                                                {{-- STAGE 3: Checked-In -> Actionable Services --}}
+                                                {{-- STAGE 3: Checked-In -> Actionable Services (Preserved) --}}
                                                 @if($currentStatus == 'checked-in')
                                                     @php
                                                         $serviceName = strtolower($apt->service_type);
-
-                                                        // Services that require "Log Shot" (Vaccination Tracker flow)
                                                         $vaxServices = ['vaccination', 'deworming', 'anti-rabies', '5-in-1', '4-in-1', '5in1', '4in1'];
-
-                                                        // Services that only need "Mark as Done" (Simple completion)
                                                         $simpleServices = ['kapon', 'check-up'];
 
                                                         $isVaxProcedure = false;
                                                         foreach($vaxServices as $vax) {
-                                                            if(stripos($serviceName, $vax) !== false) {
-                                                                $isVaxProcedure = true;
-                                                                break;
-                                                            }
+                                                            if(stripos($serviceName, $vax) !== false) { $isVaxProcedure = true; break; }
                                                         }
 
                                                         $isSimpleProcedure = false;
                                                         foreach($simpleServices as $simple) {
-                                                            if(stripos($serviceName, $simple) !== false) {
-                                                                $isSimpleProcedure = true;
-                                                                break;
-                                                            }
+                                                            if(stripos($serviceName, $simple) !== false) { $isSimpleProcedure = true; break; }
                                                         }
                                                     @endphp
 
-                                                    {{-- Show "Start Procedure" (Redirect to Vax Tracker) ONLY for Vaccines/Deworming --}}
                                                     @if($isVaxProcedure)
                                                         <li>
                                                             <a class="dropdown-item py-2 text-primary fw-bold"
@@ -237,7 +218,6 @@
                                                         </li>
                                                     @endif
 
-                                                    {{-- Show "Mark as Done" ONLY for Kapon and Check-up --}}
                                                     @if($isSimpleProcedure)
                                                         <li>
                                                             <button type="button" class="dropdown-item py-2 text-success" data-bs-toggle="modal" data-bs-target="#confirmDoneModal{{ $apt->id }}">
@@ -247,11 +227,11 @@
                                                     @endif
                                                 @endif
 
-                                                {{-- Missed & Completed Views remain the same --}}
-                                                @if($currentStatus == 'missed')
+                                                {{-- Missed & Completed (Preserved) --}}
+                                                @if($currentStatus == 'missed' || ($currentStatus == 'late' && $view == 'missed'))
                                                     <li>
                                                         <button class="dropdown-item py-2" data-bs-toggle="modal" data-bs-target="#rescheduleModal{{ $apt->id }}">
-                                                            <i data-lucide="calendar-days" class="me-2" style="width: 16px;"></i> Reschedule Missed Visit
+                                                            <i data-lucide="calendar-days" class="me-2" style="width: 16px;"></i> Reschedule Visit
                                                         </button>
                                                     </li>
                                                 @endif
@@ -291,7 +271,7 @@
             $isCompleted = in_array($currentStatus, ['done', 'completed']);
             $isActionable = in_array($currentStatus, ['approved', 'rescheduled', 'pending', 'checked-in']);
             // NEW: Check if the appointment is eligible for rescheduling
-            $canReschedule = in_array($currentStatus, ['late', 'missed', 'approved']);
+            $canReschedule = in_array($currentStatus, ['late', 'missed', 'approved', 'pending']);
         @endphp
 
         {{-- Change this condition --}}
@@ -314,9 +294,11 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Auto re-open walk-in modal if validation errors exist
-                @if ($errors->any())
-                    var walkInModal = new bootstrap.Modal(document.getElementById('walkInModal'));
-                    walkInModal.show();
+                @if(session('warning') || $errors->any())
+                    $(document).ready(function() {
+                        // Re-opens the walk-in modal automatically on page reload if there's an error
+                        $('#walkInModal').modal('show');
+                    });
                 @endif
             });
         </script>

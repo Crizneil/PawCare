@@ -56,66 +56,51 @@ class Pet extends Model
     }
     public function getCalculatedStatusAttribute()
     {
-        $vaxCount = $this->vaccinations()->count();
         $latest = $this->latestVaccination;
 
-        // 2. Check if never vaccinated
-        if ($vaxCount === 0) {
+        // 1. Check if never vaccinated
+        if (!$latest) {
             return 'unvaccinated';
         }
 
-        // 3. Overdue Check (If next due date has passed)
-        if ($latest && $latest->next_due_date) {
+        // 2. Overdue Check (If next due date has passed)
+        if ($latest->next_due_date) {
             $dueDate = \Carbon\Carbon::parse($latest->next_due_date);
 
             if ($dueDate->isPast()) {
                 return 'overdue';
             }
 
-            // 4. Due Soon (Within 14 days - keeping your original 14-day window)
+            // 3. Due Soon (Within 14 days)
             if (\Carbon\Carbon::now()->diffInDays($dueDate, false) <= 14) {
                 return 'due_soon';
             }
         }
 
-        /** * 5. Logic for Partially vs Fully */
-        if ($vaxCount < 2) {
-            return 'partially_vaccinated';
-        }
-
-        return 'fully_vaccinated';
+        // 4. If they have any record and aren't overdue/due soon, they are "Vaccinated"
+        return 'vaccinated';
     }
     public function getVaxStatusAttribute()
     {
-        // Get all vaccinations and the single latest one
-        $vaccinations = $this->vaccinations;
-        $latestVax = $vaccinations->sortByDesc('date_administered')->first();
+        $calcStatus = $this->calculated_status;
+        $latestVax = $this->latestVaccination;
 
-        $vaxCount = $vaccinations->count();
-        $vaccineNames = $vaccinations->pluck('vaccine_name')->map(fn($n) => strtolower($n));
-        $hasRabies = $vaccineNames->contains(fn($value) => str_contains($value, 'rabies'));
-
-        // Prepare default data
         $status = [
-            'latest_vax' => $latestVax, // Attach the latest record here
-            'label' => 'No Records',
-            'class' => 'bg-secondary-subtle text-secondary border-secondary',
-            'icon' => '<i data-lucide="alert-circle" style="width:16px;"></i>'
+            'latest_vax' => $latestVax,
+            'label' => ucwords(str_replace('_', ' ', $calcStatus)),
+            'class' => match($calcStatus) {
+                'vaccinated'   => 'bg-success-subtle text-success border-success',
+                'due_soon'     => 'bg-warning-subtle text-warning border-warning',
+                'overdue'      => 'bg-danger-subtle text-danger border-danger',
+                'unvaccinated' => 'bg-secondary-subtle text-secondary border-secondary',
+                default        => 'bg-light text-dark'
+            },
+            'icon' => match($calcStatus) {
+                'vaccinated' => '<i data-lucide="check-circle" style="width:16px;"></i>',
+                'unvaccinated' => '<i data-lucide="alert-circle" style="width:16px;"></i>',
+                default => '<i data-lucide="clock" style="width:16px;"></i>',
+            }
         ];
-
-        if ($vaxCount === 0) {
-            return (object) $status;
-        }
-
-        if ($hasRabies && $vaxCount > 1) {
-            $status['label'] = 'Fully Vaccinated';
-            $status['class'] = 'bg-success-subtle text-success border-success';
-            $status['icon'] = '<i data-lucide="check-circle" style="width:16px;"></i>';
-        } else {
-            $status['label'] = 'Partially Vaccinated';
-            $status['class'] = 'bg-info-subtle text-info border-info';
-            $status['icon'] = '<i data-lucide="shield" style="width:16px;"></i>';
-        }
 
         return (object) $status;
     }
@@ -150,16 +135,16 @@ class Pet extends Model
             }),
 
             'due_soon' => $query->whereHas('latestVaccination', function($q) {
-                $q->whereBetween('next_due_date', [now(), now()->addDays(30)]);
+                $q->whereBetween('next_due_date', [now(), now()->addDays(14)]);
             }),
 
-            'partially_vaccinated' => $query->has('vaccinations', '>=', 1)
-                                        ->has('vaccinations', '<', 2),
-
-            'fully_vaccinated' => $query->whereHas('vaccinations', null, '>=', 2)
-                ->whereHas('latestVaccination', function($q) {
-                    $q->where('next_due_date', '>', now()->addDays(30));
-                }),
+            // Updated: Merged status logic for the filter
+            'vaccinated' => $query->whereHas('latestVaccination', function($q) {
+                $q->where(function($sub) {
+                    $sub->where('next_due_date', '>', now()->addDays(14))
+                        ->orWhereNull('next_due_date');
+                });
+            }),
 
             default => $query,
         };

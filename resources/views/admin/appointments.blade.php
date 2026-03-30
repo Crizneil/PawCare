@@ -407,6 +407,12 @@
                                 <i class="bi bi-check2-square me-1"></i> Mark as Done
                             </button>
                         </form>`;
+                } else if (statusStr === 'cancelled') {
+                    // Specific message for cancelled appointments
+                    actionsHtml += `
+                        <div class="alert alert-danger text-center small border-0 w-100 rounded-4 mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i> This appointment was cancelled by the owner.
+                        </div>`;
                 } else {
                     actionsHtml += `
                         <div class="alert alert-secondary text-center small border-0 w-100 rounded-4 mb-0">

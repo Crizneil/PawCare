@@ -5,21 +5,32 @@
                 <h5 class="modal-title fw-bold" id="addPetModalLabel">Register New Pet</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.pets.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ $submitRoute ?? route('admin.pets.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="image_base64" id="pet_add_image_base64">
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         {{-- Searchable Owner Dropdown --}}
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">Select Owner</label>
+                            <label class="form-label">Registered Owner</label>
                             <select name="user_id" id="ownerSearchSelect" class="form-select" required>
-                                <option value="" selected disabled>Type name or email to search...</option>
+                                <option value="">Select Registered Owner...</option>
                                 @foreach($owners as $owner)
-                                    <option value="{{ $owner->id }}">{{ $owner->name }} ({{ $owner->email }})</option>
+                                    <option value="{{ $owner->id }}">
+                                        {{ $owner->name }} ({{ $owner->email }})
+                                    </option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Need a new owner? <a href="{{ route('admin.owners') }}" class="text-primary text-decoration-none">Register them here</a>.</small>
+                            {{-- Only show the registration link if the logged-in user is an Admin --}}
+                            @if(Auth::user()->role === 'admin')
+                                <small class="text-muted">Need a new owner?
+                                    <a href="{{ route('admin.owners') }}"
+                                    class="text-primary text-decoration-none"
+                                    data-bs-toggle="modal" data-bs-target="#addOwnerModal">
+                                    Register them here
+                                    </a>.
+                                </small>
+                            @endif
                         </div>
                         <div class="text-center mb-4">
                             <div class="position-relative d-inline-block">
@@ -66,7 +77,12 @@
                             <select name="breed" id="breedSelect" class="form-select bg-light" required disabled>
                                 <option value="" selected disabled>Select Breed</option>
                             </select>
-                            <input type="text" class="form-control bg-light mt-2 d-none" name="other_breed" id="otherBreedInput" placeholder="Specify breed">
+
+                            {{-- Wrap this in a div for easier toggling --}}
+                            <div id="otherBreedContainer" class="mt-2 d-none">
+                                <label class="form-label small fw-bold text-muted">Please Specify Breed</label>
+                                <input type="text" class="form-control bg-light" name="other_breed" id="otherBreedInput" placeholder="e.g. Mixed Terrier">
+                            </div>
                         </div>
 
                         <div class="col-md-4">

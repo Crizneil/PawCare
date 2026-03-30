@@ -119,50 +119,60 @@
                             </div>
 
                             <div class="row g-3">
-                                <div class="col-6">
-                                    <label class="small fw-bold text-muted mb-1">Pet Name</label>
-                                    <div id="petNameSelectContainer">
-                                        <select id="petNameSelect" class="form-select rounded-pill bg-light border-0 px-3">
-                                            <option value="">Select pet...</option>
-                                        </select>
+                                <div class="col-12">
+                                    <label class="small fw-bold text-muted mb-1">Pet Details</label>
+
+                                    {{-- Existing Pets Checkbox Container --}}
+                                    <div id="petNameSelectContainer" class="mb-3" style="display:block;">
+                                        <div id="petCheckboxesContainer" class="row g-2 border rounded-4 p-3 bg-light" style="max-height: 250px; overflow-y: auto;">
+                                            <p class="text-muted small mb-0 text-center py-3 w-100">Please select an owner first...</p>
+                                        </div>
                                     </div>
-                                    <div id="petNameInputContainer" style="display: none;">
-                                        <input type="text" id="petNameInput" name="pet_name" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Enter name...">
+
+                                    {{-- New Pet Input (Hidden by default) --}}
+                                    <div id="petNameInputContainer" class="mb-3" style="display:none;">
+                                        <input type="text" id="petNameInput" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Enter new pet name">
                                     </div>
-                                </div>
-                                <div class="col-6">
-                                    <label class="small fw-bold text-muted mb-1">Birthday</label>
-                                    <input type="date" name="birthday" id="walkinBirthdayInput" max="{{ date('Y-m-d') }}" class="form-control rounded-pill bg-light border-0 px-3" value="{{ date('Y-m-d') }}" required>
                                 </div>
 
-                                <div id="walkinSpeciesCol" class="col-4">
-                                    <label class="small fw-bold text-muted mb-1">Species</label>
-                                    <select name="species" id="walkinSpeciesSelect" class="form-select rounded-pill bg-light border-0 px-1 text-center" required>
-                                        <option value="" selected disabled>Select</option>
-                                        <option value="Dog">Dog</option>
-                                        <option value="Cat">Cat</option>
-                                    </select>
-                                    <input type="text" id="walkinSpeciesDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none text-center" readonly>
-                                </div>
-                                <div id="walkinGenderCol" class="col-4">
-                                    <label class="small fw-bold text-muted mb-1">Gender</label>
-                                    <select name="gender" id="walkinGenderSelect" class="form-select rounded-pill bg-light border-0 px-1 text-center" required>
-                                        <option value="" selected disabled>Select</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                    <input type="text" id="walkinGenderDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none text-center" readonly>
-                                </div>
-                                <div id="walkinBreedCol" class="col-4">
-                                    <label class="small fw-bold text-muted mb-1 ps-2">Breed</label>
-                                    <div id="walkinBreedContainer">
-                                        <select name="breed" id="walkinBreedSelect" class="form-select rounded-pill bg-light border-0 px-1 text-center" required>
-                                            <option value="" selected disabled>Select</option>
-                                        </select>
-                                        <input type="text" id="walkinBreedDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none text-center" readonly>
+                                {{-- These fields now hide and auto-fill when "Existing" is checked --}}
+                                <div id="petExtraDetailsRow" class="row g-2 m-0 p-0">
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-muted mb-1">Birthday</label>
+                                        <input type="date" name="birthday" id="walkinBirthdayInput" max="{{ date('Y-m-d') }}" class="form-control rounded-pill bg-light border-0 px-3" value="{{ date('Y-m-d') }}">
                                     </div>
-                                    <div id="walkinOtherBreedContainer" class="mt-2 d-none">
-                                        <input type="text" name="other_breed" id="walkinOtherBreedInput" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Specify breed">
+
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-muted mb-1">Species</label>
+                                        <select name="species" id="walkinSpeciesSelect" class="form-select rounded-pill bg-light border-0 px-3">
+                                            <option value="" selected disabled>Select</option>
+                                            <option value="Dog">Dog</option>
+                                            <option value="Cat">Cat</option>
+                                        </select>
+                                        <input type="text" id="walkinSpeciesDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none" readonly>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-muted mb-1">Gender</label>
+                                        <select name="gender" id="walkinGenderSelect" class="form-select rounded-pill bg-light border-0 px-3">
+                                            <option value="" selected disabled>Select</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                        <input type="text" id="walkinGenderDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none" readonly>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-muted mb-1">Breed</label>
+                                        <div id="walkinBreedContainer">
+                                            <select name="breed" id="walkinBreedSelect" class="form-select rounded-pill bg-light border-0 px-3">
+                                                <option value="" selected disabled>Select Breed</option>
+                                            </select>
+                                            <input type="text" id="walkinBreedDisplay" class="form-control rounded-pill bg-light-subtle text-muted border-0 px-3 d-none" readonly>
+                                        </div>
+                                        <div id="walkinOtherBreedContainer" class="mt-2 d-none">
+                                            <input type="text" name="other_breed" id="walkinOtherBreedInput" class="form-control rounded-pill bg-light border-0 px-3" placeholder="Specify breed">
+                                        </div>
                                     </div>
                                 </div>
 
@@ -223,6 +233,47 @@
 
     .ts-wrapper.single .ts-control {
         background-color: #f8f9fa !important;
+    }
+    /* Container adjustment */
+    #petCheckboxesContainer {
+        max-height: 280px;
+        overflow-y: auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+    }
+
+    /* Card Styling */
+    .pet-selection-card {
+        background-color: #ffffff;
+        cursor: pointer;
+        border: 1px solid #e9ecef !important;
+        transition: all 0.2s ease;
+    }
+
+    .pet-selection-card:hover {
+        border-color: #fd7e14 !important;
+        background-color: #fffaf5;
+    }
+
+    /* Highlight card when checkbox is checked */
+    .pet-selection-card:has(.pet-checkbox:checked) {
+        border-color: #fd7e14 !important;
+        background-color: #fff4e6 !important;
+        box-shadow: 0 2px 4px rgba(253, 126, 20, 0.1);
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    /* Custom Scrollbar for the pet list */
+    #petCheckboxesContainer::-webkit-scrollbar {
+        width: 5px;
+    }
+    #petCheckboxesContainer::-webkit-scrollbar-thumb {
+        background: #dee2e6;
+        border-radius: 10px;
     }
 </style>
 
@@ -334,46 +385,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function toggleSections() {
-        if (statusExisting.checked) {
-            existingSection.style.setProperty('display', 'block', 'important');
-            newSection.style.setProperty('display', 'none', 'important');
+        const isExisting = statusExisting && statusExisting.checked;
+        const extraDetailsRow = document.getElementById('petExtraDetailsRow');
+
+        if (isExisting) {
+            if (existingSection) existingSection.style.display = 'block';
+            if (newSection) newSection.style.display = 'none';
             petNameSelectContainer.style.display = 'block';
             petNameInputContainer.style.display = 'none';
-            petNameSelect.name = 'pet_name';
-            petNameSelect.required = true;
-            petNameInput.removeAttribute('name');
-            petNameInput.required = false;
+            extraDetailsRow.style.display = 'none'; // Hide manual inputs
             togglePetFields(true);
-            newSection.querySelectorAll('input, select').forEach(i => i.required = false);
-
-            if (emailContainer) emailContainer.style.setProperty('display', 'none', 'important');
-            if (emailInput) emailInput.required = false;
-
         } else {
-            existingSection.style.setProperty('display', 'none', 'important');
-            newSection.style.setProperty('display', 'block', 'important');
+            if (existingSection) existingSection.style.display = 'none';
+            if (newSection) newSection.style.display = 'block';
             petNameSelectContainer.style.display = 'none';
             petNameInputContainer.style.display = 'block';
-            petNameInput.name = 'pet_name';
-            petNameInput.required = true;
-            petNameSelect.removeAttribute('name');
-            petNameSelect.required = false;
-
-            if (tsOwner) tsOwner.clear();
-            if (tsPet) tsPet.clearOptions();
-            if (tsBreed) { tsBreed.clear(); tsBreed.clearOptions(); }
-
-            petNameInput.value = '';
-            speciesSelect.value = '';
-            genderSelect.value = '';
-            birthdayInput.value = "{{ date('Y-m-d') }}";
+            extraDetailsRow.style.display = 'flex'; // Show manual inputs for new pet
             togglePetFields(false);
-            handleEmailVisibility();
-
-            ['first_name', 'last_name', 'phone'].forEach(name => {
-                const el = newSection.querySelector(`[name="${name}"]`);
-                if (el) el.required = true;
-            });
         }
     }
 
@@ -448,21 +476,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (tsOwner) {
         tsOwner.on('change', async function(userId) {
-            if (tsPet) { tsPet.clear(); tsPet.clearOptions(); }
-            if (!userId) return;
+            const checkboxContainer = document.getElementById('petCheckboxesContainer');
+            const extraDetailsRow = document.getElementById('petExtraDetailsRow');
+
+            if (!userId || statusNew.checked) return;
+
+            checkboxContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-orange" role="status"></div><span class="ms-2 small text-muted">Fetching pets...</span></div>';
+
             try {
                 const response = await fetch(`/staff/owner/${userId}/pets`);
                 const pets = await response.json();
-                if (pets.length > 0 && tsPet) {
-                    const options = pets.map(pet => ({
-                        value: pet.id,
-                        text: pet.name,
-                        info: JSON.stringify(pet)
-                    }));
-                    tsPet.addOptions(options);
-                    tsPet.open();
+
+                if (pets.length > 0) {
+                    checkboxContainer.innerHTML = '';
+                    checkboxContainer.className = "row g-2 border rounded-4 p-3 bg-light";
+                    // Hide the manual detail inputs for existing pets as they are now in the checkbox
+                    extraDetailsRow.style.display = 'none';
+
+                    pets.forEach(pet => {
+                        const col = document.createElement('div');
+                        col.className = 'col-md-6 mb-2'; // Two columns to save space
+                        col.innerHTML = `
+                            <div class="pet-selection-card position-relative border rounded-3 p-2 h-100 transition-all">
+                                <input class="form-check-input pet-checkbox position-absolute top-50 start-0 ms-2 translate-middle-y shadow-none"
+                                    type="checkbox"
+                                    name="pet_ids[]"
+                                    value="${pet.id}"
+                                    id="pet_${pet.id}"
+                                    data-species="${pet.species}"
+                                    data-gender="${pet.gender}"
+                                    data-breed="${pet.breed}"
+                                    data-birthday="${pet.birthday || ''}">
+
+                                <label class="form-check-label ms-4 ps-2 d-block cursor-pointer" for="pet_${pet.id}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-dark small">${pet.name}</span>
+                                        <span class="badge bg-orange-subtle text-orange px-2 py-1" style="font-size: 10px;">${pet.species}</span>
+                                    </div>
+                                    <div class="text-muted" style="font-size: 11px;">
+                                        <span class="text-truncate d-block">${pet.breed}</span>
+                                        <span class="d-block">${pet.gender} • ${pet.birthday ? pet.birthday : 'No DOB'}</span>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+                        checkboxContainer.appendChild(col);
+                    });
+
+                    // Refresh Lucide icons for the new elements
+                    if(typeof lucide !== 'undefined') lucide.createIcons();
+
+                    // Logic to sync hidden fields when a checkbox is clicked
+                    checkboxContainer.querySelectorAll('.pet-checkbox').forEach(cb => {
+                        cb.addEventListener('change', function() {
+                            if(this.checked) {
+                                speciesSelect.value = this.dataset.species;
+                                genderSelect.value = this.dataset.gender;
+                                birthdayInput.value = this.dataset.birthday;
+                                // Set display values for the hidden select elements
+                                speciesDisplay.value = this.dataset.species;
+                                genderDisplay.value = this.dataset.gender;
+                                breedDisplay.value = this.dataset.breed;
+                            }
+                        });
+                    });
+
+                } else {
+                    checkboxContainer.innerHTML = '<p class="text-danger small text-center py-3">No registered pets found for this owner.</p>';
+                    extraDetailsRow.style.display = 'flex'; // Show if no pets found so they can add one
                 }
-            } catch (error) { console.error("Error fetching pets:", error); }
+            } catch (error) {
+                checkboxContainer.innerHTML = '<p class="text-danger small text-center py-3">Error loading pets.</p>';
+            }
         });
     }
 
@@ -538,23 +623,28 @@ document.addEventListener('DOMContentLoaded', function () {
         const date = walkinDate.value;
         const service = walkinService.value;
         if (!date) return;
-        try {
+            try {
             const response = await fetch(`/staff/appointments/booked-slots?date=${date}`);
             const bookedSlots = await response.json();
-            walkinTimeSlot.innerHTML = '<option value="" selected disabled>Select time...</option>';
+
+            walkinTimeSlot.innerHTML = '<option value="" selected disabled>Select available time...</option>';
 
             allSlots.forEach((slot, index) => {
                 const isBooked = bookedSlots.includes(slot);
-                let isDisabled = isBooked;
+                let isExcludedByKapon = false;
+
                 if (service === 'kapon') {
                     const isNextBooked = allSlots[index + 1] ? bookedSlots.includes(allSlots[index + 1]) : true;
-                    if (isNextBooked || slot === "11:30" || slot === "16:30") isDisabled = true;
+                    if (isNextBooked || slot === "11:30" || slot === "16:30") isExcludedByKapon = true;
                 }
-                const option = document.createElement('option');
-                option.value = slot;
-                option.textContent = formatTimeDisplay(slot) + (isBooked ? ' (Booked)' : '');
-                option.disabled = isDisabled;
-                walkinTimeSlot.appendChild(option);
+
+                // HIDE if booked or if Kapon logic excludes it
+                if (!isBooked && !isExcludedByKapon) {
+                    const option = document.createElement('option');
+                    option.value = slot;
+                    option.textContent = formatTimeDisplay(slot);
+                    walkinTimeSlot.appendChild(option);
+                }
             });
         } catch (error) { console.error("Error fetching slots:", error); }
     }

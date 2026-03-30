@@ -102,7 +102,7 @@
                             </h5>
                             <span class="badge bg-primary-subtle text-primary rounded-pill px-3">NEXT 14 DAYS</span>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-hover align-middle border-0">
                                 <thead class="bg-light">
@@ -144,7 +144,7 @@
                                                 </div>
                                             </td>
                                             <td class="text-end pe-3">
-                                                <a href="{{ route('admin.pet-records', ['general_search' => $vax->pet->pet_id]) }}" 
+                                                <a href="{{ route('admin.pet-records', ['general_search' => $vax->pet->pet_id]) }}"
                                                    class="btn btn-sm btn-outline-primary rounded-pill px-3">View Record</a>
                                             </td>
                                         </tr>
@@ -204,25 +204,30 @@
         // 1. Vaccination Status Chart
         const vaxCtx = document.getElementById('vaxChart');
         if (vaxCtx) {
+            // Logic to sum up vaccinated numbers if the backend still sends them separately
+            // Or just use vaxData.vaccinated if you updated the Controller
+            const totalVaccinated = (vaxData.vaccinated)
+                ? vaxData.vaccinated
+                : (vaxData.fully_vaccinated || 0) + (vaxData.partially_vaccinated || 0);
+
             new Chart(vaxCtx.getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: ['Fully Vaccinated', 'Partially Vaccinated', 'Due Soon', 'Overdue', 'Unvaccinated'],
+                    // Updated Labels: Removed Fully/Partially
+                    labels: ['Vaccinated', 'Due Soon', 'Overdue', 'Unvaccinated'],
                     datasets: [{
                         label: 'Status Count',
                         data: [
-                            vaxData.fully_vaccinated || 0, 
-                            vaxData.partially_vaccinated || 0, 
-                            vaxData.due_soon || 0, 
-                            vaxData.overdue || 0, 
+                            totalVaccinated,
+                            vaxData.due_soon || 0,
+                            vaxData.overdue || 0,
                             vaxData.unvaccinated || 0
                         ],
                         backgroundColor: [
-                            'rgba(25, 135, 84, 0.7)', // Success
-                            'rgba(13, 110, 253, 0.7)', // Info/Blue
-                            'rgba(255, 193, 7, 0.7)',  // Warning
-                            'rgba(220, 53, 69, 0.7)',  // Danger
-                            'rgba(108, 117, 125, 0.7)' // Muted
+                            'rgba(25, 135, 84, 0.7)', // Success (Green)
+                            'rgba(255, 193, 7, 0.7)',  // Warning (Yellow)
+                            'rgba(220, 53, 69, 0.7)',  // Danger (Red)
+                            'rgba(108, 117, 125, 0.7)' // Muted (Gray)
                         ],
                         borderWidth: 0,
                         borderRadius: 8
@@ -235,8 +240,14 @@
                         legend: { display: false }
                     },
                     scales: {
-                        y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
-                        x: { grid: { display: false } }
+                        y: {
+                            beginAtZero: true,
+                            grid: { display: false },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
                     }
                 }
             });

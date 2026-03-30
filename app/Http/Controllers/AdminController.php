@@ -36,8 +36,7 @@ class AdminController extends Controller
         $pets = Pet::notDeceased()->with('vaccinations')->get();
 
         $vaccinationStats = [
-            'fully_vaccinated' => 0,
-            'partially_vaccinated' => 0,
+            'vaccinated' => 0,
             'overdue' => 0,
             'due_soon' => 0,
             'unvaccinated' => 0
@@ -45,6 +44,11 @@ class AdminController extends Controller
 
         foreach ($pets as $pet) {
             $status = $pet->calculated_status;
+
+            // Logic to bridge old data if necessary:
+            if ($status == 'fully_vaccinated' || $status == 'partially_vaccinated') {
+                $status = 'vaccinated';
+            }
             if (isset($vaccinationStats[$status])) {
                 $vaccinationStats[$status]++;
             }
@@ -133,9 +137,7 @@ class AdminController extends Controller
     public function getAppointmentsApi(Request $request)
     {
         // Filter out cancelled appointments for the calendar view
-        $appointments = Appointment::with(['user', 'pet'])
-            ->whereNotIn('status', ['cancelled', 'Cancelled'])
-            ->get();
+        $appointments = Appointment::with(['user', 'pet'])->get();
 
         $events = $appointments->map(function ($appt) {
             $owner = $appt->user;
@@ -153,6 +155,8 @@ class AdminController extends Controller
                 'completed' => '#198754', // Green
                 'Done'      => '#198754',
                 'rejected'  => '#6c757d', // Gray
+                'cancelled' => '#dc3545', // Red
+                'Cancelled' => '#dc3545',
             ];
 
             return [
@@ -635,22 +639,28 @@ class AdminController extends Controller
     }
 
 
-    public function storePet(Request $request)
+    public function storePet(Request $finalBr)
     {
-        $request->validate([
+        $finalBr->validate([
             'user_id' => 'required|exists:users,id',
             'name' => 'required|string|max:255',
             'gender' => 'required',
             'species' => 'required|string|in:Dog,Cat',
             'breed' => 'nullable|string|max:255',
+            'other_breed' => 'nullable|string|max:255',
             'birthday' => 'required|date|before_or_equal:today',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
+        // Handle "Other" logic and Capitalization
+        $finalBreed = $finalBr->breed;
+        if ($finalBr->breed === 'Other' && $finalBr->filled('other_breed')) {
+            $finalBreed = Str::title(trim($finalBr->other_breed));
+        }
 
         $imagePath = null;
         // 1. Check for Base64 first (Camera Capture)
-        if ($request->filled('image_base64')) {
-            $imageData = $request->input('image_base64');
+        if ($finalBr->filled('image_base64')) {
+            $imageData = $finalBr->input('image_base64');
             // Strip the metadata
             $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
             $imageData = base64_decode($imageData);
@@ -660,8 +670,8 @@ class AdminController extends Controller
             $imagePath = $fileName;
         }
         // 2. Fallback to standard file upload
-        else if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('pets', 'public');
+        else if ($finalBr->hasFile('image')) {
+            $imagePath = $finalBr->file('image')->store('pets', 'public');
         }
 
         $year = date('Y');
@@ -669,14 +679,14 @@ class AdminController extends Controller
         $unique_id = 'PC-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
         $pet = Pet::create([
-            'user_id' => $request->user_id,
+            'user_id' => $finalBr->user_id,
             'pet_id' => $unique_id,
-            'name' => $request->name,
-            'species' => $request->species,
-            'breed' => $request->breed ?? 'Unknown',
-            'birthday' => $request->birthday,
-            'gender' => $request->gender, // Need to pass default gender to satisfy schema
-            'owner' => User::find($request->user_id)->name ?? 'Unknown',
+            'name' => $finalBr->name,
+            'species' => $finalBr->species,
+            'breed' => $finalBreed ?? 'Unknown',
+            'birthday' => $finalBr->birthday,
+            'gender' => $finalBr->gender, // Need to pass default gender to satisfy schema
+            'owner' => User::find($finalBr->user_id)->name ?? 'Unknown',
             'image_url' => $imagePath,
             'status' => 'Verified', // Pets added by Admin are automatically verified
         ]);
@@ -702,11 +712,20 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'breed' => 'nullable|string|max:255',
+            'other_breed' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
             'image_base64' => 'nullable|string',
         ]);
 
         $pet = Pet::findOrFail($id);
+
+        $formattedName = Str::ucfirst(trim($request->name));
+
+        // Handle "Other" logic and Capitalization
+        $finalBreed = $request->breed;
+        if ($request->breed === 'Other' && $request->filled('other_breed')) {
+            $finalBreed = Str::title(trim($request->other_breed));
+        }
 
         // Store old name for logging
         $oldName = $pet->name;
@@ -715,8 +734,8 @@ class AdminController extends Controller
         $newStatus = $request->status ?? $pet->status;
 
         $updateData = [
-            'name' => $request->name,
-            'breed' => $request->breed,
+            'name' => $formattedName,
+            'breed' => $finalBreed,
             'status' => $newStatus,
         ];
 
@@ -811,7 +830,9 @@ class AdminController extends Controller
 
     public function employees()
     {
-        $staff = User::where('role', 'staff')->latest()->paginate(10);
+        $staff = User::where('role', 'staff')
+        ->orderBy('name', 'asc') // 'asc' for A to Z
+        ->paginate(10);
 
         return view('admin.employees', compact('staff'));
     }
@@ -1037,23 +1058,31 @@ class AdminController extends Controller
 
     public function restorePet($id)
     {
-        // Use withTrashed() so we can find BOTH soft-deleted and status-archived pets
         $pet = Pet::withTrashed()->findOrFail($id);
 
+        // Block restoration if the pet is deceased
+        if ($pet->status === 'DECEASED') {
+            return back()->with('error', "Deceased pet records cannot be reactivated.");
+        }
+
         if ($pet->trashed()) {
-            // Handle actual Soft Deletes
+            // If your logic now says Removed pets can't be restored,
+            // you should also block this:
+            return back()->with('error', "Removed pets cannot be restored.");
+
+            // OR if you still want the logic to exist but just hidden from UI:
             $pet->restore();
         }
 
-        // This handles both restored pets and Deceased/Inactive pets
+        // Only Inactive pets will reach here based on your UI change
         $pet->update(['status' => 'Verified']);
 
         ActivityLog::record(
             'RESTORE',
-            "Restored pet record and updated status for: " . $pet->name
+            "Reactivated pet record: " . $pet->name
         );
 
-        return back()->with('success', "Pet record for {$pet->name} has been restored successfully.");
+        return back()->with('success', "Pet record for {$pet->name} has been reactivated.");
     }
 
     public function restoreStaff($id)

@@ -137,7 +137,7 @@
                 <th style="width: 15%;">Time</th>
                 <th style="width: 30%;">Pet Owner</th>
                 <th style="width: 25%;">Pet Name</th>
-                <th style="width: 30%;">Service Rendered</th>
+                <th style="width: 30%;">Service Type</th>
             </tr>
         </thead>
         <tbody>

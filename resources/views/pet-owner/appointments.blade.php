@@ -19,12 +19,10 @@
                         $statusText = 'Fully Booked';
                         $statusColor = 'danger';
                         $isDisabled = true;
-                    } elseif ($userBookedToday >= 2) {
-                        $statusText = 'Limit Reached';
-                        $statusColor = 'danger';
-                        $isDisabled = true;
-                    } elseif ($userBookedToday == 1) {
-                        $statusText = 'Limited Slot';
+                    }
+
+                    elseif ($totalBookedToday >= ($totalSlots * 0.8)) { // Optional: show warning at 80% capacity
+                        $statusText = 'Limited Slots';
                         $statusColor = 'warning';
                     }
                 @endphp
@@ -128,18 +126,18 @@
                                     </td>
                                     {{-- Action label matches your CSS trigger --}}
                                     <td class="text-end pe-4" data-label="Actions">
-                                        @if(in_array(strtolower($appointment->status), ['pending', 'rescheduled']))
-                                            <form action="{{ route('pet-owner.appointments.cancel', $appointment->id) }}"
-                                                method="POST" class="d-inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger rounded-pill px-3">Cancel</button>
-                                            </form>
+                                        @if(in_array(strtolower($appointment->status), ['pending', 'rescheduled', 'approved']))
+                                            {{-- This button now triggers the modal instead of submitting directly --}}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#cancelModal{{ $appointment->id }}">
+                                                Cancel
+                                            </button>
 
                                         @elseif(strtolower($appointment->status) === 'completed' || strtolower($appointment->status) === 'done')
                                             <button class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm"
-                                                data-bs-toggle="modal" data-bs-target="#viewResultModal{{ $appointment->id }}">
+                                                    data-bs-toggle="modal" data-bs-target="#viewResultModal{{ $appointment->id }}">
                                                 View
                                             </button>
                                         @else
@@ -161,11 +159,17 @@
         </div>
     </div>
 
-    @foreach ($appointments as $appointment)
-        @if(strtolower($appointment->status) === 'completed' || strtolower($appointment->status) === 'done')
-            @include('partials._view_vaccination_details_modal', ['appointment' => $appointment])
-        @endif
-    @endforeach
+@foreach ($appointments as $appointment)
+    {{-- Cancel Modal --}}
+    @if(in_array(strtolower($appointment->status), ['pending', 'rescheduled', 'approved']))
+        @include('partials._cancel_modal', ['appointment' => $appointment])
+    @endif
+
+    {{-- View Results Modal --}}
+    @if(strtolower($appointment->status) === 'completed' || strtolower($appointment->status) === 'done')
+        @include('partials._view_vaccination_details_modal', ['appointment' => $appointment])
+    @endif
+@endforeach
 
     {{-- Appointment Booking Modal --}}
     <div class="modal fade" id="setAppointmentModal" tabindex="-1" aria-hidden="true">
@@ -205,13 +209,20 @@
                             <div class="col-md-6">
                                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Pet Information</h6>
                                 <div class="mb-3">
-                                    <label class="small fw-bold text-muted mb-1">Pet Name <span class="text-danger">*</span></label>
-                                    <select name="pet_id" class="form-select bg-light" required>
-                                        <option value="">Please Select Pet here.</option>
+                                    <label class="small fw-bold text-muted mb-1">Select Pet(s) <span class="text-danger">*</span></label>
+                                    <div id="pet_checkbox_container" class="p-2 border rounded bg-light" style="max-height: 150px; overflow-y: auto;">
                                         @foreach(\App\Models\Pet::where('user_id', auth()->id())->whereIn('status', ['ACTIVE', 'Verified'])->get() as $pet)
-                                            <option value="{{ $pet->id }}">{{ $pet->name }} ({{ ucfirst($pet->species) }})</option>
+                                            <div class="form-check mb-2 pet-checkbox-item">
+                                                <input class="form-check-input pet-id-checkbox" type="checkbox" name="pet_ids[]"
+                                                    value="{{ $pet->id }}" id="pet_{{ $pet->id }}"
+                                                    data-name="{{ $pet->name }}">
+                                                <label class="form-check-label small" for="pet_{{ $pet->id }}">
+                                                    {{ $pet->name }} <span class="text-muted">({{ ucfirst($pet->species) }})</span>
+                                                </label>
+                                            </div>
                                         @endforeach
-                                    </select>
+                                    </div>
+                                    <small class="text-muted">You can select multiple pets for this visit.</small>
                                 </div>
                                 <div class="mb-3">
                                     <label class="small fw-bold text-muted mb-1">Service(s) <span class="text-danger">*</span></label>
@@ -483,17 +494,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const busyPetIds = bookedForThisDate.map(appt => String(appt.pet_id));
 
-        Array.from(petSelect.options).forEach(option => {
-            if (option.value === "") return;
-            const originalText = option.getAttribute('data-original-text') || option.text;
-            if (!option.hasAttribute('data-original-text')) option.setAttribute('data-original-text', originalText);
-
-            if (busyPetIds.includes(option.value)) {
-                option.disabled = true;
-                option.text = originalText + " (Already Scheduled)";
+        const checkboxes = document.querySelectorAll('.pet-id-checkbox');
+        checkboxes.forEach(checkbox => {
+            const parentDiv = checkbox.closest('.pet-checkbox-item');
+            if (busyPetIds.includes(checkbox.value)) {
+                checkbox.disabled = true;
+                checkbox.checked = false;
+                parentDiv.style.opacity = '0.5';
+                parentDiv.querySelector('label').innerText += " (Scheduled)";
             } else {
-                option.disabled = false;
-                option.text = originalText;
+                checkbox.disabled = false;
+                parentDiv.style.opacity = '1';
+                // Restore original text logic if needed
             }
         });
     }
@@ -509,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const todayDate = new Date();
             todayDate.setHours(0, 0, 0, 0);
 
-            // 1. Clear existing states
+            // Reset classes
             cell.classList.remove('fc-day-available', 'fc-day-limited', 'fc-day-full', 'fc-day-closed', 'fc-day-passed');
             const frame = cell.querySelector('.fc-daygrid-day-frame');
             if (!frame) return;
@@ -517,21 +529,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const oldIndicator = frame.querySelector('.availability-indicator');
             if (oldIndicator) oldIndicator.remove();
 
+            // 1. Past Dates
             if (cellDate < todayDate) {
                 cell.classList.add('fc-day-passed');
                 return;
             }
 
-            // 2. Normalize Data
+            // 2. Availability Logic
             const bookedTimes = availabilityData[dateStr] || [];
             const totalBookedCount = Array.isArray(bookedTimes) ? bookedTimes.length : Object.keys(bookedTimes).length;
-            const ownerAppointments = ownerBookedDates[dateStr] || [];
-            const ownerCount = Array.isArray(ownerAppointments) ? ownerAppointments.length : Object.keys(ownerAppointments).length;
-
             const dayOfWeek = cellDate.getDay();
             const isClosedDay = (dayOfWeek === 0 || dayOfWeek === 6);
 
-            // 3. Create & Apply new indicator matching backend truth
             const indicator = document.createElement('div');
             indicator.className = 'availability-indicator';
 
@@ -539,18 +548,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 cell.classList.add('fc-day-closed');
                 indicator.classList.add('availability-full');
                 indicator.innerText = "Closed";
-            } else if (ownerCount >= 2) {
-                cell.classList.add('fc-day-full');
-                indicator.classList.add('availability-full');
-                indicator.innerText = "Limit Reached";
-            } else if (totalBookedCount >= 20) {
+            }
+            // Logic: Use 16 or 20 based on your clinic's max capacity
+            // This count now includes "Pending" because of the Controller update
+            else if (totalBookedCount >= 16) {
                 cell.classList.add('fc-day-full');
                 indicator.classList.add('availability-full');
                 indicator.innerText = "Fully Booked";
-            } else if (ownerCount === 1) {
+            } else if (totalBookedCount >= 1) {
                 cell.classList.add('fc-day-limited');
                 indicator.classList.add('availability-limited');
-                indicator.innerText = "Limited Slot";
+                indicator.innerText = "Limited Slots";
             } else {
                 cell.classList.add('fc-day-available');
                 indicator.classList.add('availability-free');
@@ -566,27 +574,63 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedService = serviceSelect.value;
         const bookedTimes = availabilityData[selectedDate] || [];
 
+        // Get current time for "Today" check
+        const now = new Date();
+        const todayStr = formatLocalToISODate(now);
+
+        // Current time in minutes from midnight for easy comparison
+        const currentTotalMinutes = (now.getHours() * 60) + now.getMinutes();
+
         timeSelect.innerHTML = '<option value="">Select Time</option>';
+
         PREDEFINED_TIMES.forEach((timeObj, index) => {
-            let opt = document.createElement('option');
             let isUnavailable = bookedTimes.includes(timeObj.value);
 
-            if (selectedService === 'kapon') {
-                const nextTimeObj = PREDEFINED_TIMES[index + 1];
-                if (timeObj.value === "11:30" || timeObj.value === "16:30" || !nextTimeObj || bookedTimes.includes(nextTimeObj.value)) {
+            // 1. HIDE PASSED TIMES (Only if the selected date is Today)
+            if (selectedDate === todayStr) {
+                const [slotHour, slotMinute] = timeObj.value.split(':').map(Number);
+                const slotTotalMinutes = (slotHour * 60) + slotMinute;
+
+                // If the slot is in the past or starts right now, hide it
+                if (slotTotalMinutes <= currentTotalMinutes) {
                     isUnavailable = true;
                 }
             }
 
-            if (isUnavailable) {
-                opt.disabled = true;
-                opt.innerText = `${timeObj.label} (Unavailable)`;
-            } else {
+            // 2. KAPON LOGIC (Double slot blocking)
+            if (selectedService === 'kapon') {
+                const nextTimeObj = PREDEFINED_TIMES[index + 1];
+
+                // Block if:
+                // - Current slot is booked
+                // - It's the morning cut-off (11:30) or end of day (16:30)
+                // - There is no next slot available
+                // - The next 30-minute slot is already booked by someone else
+                if (isUnavailable ||
+                    timeObj.value === "11:30" ||
+                    timeObj.value === "16:30" ||
+                    !nextTimeObj ||
+                    bookedTimes.includes(nextTimeObj.value)) {
+                    isUnavailable = true;
+                }
+            }
+
+            // 3. RENDER OPTIONS
+            if (!isUnavailable) {
+                let opt = document.createElement('option');
                 opt.value = timeObj.value;
                 opt.innerText = timeObj.label;
+                timeSelect.appendChild(opt);
             }
-            timeSelect.appendChild(opt);
         });
+
+        // 4. FEEDBACK IF EMPTY
+        if (timeSelect.options.length <= 1) {
+            let opt = document.createElement('option');
+            opt.disabled = true;
+            opt.innerText = "No available slots for this service";
+            timeSelect.appendChild(opt);
+        }
     }
 
     serviceSelect.addEventListener('change', updateAvailableTimes);
@@ -664,46 +708,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (info.date < todayCheck || [0, 6].includes(dayOfWeek)) return;
 
-            let userBookingsToday = ownerBookedDates[dateStr] || [];
-            if (typeof userBookingsToday === 'object' && !Array.isArray(userBookingsToday)) userBookingsToday = Object.values(userBookingsToday);
-            const ownerCount = userBookingsToday.length;
             const dayBookings = availabilityData[dateStr] || [];
+            const totalBookedCount = dayBookings.length;
 
-            if (ownerCount >= 2) {
-                alert("Maximum limit reached for this day (" + ownerCount + "/2).");
-                return;
-            }
-            if (dayBookings.length >= 20) {
+            // We no longer check ownerCount here so they can book more than 2
+            if (totalBookedCount >= 16) {
                 alert("Clinic is fully booked for this date.");
                 return;
             }
 
             dateInput.value = dateStr;
             scheduleDisplay.innerText = info.date.toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // This still prevents booking the SAME pet twice on one day
             updatePetOptions(dateStr);
-            serviceSelect.value = "";
-            timeSelect.innerHTML = '<option value="">Please select a service first</option>';
 
-            // Modal Status Badge Logic
             const statusBadge = document.getElementById('modalStatusBadge');
-            let badgeHtml = '';
-            let isDateFull = false;
-
-            if (ownerCount >= 2) {
-                badgeHtml = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Limit Reached (2/2)</span>';
-                isDateFull = true;
-            } else if (dayBookings.length >= 20) {
-                badgeHtml = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Clinic Fully Booked</span>';
-                isDateFull = true;
-            } else if (ownerCount === 1) {
-                badgeHtml = '<span class="badge bg-warning px-3 py-2 rounded-pill shadow-sm text-dark">Limited Slot (1 Left)</span>';
-            } else {
-                badgeHtml = '<span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">Available Slot</span>';
+            if (statusBadge) {
+                if (totalBookedCount >= 20) {
+                    statusBadge.innerHTML = '<span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">Clinic Fully Booked</span>';
+                } else if (totalBookedCount >= 1) {
+                    statusBadge.innerHTML = '<span class="badge bg-warning px-3 py-2 rounded-pill shadow-sm text-dark">Limited Slots Available</span>';
+                } else {
+                    statusBadge.innerHTML = '<span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">Available Slot</span>';
+                }
             }
-            if (statusBadge) statusBadge.innerHTML = badgeHtml;
 
             const saveBtn = document.getElementById('saveAppointmentBtn');
-            if (saveBtn) saveBtn.disabled = isDateFull;
+            if (saveBtn) saveBtn.disabled = (totalBookedCount >= 20);
 
             appointmentModal.show();
         }

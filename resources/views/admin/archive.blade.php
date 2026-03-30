@@ -119,16 +119,30 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-                                            @php
-                                                $restoreRoute = route("admin.{$tab}.restore", $item->id);
-                                            @endphp
-                                            <form action="{{ $restoreRoute }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button class="btn btn-sm btn-success px-4 rounded-pill">
-                                                    <i data-lucide="rotate-ccw" class="size-14 me-1"></i>
-                                                    {{ $item->trashed() ? 'Restore' : 'Reactivate' }}
-                                                </button>
-                                            </form>
+                                            @if($tab === 'pets')
+                                                {{-- Only show the button if it's NOT trashed and NOT deceased --}}
+                                                @if(!$item->trashed() && $item->status !== 'DECEASED')
+                                                    <form action="{{ route('admin.pets.restore', $item->id) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button class="btn btn-sm btn-success px-4 rounded-pill">
+                                                            <i data-lucide="rotate-ccw" class="size-14 me-1"></i>
+                                                            Reactivate
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    {{-- Optional: Show a badge or text indicating it's permanent --}}
+                                                    <span class="text-muted small px-3">No Actions Available</span>
+                                                @endif
+                                            @elseif($tab === 'staff')
+                                                {{-- Staff are usually just soft-deleted, so we keep the restore button --}}
+                                                <form action="{{ route('admin.staff.restore', $item->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button class="btn btn-sm btn-success px-4 rounded-pill">
+                                                        <i data-lucide="rotate-ccw" class="size-14 me-1"></i>
+                                                        Restore
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

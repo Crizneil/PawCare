@@ -15,6 +15,20 @@
                 <a href="{{ route('admin.archive') }}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
                     <i class="bi bi-archive me-2"></i> Archive Center
                 </a>
+
+                {{-- Reports Dropdown --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary rounded-pill px-4 shadow-sm dropdown-toggle" type="button" id="reportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> Reports
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="reportsDropdown">
+                        <li><h6 class="dropdown-header">Active Pets Directory</h6></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1]) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> All Pets Report</a></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1, 'species' => 'Dog']) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> Dogs Only Report</a></li>
+                        <li><a class="dropdown-item py-2" href="{{ route('admin.reports.active-pets', ['pdf' => 1, 'species' => 'Cat']) }}" target="_blank"><i class="bi bi-printer me-2 text-muted"></i> Cats Only Report</a></li>
+                    </ul>
+                </div>
+
                 <button type="button" class="btn btn-orange rounded-pill px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal"
                     data-bs-target="#addPetModal">
                     <i class="fi flaticon-plus me-2"></i> Add New Pet
@@ -265,11 +279,30 @@
         }
 
         // 3. Link your external logic with the Choices instance
+        if (breedChoicesInstance) {
+            breedEl.addEventListener('addItem', function(event) {
+                const otherContainer = document.getElementById('otherBreedContainer');
+                const otherInput = document.getElementById('otherBreedInput');
+
+                // Check if the selected value is 'Other'
+                if (event.detail.value === 'Other') {
+                    otherContainer.classList.remove('d-none');
+                    otherInput.setAttribute('required', 'required');
+                    otherInput.focus();
+                } else {
+                    otherContainer.classList.add('d-none');
+                    otherInput.removeAttribute('required');
+                    otherInput.value = ''; // Clear it if they switch back
+                }
+            });
+        }
+
+        // Also initialize your existing external logic
         initializePetBreedLogic({
             speciesId: 'speciesSelect',
             breedId: 'breedSelect',
-            otherContainerId: 'otherBreedContainer', // Ensure this ID matches your HTML
-            otherInputId: 'otherBreedInput',       // Ensure this ID matches your HTML
+            otherContainerId: 'otherBreedContainer',
+            otherInputId: 'otherBreedInput',
             swapNameOnOther: true
         }, breedChoicesInstance);
 
@@ -315,5 +348,63 @@
         }
     }
 });
+document.addEventListener('DOMContentLoaded', function() {
+
+    // 1. Handle Deceased Status Double Confirmation
+    // Note: Changed selector to '.status-select' to match your updated HTML class
+    const statusSelectors = document.querySelectorAll('.status-select');
+
+        statusSelectors.forEach(select => {
+            select.addEventListener('change', function() {
+                const petId = this.dataset.petId;
+                const confirmSection = document.getElementById('deceasedConfirmSection' + petId);
+                const submitBtn = document.getElementById('submitEditBtn' + petId);
+
+                if (this.value === 'DECEASED') {
+                    confirmSection.classList.remove('d-none');
+                    submitBtn.disabled = true;
+                } else {
+                    confirmSection.classList.add('d-none');
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+
+        // 2. Monitor Confirmation Inputs (Matches '.confirm-status-input' and '.confirm-delete-input')
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('confirm-status-input') || e.target.classList.contains('confirm-delete-input')) {
+                // Change: Removed .toLowerCase() to enforce strict case matching
+                const expected = e.target.dataset.expectedName.trim();
+                const actual = e.target.value.trim();
+
+                const targetBtnId = e.target.dataset.targetBtn;
+                const targetBtn = document.getElementById(targetBtnId);
+
+                if (actual === expected) {
+                    // Match found (Strict Case)
+                    if (targetBtn) targetBtn.disabled = false;
+                    if (checkIcon) checkIcon.classList.remove('d-none');
+                    e.target.classList.add('border', 'border-success');
+                } else {
+                    // No match
+                    if (targetBtn) targetBtn.disabled = true;
+                    if (checkIcon) checkIcon.classList.add('d-none');
+                    e.target.classList.remove('border', 'border-success');
+                }
+            }
+        });
+
+        // 3. Initialize Breed Logic for each Edit Modal
+        @foreach($pets as $pet)
+            initializePetBreedLogic({
+                speciesId: 'speciesSelect{{ $pet->id }}',
+                breedId: 'breedSelect{{ $pet->id }}',
+                otherContainerId: 'otherBreedContainer{{ $pet->id }}',
+                otherInputId: 'otherBreedInput{{ $pet->id }}',
+                initialSpecies: "{{ $pet->species ?? 'Dog' }}",
+                initialBreed: "{{ $pet->breed }}"
+            });
+        @endforeach
+    });
 </script>
 @endpush

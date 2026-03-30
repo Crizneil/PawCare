@@ -94,7 +94,7 @@
                         @if($vax->next_due_date && \Carbon\Carbon::parse($vax->next_due_date)->isPast())
                             <span style="color: #dc3545; font-weight: bold;">[!] OVERDUE</span>
                         @else
-                            <span style="color: #198754; font-weight: bold;">PASSED</span>
+                            <span style="color: #198754; font-weight: bold;">DONE</span>
                         @endif
                     </td>
                 </tr>

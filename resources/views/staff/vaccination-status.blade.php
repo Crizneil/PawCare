@@ -59,27 +59,57 @@
                                     ->first();
 
                                 $aptStatus = strtolower($latestApt->status ?? '');
-                                $serviceType = $latestApt->service_type ?? '';
+                                $serviceType = strtolower(trim($latestApt->service_type ?? '')); // Normalized for easier checking
                                 $isAppointedToday = (bool)$latestApt;
 
                                 $simpleProcedures = ['kapon', 'check-up', 'consultation'];
-                                $isSimpleProcedure = in_array(strtolower($serviceType), $simpleProcedures);
+                                $isSimpleProcedure = in_array($serviceType, $simpleProcedures);
 
-                                // Use TRIM and LOWER to ensure the database match is accurate
-                                $alreadyLoggedThisSpecificService = $pet->vaccinations()
-                                    ->whereRaw('LOWER(vaccine_name) = ?', [strtolower(trim($serviceType))])
-                                    ->whereDate('date_administered', today())
-                                    ->exists();
+                                // FIX: Comprehensive list of strings that count as a "Vaccination" service
+                                $vaxKeywords = [
+                                    'anti-rabies', 'rabies', 'deworming', '5-in-1', '5in1',
+                                    '4-in-1', '4in1', 'vaccination', 'vax', 'shot'
+                                ];
 
-                                $isVaccination = (stripos($serviceType, 'anti-rabies') !== false ||
-                                                stripos($serviceType, 'deworming') !== false ||
-                                                stripos($serviceType, '5-in-1') !== false ||
-                                                stripos($serviceType, '4-in-1') !== false ||
-                                                stripos($serviceType, 'vaccination') !== false);
+                                $isVaccination = false;
+                                foreach ($vaxKeywords as $keyword) {
+                                    if (stripos($serviceType, $keyword) !== false) {
+                                        $isVaccination = true;
+                                        break;
+                                    }
+                                }
 
-                                // If you want to be able to log multiple times or override,
-                                // you can remove '!$alreadyLoggedThisSpecificService' from this line:
-                                $canLogShot = $isAppointedToday;
+                                $canLogToday = true;
+                                $waitReason = "";
+
+                                if ($vax) {
+                                    $lastDate = \Carbon\Carbon::parse($vax->date_administered);
+                                    $today = \Carbon\Carbon::today();
+                                    $daysSince = $lastDate->diffInDays($today);
+
+                                    $lastVaxName = strtolower(trim($vax->vaccine_name));
+                                    $currentService = strtolower(trim($serviceType));
+
+                                    // Logic A: Same vaccine check (Don't allow if before due date)
+                                    if (stripos($lastVaxName, $currentService) !== false || stripos($currentService, $lastVaxName) !== false) {
+                                        if ($vax->next_due_date) {
+                                            $dueDate = \Carbon\Carbon::parse($vax->next_due_date);
+                                            if ($today->lt($dueDate)) {
+                                                $canLogToday = false;
+                                                $waitReason = "Due on " . $dueDate->format('M d');
+                                            }
+                                        }
+                                    }
+                                    // Logic B: Different vaccine 15-day safety check
+                                    elseif ($daysSince < 15) {
+                                        $canLogToday = false;
+                                        $waitReason = (15 - $daysSince) . " days wait";
+                                    }
+                                }
+
+                                // Determine button visibility
+                                // Added check to ensure it shows if status is 'approved' or 'checked-in'
+                                $showLogButton = $isAppointedToday && $isVaccination && $canLogToday && !in_array($aptStatus, ['completed', 'done']);
                             @endphp
 
                             {{-- Only show the row if the pet has an appointment today --}}
@@ -146,32 +176,31 @@
                                 </td>
 
                                 <td class="text-end pe-4" data-label="Actions">
-                                    @if($canLogShot)
-                                        @if($isSimpleProcedure && !in_array($aptStatus, ['completed', 'done']))
-                                            {{-- Mark as Done only shows if not already completed --}}
-                                            <form action="{{ route('staff.appointments.update', $latestApt->id) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <input type="hidden" name="status" value="completed">
-                                                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm"
-                                                        onclick="return confirm('Complete this procedure?')">
-                                                    <i data-lucide="check-circle" class="me-1" style="width:14px;"></i> Mark as Done
-                                                </button>
-                                            </form>
-                                        @elseif($isVaccination)
-                                            {{-- Log Shot shows if $alreadyLoggedThisSpecificService is false --}}
-                                            <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#updateVax{{ $pet->id }}">
-                                                <i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Log Shot
+                                    @if($showLogButton)
+                                        <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#updateVax{{ $pet->id }}">
+                                            <i data-lucide="plus-circle" class="me-1" style="width:14px;"></i> Log Shot
+                                        </button>
+                                    @elseif($isVaccination && !$canLogToday)
+                                        <span class="badge bg-soft-secondary text-muted border">
+                                            <i data-lucide="clock" class="me-1" style="width:12px;"></i> {{ $waitReason }}
+                                        </span>
+                                    @elseif($isSimpleProcedure && !in_array($aptStatus, ['completed', 'done']))
+                                        <form action="{{ route('staff.appointments.update', $latestApt->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="status" value="completed">
+                                            <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm"
+                                                    onclick="return confirm('Complete this procedure?')">
+                                                <i data-lucide="check-circle" class="me-1" style="width:14px;"></i> Mark as Done
                                             </button>
-                                        @else
-                                            <span class="badge bg-light text-muted border">Completed</span>
-                                        @endif
-                                    @else
-                                        {{-- This shows when the specific service is already found in vaccination history for today --}}
+                                        </form>
+                                    @elseif(in_array($aptStatus, ['completed', 'done']))
                                         <span class="badge bg-soft-success text-success border border-success">
                                             <i data-lucide="check" class="me-1" style="width:12px;"></i> Logged
                                         </span>
+                                    @else
+                                        <span class="text-muted small">--</span>
                                     @endif
                                 </td>
                             </tr>
@@ -205,45 +234,47 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const vaxContainers = document.querySelectorAll('.modal-content');
+    const vaxContainers = document.querySelectorAll('.modal');
 
-    vaxContainers.forEach(container => {
-        const nameInput = container.querySelector('.vax-name-input');
-        const dateAdminInput = container.querySelector('.vax-date-input');
-        const dueDateInput = container.querySelector('.vax-due-input');
+    vaxContainers.forEach(modal => {
+        const nameInput = modal.querySelector('.vax-name-input');
+        const dateAdminInput = modal.querySelector('.vax-date-input');
+        const dueDateInput = modal.querySelector('.vax-due-input');
 
-        if (nameInput && dateAdminInput && dueDateInput) {
-            const calculateDueDate = () => {
-                const vaxName = nameInput.value.toLowerCase();
-                const adminDateValue = dateAdminInput.value;
+        const calculateDueDate = () => {
+            if (!nameInput.value || !dateAdminInput.value) return;
 
-                if (!adminDateValue) return;
+            const vaxName = nameInput.value.toLowerCase();
+            const adminDate = new Date(dateAdminInput.value);
+            let nextDate = new Date(adminDate);
 
-                const adminDate = new Date(adminDateValue);
-                if (isNaN(adminDate.getTime())) return;
+            // 1. Core Vaccines (21 days for boosters as requested)
+            if (vaxName.includes('5-in-1') || vaxName.includes('4-in-1') || vaxName.includes('5in1') || vaxName.includes('4in1')) {
+                nextDate.setDate(adminDate.getDate() + 21);
+            }
+            // 2. Deworming (3 Months)
+            else if (vaxName.includes('deworming')) {
+                nextDate.setMonth(adminDate.getMonth() + 3);
+            }
+            // 3. Anti-Rabies (1 Year)
+            else if (vaxName.includes('rabies')) {
+                nextDate.setFullYear(adminDate.getFullYear() + 1);
+            } else {
+                return; // Don't overwrite manual entry for unknown types
+            }
 
-                const targetVaccines = ['anti rabies', '5 in 1', '4 in 1', '5-in-1', '4-in-1', 'anti-rabies'];
+            const year = nextDate.getFullYear();
+            const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+            const day = String(nextDate.getDate()).padStart(2, '0');
+            dueDateInput.value = `${year}-${month}-${day}`;
+        };
 
-                if (targetVaccines.some(v => vaxName.includes(v))) {
-                    const nextYear = new Date(adminDate);
-                    nextYear.setFullYear(nextYear.getFullYear() + 1);
+        // Listen for changes
+        nameInput.addEventListener('input', calculateDueDate);
+        dateAdminInput.addEventListener('change', calculateDueDate);
 
-                    // Correcting for timezone offset to ensure the date doesn't jump back a day
-                    const year = nextYear.getFullYear();
-                    const month = String(nextYear.getMonth() + 1).padStart(2, '0');
-                    const day = String(nextYear.getDate()).padStart(2, '0');
-
-                    dueDateInput.value = `${year}-${month}-${day}`;
-                }else {
-                    // Clear the due date if the vaccine doesn't require a 1-year follow-up
-                    dueDateInput.value = '';
-                }
-            };
-
-            nameInput.addEventListener('input', calculateDueDate);
-            // Change is better for date inputs to ensure the user has finished picking
-            dateAdminInput.addEventListener('change', calculateDueDate);
-        }
+        // Auto-calculate when modal is shown (since we pre-fill the vaccine name)
+        modal.addEventListener('shown.bs.modal', calculateDueDate);
     });
 });
 </script>

@@ -140,6 +140,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // Reports & Analytics Routes
     Route::get('/reports/appointments', [AdminReportController::class, 'appointmentReport'])->name('reports.appointments');
     Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
+    Route::get('/reports/active-pets', [AdminReportController::class, 'activePetsReport'])->name('reports.active-pets');
 
     // Calendar API Endpoints
     Route::get('/api/appointments', [AdminController::class, 'getAppointmentsApi'])->name('api.appointments');
@@ -161,6 +162,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
 
     // Pet Records & Vaccination
     Route::get('/pet-records', [StaffController::class, 'petRecords'])->name('pet-records');
+    Route::post('/pets/store', [StaffController::class, 'storePet'])->name('pets.store');
     Route::get('/vaccination-status', [StaffController::class, 'vaccinationStatus'])->name('vaccination-status');
     Route::get('/vaccination-history', [StaffController::class, 'vaccinationHistory'])->name('vaccination-history');
     Route::post('/vaccination/store/{id}', [StaffController::class, 'updateVaccination'])->name('vaccination.store');
@@ -182,7 +184,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'role:staff'])->grou
 
     // Reports
     Route::get('/reports/pet-medical-history/{id}', [AdminReportController::class, 'petMedicalHistory'])->name('reports.pet-medical-history');
-
+    Route::get('/reports/active-pets', [AdminReportController::class, 'activePetsReport'])->name('reports.active-pets');
 });
 
 // Pet Owner Routes
